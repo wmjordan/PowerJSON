@@ -170,26 +170,7 @@ namespace fastJSON
 				return t;
 			}
 			var et = v.GetType ();
-			byte f;
-			if (_enumTypes.TryGetValue (et, out f) == false) { // the enum type has not been parsed
-				var ns = Enum.GetNames (et);
-				var vs = Enum.GetValues (et);
-				var vm = new Dictionary<string, Enum> (ns.Length);
-				for (int i = ns.Length - 1; i >= 0; i--) {
-					var en = ns[i];
-					var ev = (Enum)vs.GetValue(i);
-					var m = et.GetMember (en)[0];
-					var a = AttributeHelper.GetAttribute<EnumValueAttribute> (m, false);
-					if (a != null) {
-						en = a.Name;
-					}
-					_enumCache.Add (ev, en);
-					vm.Add (en ,ev);
-				}
-				_enumValueCache.Add (et, vm);
-				f = (byte)(et.IsDefined (typeof (FlagsAttribute), false) ? 1 : 0);
-				_enumTypes.Add (et, f);
-			}
+			byte f = CacheEnumType (et);
 			if (_enumCache.TryGetValue (v, out t)) {
 				return t;
 			}
@@ -221,13 +202,43 @@ namespace fastJSON
 			return t;
 		}
 
+		private byte CacheEnumType (Type enumType) {
+			byte isFlag;
+			if (_enumTypes.TryGetValue (enumType, out isFlag) == false) { // the enum type has not been parsed
+				var ns = Enum.GetNames (enumType);
+				var vs = Enum.GetValues (enumType);
+				var vm = new Dictionary<string, Enum> (ns.Length);
+				for (int i = ns.Length - 1; i >= 0; i--) {
+					var en = ns[i];
+					var ev = (Enum)vs.GetValue (i);
+					var m = enumType.GetMember (en)[0];
+					var a = AttributeHelper.GetAttribute<EnumValueAttribute> (m, false);
+					if (a != null) {
+						en = a.Name;
+					}
+					_enumCache.Add (ev, en);
+					vm.Add (en, ev);
+				}
+				_enumValueCache.Add (enumType, vm);
+				isFlag = (byte)(enumType.IsDefined (typeof (FlagsAttribute), false) ? 1 : 0);
+				_enumTypes.Add (enumType, isFlag);
+			}
+			return isFlag;
+		}
+
 		public Enum GetEnumValue (Type type, string name) {
-			var d = _enumValueCache[type];
+			Dictionary<string, Enum> d;
+			if (_enumValueCache.TryGetValue (type, out d) == false) {
+				CacheEnumType (type);
+				if (_enumValueCache.TryGetValue (type, out d) == false) {
+					throw new KeyNotFoundException ("Enum name " + name + " not found in type " + type.FullName);
+				}
+			}
 			Enum e;
 			if (d.TryGetValue (name, out e)) {
 				return e;
 			}
-			var f = _enumTypes[type];
+			var f = CacheEnumType (type);
 			if (f == 1) {
 				ulong v = 0;
 				var s = name.Split (__enumSeperatorCharArray);
