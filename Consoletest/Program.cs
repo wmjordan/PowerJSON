@@ -11,18 +11,29 @@ namespace consoletest
 {
     public class Program
     {
-        static int count = 1000;
-        static int tcount = 5;
+        static int count = 100000;
+        static int tcount = 6;
         static DataSet ds = new DataSet();
         static bool exotic = false;
         static bool dsser = false;
 
         public static void Main(string[] args)
         {
-            Console.WriteLine(".net version = " + Environment.Version);
-            Console.WriteLine("press key : (E)xotic ");
-            if (Console.ReadKey().Key == ConsoleKey.E)
-                exotic = true;
+			//Console.WriteLine(".net version = " + Environment.Version);
+			//Console.WriteLine("press key : (E)xotic ");
+			//if (Console.ReadKey().Key == ConsoleKey.E)
+			//	exotic = true;
+
+			colclass c = CreateObject ();
+			var t = fastJSON.JSON.ToJSON (c);
+			Console.WriteLine ("serialized object: ");
+			Console.WriteLine (t);
+			Console.WriteLine ("deserialized object: ");
+			var o = fastJSON.JSON.ToObject<colclass> (t);
+			Console.WriteLine (fastJSON.JSON.ToJSON (o));
+			Console.ReadKey ();
+
+			TestCustomConverterType ();
 
             ds = CreateDataset();
             Console.WriteLine("-dataset");
@@ -41,7 +52,8 @@ namespace consoletest
             fastjson_deserialize();
 
             Console.WriteLine();
-            #region [ other tests]
+			Console.ReadKey ();
+			#region [ other tests]
 
             //			litjson_serialize();
             //			jsonnet_serialize();
@@ -58,6 +70,27 @@ namespace consoletest
             //			stack_deserialize();
             #endregion
         }
+
+		private static void TestCustomConverterType () {
+			var c = new Test () {
+				CustomConverter = new CustomConverterType () {
+					Array = new int[] { 1, 2, 3 },
+					NormalArray = new int[] { 2, 3, 4 },
+					Variable1 = new int[] { 3, 4 },
+					Variable2 = new List<int> { 5, 6 }
+				},
+				Multiple1 = new FreeTypeTest () { FreeType = new class1 ("a", "b", Guid.NewGuid ()) },
+				Multiple2 = new FreeTypeTest () { FreeType = new class2 ("a", "b", "c") },
+				Multiple3 = new FreeTypeTest () { FreeType = DateTime.Now }
+			};
+			var t = fastJSON.JSON.ToJSON (c, new fastJSON.JSONParameters () { UseExtensions = false });
+			Console.WriteLine ("serialized Test instance: ");
+			Console.WriteLine (t);
+			Console.WriteLine ("deserialized Test instance: ");
+			var o = fastJSON.JSON.ToObject<Test> (t);
+			Console.WriteLine (fastJSON.JSON.ToJSON (o, new fastJSON.JSONParameters () { UseExtensions = false }));
+			Console.ReadKey ();
+		}
 
         //private static string pser(object data)
         //{
@@ -172,6 +205,7 @@ namespace consoletest
             Console.WriteLine();
             Console.Write("fastjson deserialize");
             colclass c = CreateObject();
+
 			var stopwatch = new Stopwatch();
             for (int pp = 0; pp < tcount; pp++)
             {

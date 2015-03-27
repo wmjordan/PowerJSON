@@ -91,8 +91,19 @@ namespace fastJSON
         /// <summary>
         /// Save property/field names as lowercase (default = false)
         /// </summary>
-        public bool SerializeToLowerCaseNames = false;
+		[Obsolete ("Please use NamingConvention instead")]
+		public bool SerializeToLowerCaseNames {
+			get { return _strategy.Convention == fastJSON.NamingConvention.LowerCase; }
+			set { _strategy = value ? NamingStrategy.LowerCase : NamingStrategy.Default; }
+		}
 
+		NamingStrategy _strategy = NamingStrategy.Default;
+		public NamingConvention NamingConvention {
+			get { return _strategy.Convention; }
+			set { _strategy = NamingStrategy.GetStrategy (value); }
+		}
+		internal NamingStrategy NamingStrategy { get { return _strategy; } }
+		
         public void FixValues()
         {
             if (UseExtensions == false) // disable conflicting params
@@ -105,6 +116,76 @@ namespace fastJSON
         }
     }
 
+	public enum NamingConvention
+	{
+		Default, LowerCase, CamelCase, UpperCase
+	}
+
+	abstract class NamingStrategy
+	{
+		internal abstract NamingConvention Convention { get; }
+		internal abstract string Rename (string name);
+
+		internal static readonly NamingStrategy Default = new DefaultNaming ();
+		internal static readonly NamingStrategy LowerCase = new LowerCaseNaming ();
+		internal static readonly NamingStrategy UpperCase = new UpperCaseNaming ();
+		internal static readonly NamingStrategy CamelCase = new CamelCaseNaming ();
+
+		internal static NamingStrategy GetStrategy (NamingConvention convention) {
+			switch (convention) {
+				case NamingConvention.Default: return Default;
+				case NamingConvention.LowerCase: return LowerCase;
+				case NamingConvention.CamelCase: return CamelCase;
+				case NamingConvention.UpperCase: return UpperCase;
+				default: throw new NotSupportedException ("case " + convention.ToString () + " is not supported.");
+			}
+		}
+
+		class DefaultNaming : NamingStrategy
+		{
+			internal override NamingConvention Convention {
+				get { return NamingConvention.Default; }
+			}
+			internal override string Rename (string name) {
+				return name;
+			}
+		}
+		class LowerCaseNaming : NamingStrategy
+		{
+			internal override NamingConvention Convention {
+				get { return NamingConvention.LowerCase; }
+			}
+			internal override string Rename (string name) {
+				return name.ToLowerInvariant ();
+			}
+		}
+		class UpperCaseNaming : NamingStrategy
+		{
+			internal override NamingConvention Convention {
+				get { return NamingConvention.UpperCase; }
+			}
+			internal override string Rename (string name) {
+				return name.ToUpperInvariant ();
+			}
+		}
+		class CamelCaseNaming : NamingStrategy
+		{
+			internal override NamingConvention Convention {
+				get { return NamingConvention.CamelCase; }
+			}
+			internal override string Rename (string name) {
+				var l = name.Length;
+				if (l > 0) {
+					var c = name[0];
+					if (c > 'A' - 1 && c < 'Z' + 1) {
+						c = Char.ToLowerInvariant (c);
+						return l > 1 ? String.Concat (c, name.Substring (1)) : c.ToString ();
+					}
+				}
+				return name;
+			}
+		}
+	}
     public static class JSON
     {
         /// <summary>
@@ -505,7 +586,7 @@ namespace fastJSON
                         v = ParseDictionary(kv.Value as Dictionary<string, object>, null, t2, null);
 
                     else if (t2.IsArray)
-                        v = CreateArray((List<object>)kv.Value, t2, t2.GetElementType(), null);
+                        v = CreateArray((IList)kv.Value, t2, t2.GetElementType(), null);
 
                     else if (kv.Value is IList)
                         v = CreateGenericList((List<object>)kv.Value, t2, t1, null);
@@ -587,10 +668,10 @@ namespace fastJSON
                 _cirrev.Add(circount, o);
             }
 
-            Dictionary<string, myPropInfo> props = Reflection.Instance.Getproperties(type, typename, Reflection.Instance.IsTypeRegistered(type));
+            Dictionary<string, myPropInfo> props = Reflection.Instance.GetProperties(type, typename, Reflection.Instance.IsTypeRegistered(type));
             foreach (string n in d.Keys)
             {
-                string name = n.ToLower();
+                string name = n.ToLowerInvariant ();
                 if (name == "$map")
                 {
                     ProcessMap(o, props, (Dictionary<string, object>)d[name]);
@@ -603,6 +684,14 @@ namespace fastJSON
                 {
                     object v = d[n];
 
+					if (pi.Converter != null) {
+						var cv = pi.Converter.DeserializationConvert (name, v);
+						if (Object.ReferenceEquals (cv, v) == false) {
+							// use the converted type
+							o = pi.setter (o, cv);
+							continue;
+						}
+					}
                     if (v != null)
                     {
                         object oset = null;
@@ -619,7 +708,7 @@ namespace fastJSON
 
                             case myPropInfoType.Array:
                                 if (!pi.IsValueType)
-                                    oset = CreateArray((List<object>)v, pi.pt, pi.bt, globaltypes);
+                                    oset = CreateArray((IList)v, pi.pt, pi.bt, globaltypes);
                                 // what about 'else'?
                                 break;
                             case myPropInfoType.ByteArray: oset = Convert.FromBase64String((string)v); break;
@@ -718,12 +807,20 @@ namespace fastJSON
         private object CreateEnum(Type pt, object v)
         {
             // TODO : optimize create enum
+			var s = v as string;
 #if !SILVERLIGHT
-            return Enum.Parse(pt, v.ToString());
+			if (s != null) {
+				return Reflection.Instance.GetEnumValue (pt, s);
+			}
+			else {
+				return Enum.ToObject (pt, v);
+			}
+            // return Enum.Parse(pt, v.ToString());
 #else
-            return Enum.Parse(pt, v, true);
+			return Reflection.Instance.GetEnumValue (pt, s);
+            // return Enum.Parse(pt, v, true);
 #endif
-        }
+		}
 
         private Guid CreateGuid(string s)
         {
@@ -764,7 +861,7 @@ namespace fastJSON
                 return new DateTime(year, month, day, hour, min, sec, ms, DateTimeKind.Utc).ToLocalTime();
         }
 
-        private object CreateArray(List<object> data, Type pt, Type bt, Dictionary<string, object> globalTypes)
+        private object CreateArray(IList data, Type pt, Type bt, Dictionary<string, object> globalTypes)
         {
             Array col = Array.CreateInstance(bt, data.Count);
             // create an array of objects
@@ -823,12 +920,8 @@ namespace fastJSON
                     val = ParseDictionary((Dictionary<string, object>)values.Value, globalTypes, t2, null);
 
                 else if (types != null && t2.IsArray)
-                {
-                    if (values.Value is Array)
-                        val = values.Value;
-                    else
-                        val = CreateArray((List<object>)values.Value, t2, t2.GetElementType(), globalTypes);
-                }
+					val = CreateArray ((IList)values.Value, t2, t2.GetElementType (), globalTypes);
+
                 else if (values.Value is IList)
                     val = CreateGenericList((List<object>)values.Value, t2, t1, globalTypes);
 

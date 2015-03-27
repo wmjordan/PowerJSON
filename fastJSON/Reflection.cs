@@ -11,11 +11,16 @@ using System.Collections.Specialized;
 
 namespace fastJSON
 {
-    internal struct Getters
+    internal class Getters
     {
         public string Name;
-        public string lcName;
+        public bool SpecificName;
+		//public string lcName;
         public Reflection.GenericGetter Getter;
+		public bool HasDefaultValue;
+		public object DefaultValue;
+		public Dictionary<Type, string> TypedName;
+		public IJsonConverter Converter;
     }
 
     internal enum myPropInfoType
@@ -43,7 +48,7 @@ namespace fastJSON
         Unknown,
     }
 
-    internal struct myPropInfo
+    internal class myPropInfo : ICloneable
     {
         public Type pt;
         public Type bt;
@@ -59,12 +64,24 @@ namespace fastJSON
         public bool IsValueType;
         public bool IsGenericType;
         public bool IsStruct;
-    }
+
+		public IJsonConverter Converter;
+
+		internal myPropInfo Clone () {
+			return this.MemberwiseClone () as myPropInfo;
+		}
+
+		object ICloneable.Clone () {
+			return this.MemberwiseClone ();
+		}
+	}
 
     internal sealed class Reflection
     {
         // Sinlgeton pattern 4 from : http://csharpindepth.com/articles/general/singleton.aspx
         private static readonly Reflection instance = new Reflection();
+		private static readonly char[] __enumSeperatorCharArray = { ',' };
+
         // Explicit static constructor to tell C# compiler
         // not to mark type as beforefieldinit
         static Reflection()
@@ -86,6 +103,9 @@ namespace fastJSON
         private SafeDictionary<string, Dictionary<string, myPropInfo>> _propertycache = new SafeDictionary<string, Dictionary<string, myPropInfo>>();
         private SafeDictionary<Type, Type[]> _genericTypes = new SafeDictionary<Type, Type[]>();
         private SafeDictionary<Type, Type> _genericTypeDef = new SafeDictionary<Type, Type>();
+		private SafeDictionary<Type, byte> _enumTypes = new SafeDictionary<Type, byte> ();
+		private SafeDictionary<Enum, string> _enumCache = new SafeDictionary<Enum, string> ();
+		private SafeDictionary<Type, Dictionary<string, Enum>> _enumValueCache = new SafeDictionary<Type, Dictionary<string, Enum>> ();
 
         #region json custom types
         // JSON custom
@@ -144,10 +164,85 @@ namespace fastJSON
             }
         }
 
-        public Dictionary<string, myPropInfo> Getproperties(Type type, string typename, bool customType)
+		public string GetEnumName (Enum v) {
+			string t;
+			if (_enumCache.TryGetValue (v, out t)) {
+				return t;
+			}
+			var et = v.GetType ();
+			byte f;
+			if (_enumTypes.TryGetValue (et, out f) == false) { // the enum type has not been parsed
+				var ns = Enum.GetNames (et);
+				var vs = Enum.GetValues (et);
+				var vm = new Dictionary<string, Enum> (ns.Length);
+				for (int i = ns.Length - 1; i >= 0; i--) {
+					var en = ns[i];
+					var ev = (Enum)vs.GetValue(i);
+					var m = et.GetMember (en)[0];
+					var a = AttributeHelper.GetAttribute<EnumValueAttribute> (m, false);
+					if (a != null) {
+						en = a.Name;
+					}
+					_enumCache.Add (ev, en);
+					vm.Add (en ,ev);
+				}
+				_enumValueCache.Add (et, vm);
+				f = (byte)(et.IsDefined (typeof (FlagsAttribute), false) ? 1 : 0);
+				_enumTypes.Add (et, f);
+			}
+			if (_enumCache.TryGetValue (v, out t)) {
+				return t;
+			}
+			if (f == 1) {
+				var vs = Enum.GetValues (et);
+				var iv = (ulong)Convert.ToInt64 (v);
+				var ov = iv;
+				if (iv == 0) {
+					return "0"; // should not be here
+				}
+				var sl = new List<string> ();
+				var vm = _enumValueCache[et];
+				for (int i = vs.Length - 1; i > 0; i--) {
+					var ev = (ulong)Convert.ToInt64 (vs.GetValue (i));
+					if (ev == 0) {
+						continue;
+					}
+					if ((iv & ev) == ev) {
+						iv -= ev;
+						sl.Add (_enumCache[(Enum)Enum.ToObject (et, ev)]);
+					}
+				}
+				if (iv != 0) {
+					return null;
+				}
+				t = String.Join (",", sl.ToArray ());
+				_enumCache.Add (v, t);
+			}
+			return t;
+		}
+
+		public Enum GetEnumValue (Type type, string name) {
+			var d = _enumValueCache[type];
+			Enum e;
+			if (d.TryGetValue (name, out e)) {
+				return e;
+			}
+			var f = _enumTypes[type];
+			if (f == 1) {
+				ulong v = 0;
+				var s = name.Split (__enumSeperatorCharArray);
+				foreach (var item in s) {
+					v |= Convert.ToUInt64 (d[item]);
+				}
+				return (Enum)Enum.ToObject (type, v);
+			}
+			throw new KeyNotFoundException ("Key \"" + name + "\" not found for type " + type.FullName);
+		}
+
+        public Dictionary<string, myPropInfo> GetProperties(Type type, string typeName, bool customType)
         {
             Dictionary<string, myPropInfo> sd = null;
-            if (_propertycache.TryGetValue(typename, out sd))
+            if (_propertycache.TryGetValue(typeName, out sd))
             {
                 return sd;
             }
@@ -166,7 +261,7 @@ namespace fastJSON
                     if (d.setter != null)
                         d.CanWrite = true;
                     d.getter = Reflection.CreateGetMethod(type, p);
-                    sd.Add(p.Name.ToLower(), d);
+					ProcessAttributes (sd, p, d);
                 }
                 FieldInfo[] fi = type.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
                 foreach (FieldInfo f in fi)
@@ -178,14 +273,37 @@ namespace fastJSON
                         if (d.setter != null)
                             d.CanWrite = true;
                         d.getter = Reflection.CreateGetField(type, f);
-                        sd.Add(f.Name.ToLower(), d);
-                    }
+						ProcessAttributes (sd, f, d);
+					}
                 }
 
-                _propertycache.Add(typename, sd);
+                _propertycache.Add(typeName, sd);
                 return sd;
             }
         }
+
+		private static void ProcessAttributes (Dictionary<string, myPropInfo> sd, MemberInfo memberInfo, myPropInfo propInfo) {
+			var df = AttributeHelper.GetAttributes<DataFieldAttribute> (memberInfo, true);
+			var cv = AttributeHelper.GetAttribute<DataConverterAttribute> (memberInfo, true);
+			if (cv != null && cv.Converter != null) {
+				propInfo.Converter = cv.Converter;
+			}
+			if (df.Length == 0) {
+				sd.Add (memberInfo.Name.ToLowerInvariant (), propInfo);
+				return;
+			}
+			foreach (var item in df) {
+				var n = (item.Name ?? memberInfo.Name).ToLowerInvariant ();
+				if (item.Type != null) {
+					var dt = propInfo.Clone ();
+					dt.pt = item.Type;
+					sd.Add (n, dt);
+				}
+				else {
+					sd.Add (n, propInfo);
+				}
+			}
+		}
 
         private myPropInfo CreateMyProp(Type t, string name, bool customType)
         {
@@ -398,28 +516,15 @@ namespace fastJSON
             }
             else
             {
-                if (!setMethod.IsStatic)
-                {
-                    il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(OpCodes.Castclass, propertyInfo.DeclaringType);
-                    il.Emit(OpCodes.Ldarg_1);
-                    if (propertyInfo.PropertyType.IsClass)
-                        il.Emit(OpCodes.Castclass, propertyInfo.PropertyType);
-                    else
-                        il.Emit(OpCodes.Unbox_Any, propertyInfo.PropertyType);
-                    il.EmitCall(OpCodes.Callvirt, setMethod, null);
-                    il.Emit(OpCodes.Ldarg_0);
-                }
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Castclass, propertyInfo.DeclaringType);
+                il.Emit(OpCodes.Ldarg_1);
+                if (propertyInfo.PropertyType.IsClass)
+                    il.Emit(OpCodes.Castclass, propertyInfo.PropertyType);
                 else
-                {
-                    il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(OpCodes.Ldarg_1);
-                    if (propertyInfo.PropertyType.IsClass)
-                        il.Emit(OpCodes.Castclass, propertyInfo.PropertyType);
-                    else
-                        il.Emit(OpCodes.Unbox_Any, propertyInfo.PropertyType);
-                    il.Emit(OpCodes.Call, setMethod);
-                }
+                    il.Emit(OpCodes.Unbox_Any, propertyInfo.PropertyType);
+                il.EmitCall(OpCodes.Callvirt, setMethod, null);
+                il.Emit(OpCodes.Ldarg_0);
             }
 
             il.Emit(OpCodes.Ret);
@@ -480,15 +585,9 @@ namespace fastJSON
             }
             else
             {
-                if (!getMethod.IsStatic)
-                {
-                    il.Emit(OpCodes.Ldarg_0);
-                    il.Emit(OpCodes.Castclass, propertyInfo.DeclaringType);
-                    il.EmitCall(OpCodes.Callvirt, getMethod, null);
-                }
-                else
-                    il.Emit(OpCodes.Call, getMethod);
-
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Castclass, propertyInfo.DeclaringType);
+                il.EmitCall(OpCodes.Callvirt, getMethod, null);
                 if (propertyInfo.PropertyType.IsValueType)
                     il.Emit(OpCodes.Box, propertyInfo.PropertyType);
             }
@@ -512,7 +611,8 @@ namespace fastJSON
                 {// Property is an indexer
                     continue;
                 }
-                if (!p.CanWrite && ShowReadOnlyProperties == false) continue;
+				var ic = AttributeHelper.GetAttribute<IncludeAttribute> (p, true);
+                if (!p.CanWrite && ShowReadOnlyProperties == false && ic == null || ic != null && ic.Include == false) continue;
                 if (IgnoreAttributes != null)
                 {
                     bool found = false;
@@ -528,8 +628,7 @@ namespace fastJSON
                         continue;
                 }
                 GenericGetter g = CreateGetMethod(type, p);
-                if (g != null)
-                    getters.Add(new Getters { Getter = g, Name = p.Name, lcName = p.Name.ToLower() });
+				AddGetter (getters, p, g);
             }
 
             FieldInfo[] fi = type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static);
@@ -551,15 +650,46 @@ namespace fastJSON
                 }
                 if (f.IsLiteral == false)
                 {
-                    GenericGetter g = CreateGetField(type, f);
-                    if (g != null)
-                        getters.Add(new Getters { Getter = g, Name = f.Name, lcName = f.Name.ToLower() });
-                }
+					GenericGetter g = CreateGetField (type, f);
+					AddGetter (getters, f, g);
+				}
             }
             val = getters.ToArray();
             _getterscache.Add(type, val);
             return val;
         }
+
+		private static void AddGetter (List<Getters> getters, MemberInfo memberInfo, GenericGetter getter) {
+			if (getter != null) {
+				var n = memberInfo.Name;
+				var d = AttributeHelper.GetAttribute<System.ComponentModel.DefaultValueAttribute> (memberInfo, true);
+				Dictionary<Type, string> tn = new Dictionary<Type, string> ();
+				var cv = AttributeHelper.GetAttribute<DataConverterAttribute> (memberInfo, true);
+				var sn = false;
+				var df = AttributeHelper.GetAttributes<DataFieldAttribute> (memberInfo, true);
+				foreach (var item in df) {
+					if (String.IsNullOrEmpty (item.Name)) {
+						continue;
+					}
+					sn = true;
+					if (item.Type == null) {
+						n = item.Name;
+					}
+					else {
+						tn.Add (item.Type, item.Name);
+					}
+				}
+				getters.Add (new Getters {
+					Getter = getter,
+					Name = n,
+					SpecificName = sn,
+					HasDefaultValue = d != null,
+					DefaultValue = d != null ? d.Value : null,
+					TypedName = tn != null && tn.Count > 0 ? tn : null,
+					Converter = cv != null ? cv.Converter : null
+				});
+			}
+		}
 
         #endregion
 

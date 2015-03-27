@@ -138,10 +138,11 @@ namespace fastJSON
                 else
                 {
                     if (pendingSeparator) _output.Append(',');
-                    if (_params.SerializeToLowerCaseNames)
-                        WritePair(key.ToLower(), nameValueCollection[key]);
-                    else
-                        WritePair(key, nameValueCollection[key]);
+					WritePair (_params.NamingStrategy.Rename (key), nameValueCollection[key]);
+					//if (_params.SerializeToLowerCaseNames)
+					//	WritePair(key.ToLower(), nameValueCollection[key]);
+					//else
+					//	WritePair(key, nameValueCollection[key]);
                     pendingSeparator = true;
                 }
             }
@@ -163,11 +164,12 @@ namespace fastJSON
                 {
                     if (pendingSeparator) _output.Append(',');
 
-                    string k = (string)entry.Key;
-                    if (_params.SerializeToLowerCaseNames)
-                        WritePair(k.ToLower(), entry.Value);
-                    else
-                        WritePair(k, entry.Value);
+					WritePair (_params.NamingStrategy.Rename ((string)entry.Key), entry.Value);
+					//string k = (string)entry.Key;
+					//if (_params.SerializeToLowerCaseNames)
+					//	WritePair(k.ToLower(), entry.Value);
+					//else
+					//	WritePair(k, entry.Value);
                     pendingSeparator = true;
                 }
             }
@@ -181,14 +183,17 @@ namespace fastJSON
             WriteStringFast(s(obj));
         }
 
-        private void WriteEnum(Enum e)
-        {
-            // TODO : optimize enum write
-            if (_params.UseValuesOfEnums)
-                WriteValue(Convert.ToInt32(e));
-            else
-                WriteStringFast(e.ToString());
-        }
+		private void WriteEnum (Enum e) {
+			// TODO : optimize enum write
+			if (_params.UseValuesOfEnums == false) {
+				var n = Reflection.Instance.GetEnumName (e);
+				if (n != null) {
+					WriteStringFast (n);
+					return;
+				}
+			}
+			WriteValue (Convert.ToInt64 (e));
+		}
 
         private void WriteGuid(Guid g)
         {
@@ -414,14 +419,30 @@ namespace fastJSON
                 {
                     //append = false;
                 }
+				else if (p.HasDefaultValue && Object.Equals (o, p.DefaultValue)) {
+					// ignore fields with default value
+				}
                 else
                 {
                     if (append)
                         _output.Append(',');
-                    if (_params.SerializeToLowerCaseNames)
-                        WritePair(p.lcName, o);
-                    else
-                        WritePair(p.Name, o);
+					string n;
+					if (p.SpecificName) {
+						if (o == null || p.TypedName == null || p.TypedName.TryGetValue (o.GetType (), out n) == false) {
+							n = p.Name;
+						}
+					}
+					else {
+						n = _params.NamingStrategy.Rename (p.Name);
+					}
+					if (p.Converter != null) {
+						o = p.Converter.SerializationConvert (n, o);
+					}
+					WritePair (n, o);
+					//if (_params.SerializeToLowerCaseNames)
+					//	WritePair(p.lcName, o);
+					//else
+					//	WritePair(p.Name, o);
                     if (o != null && _params.UseExtensions)
                     {
                         Type tt = o.GetType();
@@ -489,12 +510,12 @@ namespace fastJSON
                 else
                 {
                     if (pendingSeparator) _output.Append(',');
-
-                    string k = (string)entry.Key;
-                    if (_params.SerializeToLowerCaseNames)
-                        WritePair(k.ToLower(), entry.Value);
-                    else
-                        WritePair(k, entry.Value);
+					WritePair (_params.NamingStrategy.Rename ((string)entry.Key), entry.Value);
+					//string k = (string)entry.Key;
+					//if (_params.SerializeToLowerCaseNames)
+					//	WritePair(k.ToLower(), entry.Value);
+					//else
+					//	WritePair(k, entry.Value);
                     pendingSeparator = true;
                 }
             }
@@ -513,12 +534,12 @@ namespace fastJSON
                 else
                 {
                     if (pendingSeparator) _output.Append(',');
-                    string k = entry.Key;
-
-                    if (_params.SerializeToLowerCaseNames)
-                        WritePair(k.ToLower(), entry.Value);
-                    else
-                        WritePair(k, entry.Value);
+					WritePair (_params.NamingStrategy.Rename (entry.Key), entry.Value);
+					//string k = entry.Key;
+					//if (_params.SerializeToLowerCaseNames)
+					//	WritePair(k.ToLower(), entry.Value);
+					//else
+					//	WritePair(k, entry.Value);
                     pendingSeparator = true;
                 }
             }
