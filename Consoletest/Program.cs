@@ -12,23 +12,18 @@ namespace consoletest
     public class Program
     {
         static int count = 100000;
-        static int tcount = 6;
+        static int tcount = 5;
         static DataSet ds = new DataSet();
         static bool exotic = false;
         static bool dsser = false;
 
         public static void Main(string[] args)
         {
-			//Console.WriteLine(".net version = " + Environment.Version);
-			//Console.WriteLine("press key : (E)xotic ");
-			//if (Console.ReadKey().Key == ConsoleKey.E)
-			//	exotic = true;
+			Console.WriteLine (".net version = " + Environment.Version);
+			Console.WriteLine ("press key : (E)xotic ");
+			if (Console.ReadKey ().Key == ConsoleKey.E)
+				exotic = true;
 
-			var dv = new NullValueTest ();
-			Console.WriteLine (fastJSON.JSON.ToJSON (dv));
-			Console.WriteLine ((dv = fastJSON.JSON.ToObject<NullValueTest> (@"{ ""Text"": null, ""Number"": null, ""Array"": null, ""Guid"": null }")));
-			Console.WriteLine ((dv = fastJSON.JSON.ToObject<NullValueTest> (@"{}")));
- 
 			colclass c = CreateObject ();
 			var t = fastJSON.JSON.ToJSON (c);
 			Console.WriteLine ("serialized object: ");
@@ -38,6 +33,8 @@ namespace consoletest
 			Console.WriteLine (fastJSON.JSON.ToJSON (o));
 			Console.ReadKey ();
 
+			NullValueTest ();
+ 
 			TestCustomConverterType ();
 
             ds = CreateDataset();
@@ -76,7 +73,17 @@ namespace consoletest
             #endregion
         }
 
+		private static void NullValueTest () {
+			Console.WriteLine ("Null value test");
+			var dv = new NullValueTest ();
+			Console.WriteLine (fastJSON.JSON.ToJSON (dv));
+			Console.WriteLine ((dv = fastJSON.JSON.ToObject<NullValueTest> (@"{ ""Text"": null, ""Number"": null, ""Array"": null, ""Guid"": null, ""NullableNumber"": null }")));
+			Console.WriteLine ((dv = fastJSON.JSON.ToObject<NullValueTest> (@"{}")));
+			Console.WriteLine ();
+		}
+
 		private static void TestCustomConverterType () {
+			Console.WriteLine ("Custom converter test");
 			var c = new Test () {
 				CustomConverter = new CustomConverterType () {
 					Array = new int[] { 1, 2, 3 },
@@ -94,7 +101,8 @@ namespace consoletest
 			Console.WriteLine ("deserialized Test instance: ");
 			var o = fastJSON.JSON.ToObject<Test> (t);
 			Console.WriteLine (fastJSON.JSON.ToJSON (o, new fastJSON.JSONParameters () { UseExtensions = false }));
-			Console.ReadKey ();
+			Console.WriteLine ();
+			Console.ReadKey (true);
 		}
 
         //private static string pser(object data)

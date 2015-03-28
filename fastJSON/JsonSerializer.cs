@@ -418,39 +418,38 @@ namespace fastJSON
                 if (_params.SerializeNullValues == false && (o == null || o is DBNull))
                 {
                     //append = false;
+					continue;
                 }
-				else if (p.HasDefaultValue && Object.Equals (o, p.DefaultValue)) {
-					// ignore fields with default value
+				string n;
+				if (p.SpecificName) {
+					if (o == null || p.TypedName == null || p.TypedName.TryGetValue (o.GetType (), out n) == false) {
+						n = p.Name;
+					}
 				}
-                else
+				else {
+					n = _params.NamingStrategy.Rename (p.Name);
+				}
+				if (p.Converter != null) {
+					o = p.Converter.SerializationConvert (n, o);
+				}
+				if (p.HasDefaultValue && Object.Equals (o, p.DefaultValue)) {
+					// ignore fields with default value
+					continue;
+				}
+                if (append)
+                    _output.Append(',');
+				WritePair (n, o);
+				//if (_params.SerializeToLowerCaseNames)
+				//	WritePair(p.lcName, o);
+				//else
+				//	WritePair(p.Name, o);
+                if (o != null && _params.UseExtensions)
                 {
-                    if (append)
-                        _output.Append(',');
-					string n;
-					if (p.SpecificName) {
-						if (o == null || p.TypedName == null || p.TypedName.TryGetValue (o.GetType (), out n) == false) {
-							n = p.Name;
-						}
-					}
-					else {
-						n = _params.NamingStrategy.Rename (p.Name);
-					}
-					if (p.Converter != null) {
-						o = p.Converter.SerializationConvert (n, o);
-					}
-					WritePair (n, o);
-					//if (_params.SerializeToLowerCaseNames)
-					//	WritePair(p.lcName, o);
-					//else
-					//	WritePair(p.Name, o);
-                    if (o != null && _params.UseExtensions)
-                    {
-                        Type tt = o.GetType();
-                        if (tt == typeof(System.Object))
-                            map.Add(p.Name, tt.ToString());
-                    }
-                    append = true;
+                    Type tt = o.GetType();
+                    if (tt == typeof(System.Object))
+                        map.Add(p.Name, tt.ToString());
                 }
+                append = true;
             }
             if (map.Count > 0 && _params.UseExtensions)
             {

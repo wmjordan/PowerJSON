@@ -64,6 +64,7 @@ namespace fastJSON
 		public bool IsValueType;
 		public bool IsGenericType;
 		public bool IsStruct;
+		public bool IsNullable;
 
 		public IJsonConverter Converter;
 
@@ -125,7 +126,7 @@ namespace fastJSON
 				_customSerializer.Add(type, serializer);
 				_customDeserializer.Add(type, deserializer);
 				// reset property cache
-				Reflection.Instance.ResetPropertyCache();
+				ResetPropertyCache();
 			}
 		}
 
@@ -340,7 +341,7 @@ namespace fastJSON
 			}
 			else if (t.Name.Contains("Dictionary"))
 			{
-				d.GenericTypes = Reflection.Instance.GetGenericArguments(t);// t.GetGenericArguments();
+				d.GenericTypes = GetGenericArguments(t);// t.GetGenericArguments();
 				if (d.GenericTypes.Length > 0 && d.GenericTypes[0] == typeof(string))
 					d_type = myPropInfoType.StringKeyDictionary;
 				else
@@ -369,16 +370,22 @@ namespace fastJSON
 			d.Name = name;
 			d.changeType = GetChangeType(t);
 			d.Type = d_type;
-
+			d.IsNullable = IsNullable (t);
 			return d;
 		}
 
 		private Type GetChangeType(Type conversionType)
 		{
 			if (conversionType.IsGenericType && conversionType.GetGenericTypeDefinition().Equals(typeof(Nullable<>)))
-				return Reflection.Instance.GetGenericArguments(conversionType)[0];// conversionType.GetGenericArguments()[0];
+				return GetGenericArguments(conversionType)[0];// conversionType.GetGenericArguments()[0];
 
 			return conversionType;
+		}
+
+		public static bool IsNullable (Type t) {
+			if (!t.IsGenericType) return false;
+			Type g = t.GetGenericTypeDefinition ();
+			return g.Equals (typeof (Nullable<>));
 		}
 
 		#region [   PROPERTY GET SET   ]
@@ -718,6 +725,9 @@ namespace fastJSON
 			_propertycache = new SafeDictionary<string, Dictionary<string, myPropInfo>>();
 			_genericTypes = new SafeDictionary<Type, Type[]>();
 			_genericTypeDef = new SafeDictionary<Type, Type>();
+			_enumCache = new SafeDictionary<Enum, string> ();
+			_enumTypes = new SafeDictionary<Type, byte> ();
+			_enumValueCache = new SafeDictionary<Type, Dictionary<string, Enum>> ();
 		}
 	}
 }

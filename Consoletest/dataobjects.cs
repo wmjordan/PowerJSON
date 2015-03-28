@@ -49,16 +49,18 @@ namespace consoletest
 		public string Text;
 		public Guid Guid;
 		public int Number;
+		public int? NullableNumber;
 
 		public NullValueTest () {
 			Array = new int[] {1};
 			Text = "default text";
 			Guid = Guid.NewGuid ();
 			Number = 3;
+			NullableNumber = 4;
 		}
 
 		public override string ToString () {
-			return String.Join ("\n", "Array: " + String.Join (", ", Array ?? new int[0]), "Text: " + Text, "Guid: " + Guid.ToString (), "Number: " + Number.ToString ());
+			return String.Join ("\n", "Array: " + String.Join (", ", Array ?? new int[0]), "Text: " + Text, "Guid: " + Guid.ToString (), "Number: " + Number.ToString (), "Nullable number: " + NullableNumber.ToString ());
 		}
 	}
 	public class Test

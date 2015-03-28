@@ -517,7 +517,7 @@ namespace fastJSON
                 return Reflection.Instance.CreateCustom((string)value, conversionType);
 
             // 8-30-2014 - James Brooks - Added code for nullable types.
-            if (IsNullable(conversionType))
+            if (Reflection.IsNullable(conversionType))
             {
                 if (value == null)
                 {
@@ -531,13 +531,6 @@ namespace fastJSON
                 return CreateGuid((string)value);
 
             return Convert.ChangeType(value, conversionType, CultureInfo.InvariantCulture);
-        }
-
-        private bool IsNullable(Type t)
-        {
-            if (!t.IsGenericType) return false;
-            Type g = t.GetGenericTypeDefinition();
-            return (g.Equals(typeof(Nullable<>)));
         }
 
         private Type UnderlyingTypeOf(Type t)
@@ -653,12 +646,13 @@ namespace fastJSON
 
             string typename = type.FullName;
             object o = input;
+			var r = Reflection.Instance;
             if (o == null)
             {
                 if (_params.ParametricConstructorOverride)
                     o = System.Runtime.Serialization.FormatterServices.GetUninitializedObject(type);
                 else
-                    o = Reflection.Instance.FastCreateInstance(type);
+                    o = r.FastCreateInstance(type);
             }
             int circount = 0;
             if (_circobj.TryGetValue(o, out circount) == false)
@@ -668,7 +662,7 @@ namespace fastJSON
                 _cirrev.Add(circount, o);
             }
 
-            Dictionary<string, myPropInfo> props = Reflection.Instance.GetProperties(type, typename, Reflection.Instance.IsTypeRegistered(type));
+            Dictionary<string, myPropInfo> props = r.GetProperties(type, typename, r.IsTypeRegistered(type));
             foreach (string n in d.Keys)
             {
                 string name = n.ToLowerInvariant ();
@@ -692,73 +686,72 @@ namespace fastJSON
 								o = pi.setter (o, cv);
 							}
 							else {
-								o = pi.setter (o, pi.IsClass ? null : Reflection.Instance.FastCreateInstance (pi.pt));
+								if (pi.IsClass || pi.IsNullable) {
+									o = pi.setter (o, null);
+								}
 							}
 							continue;
 						}
 					}
-                    if (v != null)
+					if (v == null)
                     {
-						o = SetFieldOrPropertyValue (globaltypes, o, pi, v);
-                    }
-					else {
-						o = pi.setter (o, pi.IsClass ? null : Reflection.Instance.FastCreateInstance (pi.pt));
+						if (pi.IsClass || pi.IsNullable) {
+							o = pi.setter (o, null);
+						}
+						continue;
 					}
+
+					object oset = null;
+
+					switch (pi.Type) {
+						case myPropInfoType.Int: oset = (int)((long)v); break;
+						case myPropInfoType.Long: oset = (long)v; break;
+						case myPropInfoType.String: oset = (string)v; break;
+						case myPropInfoType.Bool: oset = (bool)v; break;
+						case myPropInfoType.DateTime: oset = CreateDateTime ((string)v); break;
+						case myPropInfoType.Enum: oset = CreateEnum (pi.pt, v); break;
+						case myPropInfoType.Guid: oset = CreateGuid ((string)v); break;
+
+						case myPropInfoType.Array:
+							if (!pi.IsValueType)
+								oset = CreateArray ((IList)v, pi.pt, pi.bt, globaltypes);
+							// what about 'else'?
+							break;
+						case myPropInfoType.ByteArray: oset = Convert.FromBase64String ((string)v); break;
+#if !SILVERLIGHT
+						case myPropInfoType.DataSet: oset = CreateDataset ((Dictionary<string, object>)v, globaltypes); break;
+						case myPropInfoType.DataTable: oset = CreateDataTable ((Dictionary<string, object>)v, globaltypes); break;
+						case myPropInfoType.Hashtable: // same case as Dictionary
+#endif
+						case myPropInfoType.Dictionary: oset = CreateDictionary ((List<object>)v, pi.pt, pi.GenericTypes, globaltypes); break;
+						case myPropInfoType.StringKeyDictionary: oset = CreateStringKeyDictionary ((Dictionary<string, object>)v, pi.pt, pi.GenericTypes, globaltypes); break;
+						case myPropInfoType.NameValue: oset = CreateNV ((Dictionary<string, object>)v); break;
+						case myPropInfoType.StringDictionary: oset = CreateSD ((Dictionary<string, object>)v); break;
+						case myPropInfoType.Custom: oset = Reflection.Instance.CreateCustom ((string)v, pi.pt); break;
+						default: {
+								if (pi.IsGenericType && pi.IsValueType == false && v is List<object>)
+									oset = CreateGenericList ((List<object>)v, pi.pt, pi.bt, globaltypes);
+
+								else if ((pi.IsClass || pi.IsStruct) && v is Dictionary<string, object>)
+									oset = ParseDictionary ((Dictionary<string, object>)v, globaltypes, pi.pt, pi.getter (o));
+
+								else if (v is List<object>)
+									oset = CreateArray ((List<object>)v, pi.pt, typeof (object), globaltypes);
+
+								else if (pi.IsValueType)
+									oset = ChangeType (v, pi.changeType);
+
+								else
+									oset = v;
+							}
+							break;
+					}
+
+					o = pi.setter (o, oset);
                 }
             }
             return o;
         }
-
-		private object SetFieldOrPropertyValue (Dictionary<string, object> globaltypes, object o, myPropInfo pi, object v) {
-			object oset = null;
-
-			switch (pi.Type) {
-				case myPropInfoType.Int: oset = (int)((long)v); break;
-				case myPropInfoType.Long: oset = (long)v; break;
-				case myPropInfoType.String: oset = (string)v; break;
-				case myPropInfoType.Bool: oset = (bool)v; break;
-				case myPropInfoType.DateTime: oset = CreateDateTime ((string)v); break;
-				case myPropInfoType.Enum: oset = CreateEnum (pi.pt, v); break;
-				case myPropInfoType.Guid: oset = CreateGuid ((string)v); break;
-
-				case myPropInfoType.Array:
-					if (!pi.IsValueType)
-						oset = CreateArray ((IList)v, pi.pt, pi.bt, globaltypes);
-					// what about 'else'?
-					break;
-				case myPropInfoType.ByteArray: oset = Convert.FromBase64String ((string)v); break;
-#if !SILVERLIGHT
-				case myPropInfoType.DataSet: oset = CreateDataset ((Dictionary<string, object>)v, globaltypes); break;
-				case myPropInfoType.DataTable: oset = CreateDataTable ((Dictionary<string, object>)v, globaltypes); break;
-				case myPropInfoType.Hashtable: // same case as Dictionary
-#endif
-				case myPropInfoType.Dictionary: oset = CreateDictionary ((List<object>)v, pi.pt, pi.GenericTypes, globaltypes); break;
-				case myPropInfoType.StringKeyDictionary: oset = CreateStringKeyDictionary ((Dictionary<string, object>)v, pi.pt, pi.GenericTypes, globaltypes); break;
-				case myPropInfoType.NameValue: oset = CreateNV ((Dictionary<string, object>)v); break;
-				case myPropInfoType.StringDictionary: oset = CreateSD ((Dictionary<string, object>)v); break;
-				case myPropInfoType.Custom: oset = Reflection.Instance.CreateCustom ((string)v, pi.pt); break;
-				default: {
-						if (pi.IsGenericType && pi.IsValueType == false && v is List<object>)
-							oset = CreateGenericList ((List<object>)v, pi.pt, pi.bt, globaltypes);
-
-						else if ((pi.IsClass || pi.IsStruct) && v is Dictionary<string, object>)
-							oset = ParseDictionary ((Dictionary<string, object>)v, globaltypes, pi.pt, pi.getter (o));
-
-						else if (v is List<object>)
-							oset = CreateArray ((List<object>)v, pi.pt, typeof (object), globaltypes);
-
-						else if (pi.IsValueType)
-							oset = ChangeType (v, pi.changeType);
-
-						else
-							oset = v;
-					}
-					break;
-			}
-
-			o = pi.setter (o, oset);
-			return o;
-		}
 
         private StringDictionary CreateSD(Dictionary<string, object> d)
         {
