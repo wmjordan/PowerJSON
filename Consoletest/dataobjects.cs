@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Data;
 using fastJSON;
 
@@ -42,6 +43,24 @@ namespace consoletest
 		public string description { get; set; }
 	}
 
+	public class NullValueTest
+	{
+		public int[] Array;
+		public string Text;
+		public Guid Guid;
+		public int Number;
+
+		public NullValueTest () {
+			Array = new int[] {1};
+			Text = "default text";
+			Guid = Guid.NewGuid ();
+			Number = 3;
+		}
+
+		public override string ToString () {
+			return String.Join ("\n", "Array: " + String.Join (", ", Array ?? new int[0]), "Text: " + Text, "Guid: " + Guid.ToString (), "Number: " + Number.ToString ());
+		}
+	}
 	public class Test
 	{
 		[DataField ("multiple_1")]

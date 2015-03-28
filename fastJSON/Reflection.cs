@@ -11,59 +11,59 @@ using System.Collections.Specialized;
 
 namespace fastJSON
 {
-    internal class Getters
-    {
-        public string Name;
-        public bool SpecificName;
+	internal class Getters
+	{
+		public string Name;
+		public bool SpecificName;
 		//public string lcName;
-        public Reflection.GenericGetter Getter;
+		public Reflection.GenericGetter Getter;
 		public bool HasDefaultValue;
 		public object DefaultValue;
 		public Dictionary<Type, string> TypedName;
 		public IJsonConverter Converter;
-    }
+	}
 
-    internal enum myPropInfoType
-    {
-        Int,
-        Long,
-        String,
-        Bool,
-        DateTime,
-        Enum,
-        Guid,
+	internal enum myPropInfoType
+	{
+		Int,
+		Long,
+		String,
+		Bool,
+		DateTime,
+		Enum,
+		Guid,
 
-        Array,
-        ByteArray,
-        Dictionary,
-        StringKeyDictionary,
-        NameValue,
-        StringDictionary,
+		Array,
+		ByteArray,
+		Dictionary,
+		StringKeyDictionary,
+		NameValue,
+		StringDictionary,
 #if !SILVERLIGHT
-        Hashtable,
-        DataSet,
-        DataTable,
+		Hashtable,
+		DataSet,
+		DataTable,
 #endif
-        Custom,
-        Unknown,
-    }
+		Custom,
+		Unknown,
+	}
 
-    internal class myPropInfo : ICloneable
-    {
-        public Type pt;
-        public Type bt;
-        public Type changeType;
-        public Reflection.GenericSetter setter;
-        public Reflection.GenericGetter getter;
-        public Type[] GenericTypes;
-        public string Name;
-        public myPropInfoType Type;
-        public bool CanWrite;
+	internal class myPropInfo : ICloneable
+	{
+		public Type pt;
+		public Type bt;
+		public Type changeType;
+		public Reflection.GenericSetter setter;
+		public Reflection.GenericGetter getter;
+		public Type[] GenericTypes;
+		public string Name;
+		public myPropInfoType Type;
+		public bool CanWrite;
 
-        public bool IsClass;
-        public bool IsValueType;
-        public bool IsGenericType;
-        public bool IsStruct;
+		public bool IsClass;
+		public bool IsValueType;
+		public bool IsGenericType;
+		public bool IsStruct;
 
 		public IJsonConverter Converter;
 
@@ -76,93 +76,93 @@ namespace fastJSON
 		}
 	}
 
-    internal sealed class Reflection
-    {
-        // Sinlgeton pattern 4 from : http://csharpindepth.com/articles/general/singleton.aspx
-        private static readonly Reflection instance = new Reflection();
+	internal sealed class Reflection
+	{
+		// Sinlgeton pattern 4 from : http://csharpindepth.com/articles/general/singleton.aspx
+		private static readonly Reflection instance = new Reflection();
 		private static readonly char[] __enumSeperatorCharArray = { ',' };
 
-        // Explicit static constructor to tell C# compiler
-        // not to mark type as beforefieldinit
-        static Reflection()
-        {
-        }
-        private Reflection()
-        {
-        }
-        public static Reflection Instance { get { return instance; } }
+		// Explicit static constructor to tell C# compiler
+		// not to mark type as beforefieldinit
+		static Reflection()
+		{
+		}
+		private Reflection()
+		{
+		}
+		public static Reflection Instance { get { return instance; } }
 
-        internal delegate object GenericSetter(object target, object value);
-        internal delegate object GenericGetter(object obj);
-        private delegate object CreateObject();
+		internal delegate object GenericSetter(object target, object value);
+		internal delegate object GenericGetter(object obj);
+		private delegate object CreateObject();
 
-        private SafeDictionary<Type, string> _tyname = new SafeDictionary<Type, string>();
-        private SafeDictionary<string, Type> _typecache = new SafeDictionary<string, Type>();
-        private SafeDictionary<Type, CreateObject> _constrcache = new SafeDictionary<Type, CreateObject>();
-        private SafeDictionary<Type, Getters[]> _getterscache = new SafeDictionary<Type, Getters[]>();
-        private SafeDictionary<string, Dictionary<string, myPropInfo>> _propertycache = new SafeDictionary<string, Dictionary<string, myPropInfo>>();
-        private SafeDictionary<Type, Type[]> _genericTypes = new SafeDictionary<Type, Type[]>();
-        private SafeDictionary<Type, Type> _genericTypeDef = new SafeDictionary<Type, Type>();
+		private SafeDictionary<Type, string> _tyname = new SafeDictionary<Type, string>();
+		private SafeDictionary<string, Type> _typecache = new SafeDictionary<string, Type>();
+		private SafeDictionary<Type, CreateObject> _constrcache = new SafeDictionary<Type, CreateObject>();
+		private SafeDictionary<Type, Getters[]> _getterscache = new SafeDictionary<Type, Getters[]>();
+		private SafeDictionary<string, Dictionary<string, myPropInfo>> _propertycache = new SafeDictionary<string, Dictionary<string, myPropInfo>>();
+		private SafeDictionary<Type, Type[]> _genericTypes = new SafeDictionary<Type, Type[]>();
+		private SafeDictionary<Type, Type> _genericTypeDef = new SafeDictionary<Type, Type>();
 		private SafeDictionary<Type, byte> _enumTypes = new SafeDictionary<Type, byte> ();
 		private SafeDictionary<Enum, string> _enumCache = new SafeDictionary<Enum, string> ();
 		private SafeDictionary<Type, Dictionary<string, Enum>> _enumValueCache = new SafeDictionary<Type, Dictionary<string, Enum>> ();
 
-        #region json custom types
-        // JSON custom
-        internal SafeDictionary<Type, Serialize> _customSerializer = new SafeDictionary<Type, Serialize>();
-        internal SafeDictionary<Type, Deserialize> _customDeserializer = new SafeDictionary<Type, Deserialize>();
-        internal object CreateCustom(string v, Type type)
-        {
-            Deserialize d;
-            _customDeserializer.TryGetValue(type, out d);
-            return d(v);
-        }
+		#region json custom types
+		// JSON custom
+		internal SafeDictionary<Type, Serialize> _customSerializer = new SafeDictionary<Type, Serialize>();
+		internal SafeDictionary<Type, Deserialize> _customDeserializer = new SafeDictionary<Type, Deserialize>();
+		internal object CreateCustom(string v, Type type)
+		{
+			Deserialize d;
+			_customDeserializer.TryGetValue(type, out d);
+			return d(v);
+		}
 
-        internal void RegisterCustomType(Type type, Serialize serializer, Deserialize deserializer)
-        {
-            if (type != null && serializer != null && deserializer != null)
-            {
-                _customSerializer.Add(type, serializer);
-                _customDeserializer.Add(type, deserializer);
-                // reset property cache
-                Reflection.Instance.ResetPropertyCache();
-            }
-        }
+		internal void RegisterCustomType(Type type, Serialize serializer, Deserialize deserializer)
+		{
+			if (type != null && serializer != null && deserializer != null)
+			{
+				_customSerializer.Add(type, serializer);
+				_customDeserializer.Add(type, deserializer);
+				// reset property cache
+				Reflection.Instance.ResetPropertyCache();
+			}
+		}
 
-        internal bool IsTypeRegistered(Type t)
-        {
-            if (_customSerializer.Count == 0)
-                return false;
-            Serialize s;
-            return _customSerializer.TryGetValue(t, out s);
-        }
-        #endregion
+		internal bool IsTypeRegistered(Type t)
+		{
+			if (_customSerializer.Count == 0)
+				return false;
+			Serialize s;
+			return _customSerializer.TryGetValue(t, out s);
+		}
+		#endregion
 
-        public Type GetGenericTypeDefinition(Type t)
-        {
-            Type tt = null;
-            if (_genericTypeDef.TryGetValue(t, out tt))
-                return tt;
-            else
-            {
-                tt = t.GetGenericTypeDefinition();
-                _genericTypeDef.Add(t, tt);
-                return tt;
-            }
-        }
+		public Type GetGenericTypeDefinition(Type t)
+		{
+			Type tt = null;
+			if (_genericTypeDef.TryGetValue(t, out tt))
+				return tt;
+			else
+			{
+				tt = t.GetGenericTypeDefinition();
+				_genericTypeDef.Add(t, tt);
+				return tt;
+			}
+		}
 
-        public Type[] GetGenericArguments(Type t)
-        {
-            Type[] tt = null;
-            if (_genericTypes.TryGetValue(t, out tt))
-                return tt;
-            else
-            {
-                tt = t.GetGenericArguments();
-                _genericTypes.Add(t, tt);
-                return tt;
-            }
-        }
+		public Type[] GetGenericArguments(Type t)
+		{
+			Type[] tt = null;
+			if (_genericTypes.TryGetValue(t, out tt))
+				return tt;
+			else
+			{
+				tt = t.GetGenericArguments();
+				_genericTypes.Add(t, tt);
+				return tt;
+			}
+		}
 
 		public string GetEnumName (Enum v) {
 			string t;
@@ -250,48 +250,48 @@ namespace fastJSON
 			throw new KeyNotFoundException ("Key \"" + name + "\" not found for type " + type.FullName);
 		}
 
-        public Dictionary<string, myPropInfo> GetProperties(Type type, string typeName, bool customType)
-        {
-            Dictionary<string, myPropInfo> sd = null;
-            if (_propertycache.TryGetValue(typeName, out sd))
-            {
-                return sd;
-            }
-            else
-            {
-                sd = new Dictionary<string, myPropInfo>();
-                PropertyInfo[] pr = type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
-                foreach (PropertyInfo p in pr)
-                {
-                    if (p.GetIndexParameters().Length > 0)
-                    {// Property is an indexer
-                        continue;
-                    }
-                    myPropInfo d = CreateMyProp(p.PropertyType, p.Name, customType);
-                    d.setter = Reflection.CreateSetMethod(type, p);
-                    if (d.setter != null)
-                        d.CanWrite = true;
-                    d.getter = Reflection.CreateGetMethod(type, p);
-					ProcessAttributes (sd, p, d);
-                }
-                FieldInfo[] fi = type.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
-                foreach (FieldInfo f in fi)
-                {
-                    myPropInfo d = CreateMyProp(f.FieldType, f.Name, customType);
-                    if (f.IsLiteral == false)
-                    {
-                        d.setter = Reflection.CreateSetField(type, f);
-                        if (d.setter != null)
-                            d.CanWrite = true;
-                        d.getter = Reflection.CreateGetField(type, f);
-						ProcessAttributes (sd, f, d);
-					}
-                }
+		public Dictionary<string, myPropInfo> GetProperties(Type type, string typeName, bool customType)
+		{
+			Dictionary<string, myPropInfo> sd = null;
+			if (_propertycache.TryGetValue(typeName, out sd))
+			{
+				return sd;
+			}
+			sd = new Dictionary<string, myPropInfo>();
+			PropertyInfo[] pr = type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+			foreach (PropertyInfo p in pr)
+			{
+				if (p.GetIndexParameters().Length > 0)
+				{// Property is an indexer
+					continue;
+				}
+				myPropInfo d = CreateMyProp(p.PropertyType, p.Name, customType);
+				var ro = AttributeHelper.GetAttribute<System.ComponentModel.ReadOnlyAttribute> (p, true);
+				if (ro == null || ro.IsReadOnly == false) {
+					d.setter = Reflection.CreateSetMethod (type, p);
+					if (d.setter != null)
+						d.CanWrite = true;
+				}
+				d.getter = Reflection.CreateGetMethod(type, p);
+				ProcessAttributes (sd, p, d);
+			}
+			FieldInfo[] fi = type.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+			foreach (FieldInfo f in fi)
+			{
+				myPropInfo d = CreateMyProp(f.FieldType, f.Name, customType);
+				if (f.IsLiteral == false)
+				{
+					d.setter = Reflection.CreateSetField(type, f);
+					if (d.setter != null)
+						d.CanWrite = true;
+					d.getter = Reflection.CreateGetField(type, f);
+					ProcessAttributes (sd, f, d);
+				}
+			}
 
-                _propertycache.Add(typeName, sd);
-                return sd;
-            }
-        }
+			_propertycache.Add(typeName, sd);
+			return sd;
+		}
 
 		private static void ProcessAttributes (Dictionary<string, myPropInfo> sd, MemberInfo memberInfo, myPropInfo propInfo) {
 			var df = AttributeHelper.GetAttributes<DataFieldAttribute> (memberInfo, true);
@@ -316,359 +316,359 @@ namespace fastJSON
 			}
 		}
 
-        private myPropInfo CreateMyProp(Type t, string name, bool customType)
-        {
-            myPropInfo d = new myPropInfo();
-            myPropInfoType d_type = myPropInfoType.Unknown;
+		private myPropInfo CreateMyProp(Type t, string name, bool customType)
+		{
+			myPropInfo d = new myPropInfo();
+			myPropInfoType d_type = myPropInfoType.Unknown;
 
-            if (t == typeof(int) || t == typeof(int?)) d_type = myPropInfoType.Int;
-            else if (t == typeof(long) || t == typeof(long?)) d_type = myPropInfoType.Long;
-            else if (t == typeof(string)) d_type = myPropInfoType.String;
-            else if (t == typeof(bool) || t == typeof(bool?)) d_type = myPropInfoType.Bool;
-            else if (t == typeof(DateTime) || t == typeof(DateTime?)) d_type = myPropInfoType.DateTime;
-            else if (t.IsEnum) d_type = myPropInfoType.Enum;
-            else if (t == typeof(Guid) || t == typeof(Guid?)) d_type = myPropInfoType.Guid;
-            else if (t == typeof(StringDictionary)) d_type = myPropInfoType.StringDictionary;
-            else if (t == typeof(NameValueCollection)) d_type = myPropInfoType.NameValue;
-            else if (t.IsArray)
-            {
-                d.bt = t.GetElementType();
-                if (t == typeof(byte[]))
-                    d_type = myPropInfoType.ByteArray;
-                else
-                    d_type = myPropInfoType.Array;
-            }
-            else if (t.Name.Contains("Dictionary"))
-            {
-                d.GenericTypes = Reflection.Instance.GetGenericArguments(t);// t.GetGenericArguments();
-                if (d.GenericTypes.Length > 0 && d.GenericTypes[0] == typeof(string))
-                    d_type = myPropInfoType.StringKeyDictionary;
-                else
-                    d_type = myPropInfoType.Dictionary;
-            }
+			if (t == typeof(int) || t == typeof(int?)) d_type = myPropInfoType.Int;
+			else if (t == typeof(long) || t == typeof(long?)) d_type = myPropInfoType.Long;
+			else if (t == typeof(string)) d_type = myPropInfoType.String;
+			else if (t == typeof(bool) || t == typeof(bool?)) d_type = myPropInfoType.Bool;
+			else if (t == typeof(DateTime) || t == typeof(DateTime?)) d_type = myPropInfoType.DateTime;
+			else if (t.IsEnum) d_type = myPropInfoType.Enum;
+			else if (t == typeof(Guid) || t == typeof(Guid?)) d_type = myPropInfoType.Guid;
+			else if (t == typeof(StringDictionary)) d_type = myPropInfoType.StringDictionary;
+			else if (t == typeof(NameValueCollection)) d_type = myPropInfoType.NameValue;
+			else if (t.IsArray)
+			{
+				d.bt = t.GetElementType();
+				if (t == typeof(byte[]))
+					d_type = myPropInfoType.ByteArray;
+				else
+					d_type = myPropInfoType.Array;
+			}
+			else if (t.Name.Contains("Dictionary"))
+			{
+				d.GenericTypes = Reflection.Instance.GetGenericArguments(t);// t.GetGenericArguments();
+				if (d.GenericTypes.Length > 0 && d.GenericTypes[0] == typeof(string))
+					d_type = myPropInfoType.StringKeyDictionary;
+				else
+					d_type = myPropInfoType.Dictionary;
+			}
 #if !SILVERLIGHT
-            else if (t == typeof(Hashtable)) d_type = myPropInfoType.Hashtable;
-            else if (t == typeof(DataSet)) d_type = myPropInfoType.DataSet;
-            else if (t == typeof(DataTable)) d_type = myPropInfoType.DataTable;
+			else if (t == typeof(Hashtable)) d_type = myPropInfoType.Hashtable;
+			else if (t == typeof(DataSet)) d_type = myPropInfoType.DataSet;
+			else if (t == typeof(DataTable)) d_type = myPropInfoType.DataTable;
 #endif
-            else if (customType)
-                d_type = myPropInfoType.Custom;
+			else if (customType)
+				d_type = myPropInfoType.Custom;
 
-            if (t.IsValueType && !t.IsPrimitive && !t.IsEnum && t != typeof(decimal))
-                d.IsStruct = true;
+			if (t.IsValueType && !t.IsPrimitive && !t.IsEnum && t != typeof(decimal))
+				d.IsStruct = true;
 
-            d.IsClass = t.IsClass;
-            d.IsValueType = t.IsValueType;
-            if (t.IsGenericType)
-            {
-                d.IsGenericType = true;
-                d.bt = t.GetGenericArguments()[0];
-            }
+			d.IsClass = t.IsClass;
+			d.IsValueType = t.IsValueType;
+			if (t.IsGenericType)
+			{
+				d.IsGenericType = true;
+				d.bt = t.GetGenericArguments()[0];
+			}
 
-            d.pt = t;
-            d.Name = name;
-            d.changeType = GetChangeType(t);
-            d.Type = d_type;
+			d.pt = t;
+			d.Name = name;
+			d.changeType = GetChangeType(t);
+			d.Type = d_type;
 
-            return d;
-        }
+			return d;
+		}
 
-        private Type GetChangeType(Type conversionType)
-        {
-            if (conversionType.IsGenericType && conversionType.GetGenericTypeDefinition().Equals(typeof(Nullable<>)))
-                return Reflection.Instance.GetGenericArguments(conversionType)[0];// conversionType.GetGenericArguments()[0];
+		private Type GetChangeType(Type conversionType)
+		{
+			if (conversionType.IsGenericType && conversionType.GetGenericTypeDefinition().Equals(typeof(Nullable<>)))
+				return Reflection.Instance.GetGenericArguments(conversionType)[0];// conversionType.GetGenericArguments()[0];
 
-            return conversionType;
-        }
+			return conversionType;
+		}
 
-        #region [   PROPERTY GET SET   ]
+		#region [   PROPERTY GET SET   ]
 
-        internal string GetTypeAssemblyName(Type t)
-        {
-            string val = "";
-            if (_tyname.TryGetValue(t, out val))
-                return val;
-            else
-            {
-                string s = t.AssemblyQualifiedName;
-                _tyname.Add(t, s);
-                return s;
-            }
-        }
+		internal string GetTypeAssemblyName(Type t)
+		{
+			string val = "";
+			if (_tyname.TryGetValue(t, out val))
+				return val;
+			else
+			{
+				string s = t.AssemblyQualifiedName;
+				_tyname.Add(t, s);
+				return s;
+			}
+		}
 
-        internal Type GetTypeFromCache(string typename)
-        {
-            Type val = null;
-            if (_typecache.TryGetValue(typename, out val))
-                return val;
-            else
-            {
-                Type t = Type.GetType(typename);
-                //if (t == null) // RaptorDB : loading runtime assemblies
-                //{
-                //    t = Type.GetType(typename, (name) => {
-                //        return AppDomain.CurrentDomain.GetAssemblies().Where(z => z.FullName == name.FullName).FirstOrDefault();
-                //    }, null, true);
-                //}
-                _typecache.Add(typename, t);
-                return t;
-            }
-        }
+		internal Type GetTypeFromCache(string typename)
+		{
+			Type val = null;
+			if (_typecache.TryGetValue(typename, out val))
+				return val;
+			else
+			{
+				Type t = Type.GetType(typename);
+				//if (t == null) // RaptorDB : loading runtime assemblies
+				//{
+				//    t = Type.GetType(typename, (name) => {
+				//        return AppDomain.CurrentDomain.GetAssemblies().Where(z => z.FullName == name.FullName).FirstOrDefault();
+				//    }, null, true);
+				//}
+				_typecache.Add(typename, t);
+				return t;
+			}
+		}
 
-        internal object FastCreateInstance(Type objtype)
-        {
-            try
-            {
-                CreateObject c = null;
-                if (_constrcache.TryGetValue(objtype, out c))
-                {
-                    return c();
-                }
-                else
-                {
-                    if (objtype.IsClass)
-                    {
-                        DynamicMethod dynMethod = new DynamicMethod("_", objtype, null);
-                        ILGenerator ilGen = dynMethod.GetILGenerator();
-                        ilGen.Emit(OpCodes.Newobj, objtype.GetConstructor(Type.EmptyTypes));
-                        ilGen.Emit(OpCodes.Ret);
-                        c = (CreateObject)dynMethod.CreateDelegate(typeof(CreateObject));
-                        _constrcache.Add(objtype, c);
-                    }
-                    else // structs
-                    {
-                        DynamicMethod dynMethod = new DynamicMethod("_", typeof(object), null);
-                        ILGenerator ilGen = dynMethod.GetILGenerator();
-                        var lv = ilGen.DeclareLocal(objtype);
-                        ilGen.Emit(OpCodes.Ldloca_S, lv);
-                        ilGen.Emit(OpCodes.Initobj, objtype);
-                        ilGen.Emit(OpCodes.Ldloc_0);
-                        ilGen.Emit(OpCodes.Box, objtype);
-                        ilGen.Emit(OpCodes.Ret);
-                        c = (CreateObject)dynMethod.CreateDelegate(typeof(CreateObject));
-                        _constrcache.Add(objtype, c);
-                    }
-                    return c();
-                }
-            }
-            catch (Exception exc)
-            {
-                throw new Exception(string.Format("Failed to fast create instance for type '{0}' from assembly '{1}'",
-                    objtype.FullName, objtype.AssemblyQualifiedName), exc);
-            }
-        }
+		internal object FastCreateInstance(Type objtype)
+		{
+			try
+			{
+				CreateObject c = null;
+				if (_constrcache.TryGetValue(objtype, out c))
+				{
+					return c();
+				}
+				else
+				{
+					if (objtype.IsClass)
+					{
+						DynamicMethod dynMethod = new DynamicMethod("_", objtype, null);
+						ILGenerator ilGen = dynMethod.GetILGenerator();
+						ilGen.Emit(OpCodes.Newobj, objtype.GetConstructor(Type.EmptyTypes));
+						ilGen.Emit(OpCodes.Ret);
+						c = (CreateObject)dynMethod.CreateDelegate(typeof(CreateObject));
+						_constrcache.Add(objtype, c);
+					}
+					else // structs
+					{
+						DynamicMethod dynMethod = new DynamicMethod("_", typeof(object), null);
+						ILGenerator ilGen = dynMethod.GetILGenerator();
+						var lv = ilGen.DeclareLocal(objtype);
+						ilGen.Emit(OpCodes.Ldloca_S, lv);
+						ilGen.Emit(OpCodes.Initobj, objtype);
+						ilGen.Emit(OpCodes.Ldloc_0);
+						ilGen.Emit(OpCodes.Box, objtype);
+						ilGen.Emit(OpCodes.Ret);
+						c = (CreateObject)dynMethod.CreateDelegate(typeof(CreateObject));
+						_constrcache.Add(objtype, c);
+					}
+					return c();
+				}
+			}
+			catch (Exception exc)
+			{
+				throw new Exception(string.Format("Failed to fast create instance for type '{0}' from assembly '{1}'",
+					objtype.FullName, objtype.AssemblyQualifiedName), exc);
+			}
+		}
 
-        internal static GenericSetter CreateSetField(Type type, FieldInfo fieldInfo)
-        {
-            Type[] arguments = new Type[2];
-            arguments[0] = arguments[1] = typeof(object);
+		internal static GenericSetter CreateSetField(Type type, FieldInfo fieldInfo)
+		{
+			Type[] arguments = new Type[2];
+			arguments[0] = arguments[1] = typeof(object);
 
-            DynamicMethod dynamicSet = new DynamicMethod("_", typeof(object), arguments, type);
+			DynamicMethod dynamicSet = new DynamicMethod("_", typeof(object), arguments, type);
 
-            ILGenerator il = dynamicSet.GetILGenerator();
+			ILGenerator il = dynamicSet.GetILGenerator();
 
-            if (!type.IsClass) // structs
-            {
-                var lv = il.DeclareLocal(type);
-                il.Emit(OpCodes.Ldarg_0);
-                il.Emit(OpCodes.Unbox_Any, type);
-                il.Emit(OpCodes.Stloc_0);
-                il.Emit(OpCodes.Ldloca_S, lv);
-                il.Emit(OpCodes.Ldarg_1);
-                if (fieldInfo.FieldType.IsClass)
-                    il.Emit(OpCodes.Castclass, fieldInfo.FieldType);
-                else
-                    il.Emit(OpCodes.Unbox_Any, fieldInfo.FieldType);
-                il.Emit(OpCodes.Stfld, fieldInfo);
-                il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Box, type);
-                il.Emit(OpCodes.Ret);
-            }
-            else
-            {
-                il.Emit(OpCodes.Ldarg_0);
-                il.Emit(OpCodes.Ldarg_1);
-                if (fieldInfo.FieldType.IsValueType)
-                    il.Emit(OpCodes.Unbox_Any, fieldInfo.FieldType);
-                il.Emit(OpCodes.Stfld, fieldInfo);
-                il.Emit(OpCodes.Ldarg_0);
-                il.Emit(OpCodes.Ret);
-            }
-            return (GenericSetter)dynamicSet.CreateDelegate(typeof(GenericSetter));
-        }
+			if (!type.IsClass) // structs
+			{
+				var lv = il.DeclareLocal(type);
+				il.Emit(OpCodes.Ldarg_0);
+				il.Emit(OpCodes.Unbox_Any, type);
+				il.Emit(OpCodes.Stloc_0);
+				il.Emit(OpCodes.Ldloca_S, lv);
+				il.Emit(OpCodes.Ldarg_1);
+				if (fieldInfo.FieldType.IsClass)
+					il.Emit(OpCodes.Castclass, fieldInfo.FieldType);
+				else
+					il.Emit(OpCodes.Unbox_Any, fieldInfo.FieldType);
+				il.Emit(OpCodes.Stfld, fieldInfo);
+				il.Emit(OpCodes.Ldloc_0);
+				il.Emit(OpCodes.Box, type);
+				il.Emit(OpCodes.Ret);
+			}
+			else
+			{
+				il.Emit(OpCodes.Ldarg_0);
+				il.Emit(OpCodes.Ldarg_1);
+				if (fieldInfo.FieldType.IsValueType)
+					il.Emit(OpCodes.Unbox_Any, fieldInfo.FieldType);
+				il.Emit(OpCodes.Stfld, fieldInfo);
+				il.Emit(OpCodes.Ldarg_0);
+				il.Emit(OpCodes.Ret);
+			}
+			return (GenericSetter)dynamicSet.CreateDelegate(typeof(GenericSetter));
+		}
 
-        internal static GenericSetter CreateSetMethod(Type type, PropertyInfo propertyInfo)
-        {
-            MethodInfo setMethod = propertyInfo.GetSetMethod();
-            if (setMethod == null)
-                return null;
+		internal static GenericSetter CreateSetMethod(Type type, PropertyInfo propertyInfo)
+		{
+			MethodInfo setMethod = propertyInfo.GetSetMethod();
+			if (setMethod == null)
+				return null;
 
-            Type[] arguments = new Type[2];
-            arguments[0] = arguments[1] = typeof(object);
+			Type[] arguments = new Type[2];
+			arguments[0] = arguments[1] = typeof(object);
 
-            DynamicMethod setter = new DynamicMethod("_", typeof(object), arguments);
-            ILGenerator il = setter.GetILGenerator();
+			DynamicMethod setter = new DynamicMethod("_", typeof(object), arguments);
+			ILGenerator il = setter.GetILGenerator();
 
-            if (!type.IsClass) // structs
-            {
-                var lv = il.DeclareLocal(type);
-                il.Emit(OpCodes.Ldarg_0);
-                il.Emit(OpCodes.Unbox_Any, type);
-                il.Emit(OpCodes.Stloc_0);
-                il.Emit(OpCodes.Ldloca_S, lv);
-                il.Emit(OpCodes.Ldarg_1);
-                if (propertyInfo.PropertyType.IsClass)
-                    il.Emit(OpCodes.Castclass, propertyInfo.PropertyType);
-                else
-                    il.Emit(OpCodes.Unbox_Any, propertyInfo.PropertyType);
-                il.EmitCall(OpCodes.Call, setMethod, null);
-                il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Box, type);
-            }
-            else
-            {
-                il.Emit(OpCodes.Ldarg_0);
-                il.Emit(OpCodes.Castclass, propertyInfo.DeclaringType);
-                il.Emit(OpCodes.Ldarg_1);
-                if (propertyInfo.PropertyType.IsClass)
-                    il.Emit(OpCodes.Castclass, propertyInfo.PropertyType);
-                else
-                    il.Emit(OpCodes.Unbox_Any, propertyInfo.PropertyType);
-                il.EmitCall(OpCodes.Callvirt, setMethod, null);
-                il.Emit(OpCodes.Ldarg_0);
-            }
+			if (!type.IsClass) // structs
+			{
+				var lv = il.DeclareLocal(type);
+				il.Emit(OpCodes.Ldarg_0);
+				il.Emit(OpCodes.Unbox_Any, type);
+				il.Emit(OpCodes.Stloc_0);
+				il.Emit(OpCodes.Ldloca_S, lv);
+				il.Emit(OpCodes.Ldarg_1);
+				if (propertyInfo.PropertyType.IsClass)
+					il.Emit(OpCodes.Castclass, propertyInfo.PropertyType);
+				else
+					il.Emit(OpCodes.Unbox_Any, propertyInfo.PropertyType);
+				il.EmitCall(OpCodes.Call, setMethod, null);
+				il.Emit(OpCodes.Ldloc_0);
+				il.Emit(OpCodes.Box, type);
+			}
+			else
+			{
+				il.Emit(OpCodes.Ldarg_0);
+				il.Emit(OpCodes.Castclass, propertyInfo.DeclaringType);
+				il.Emit(OpCodes.Ldarg_1);
+				if (propertyInfo.PropertyType.IsClass)
+					il.Emit(OpCodes.Castclass, propertyInfo.PropertyType);
+				else
+					il.Emit(OpCodes.Unbox_Any, propertyInfo.PropertyType);
+				il.EmitCall(OpCodes.Callvirt, setMethod, null);
+				il.Emit(OpCodes.Ldarg_0);
+			}
 
-            il.Emit(OpCodes.Ret);
+			il.Emit(OpCodes.Ret);
 
-            return (GenericSetter)setter.CreateDelegate(typeof(GenericSetter));
-        }
+			return (GenericSetter)setter.CreateDelegate(typeof(GenericSetter));
+		}
 
-        internal static GenericGetter CreateGetField(Type type, FieldInfo fieldInfo)
-        {
-            DynamicMethod dynamicGet = new DynamicMethod("_", typeof(object), new Type[] { typeof(object) }, type);
+		internal static GenericGetter CreateGetField(Type type, FieldInfo fieldInfo)
+		{
+			DynamicMethod dynamicGet = new DynamicMethod("_", typeof(object), new Type[] { typeof(object) }, type);
 
-            ILGenerator il = dynamicGet.GetILGenerator();
+			ILGenerator il = dynamicGet.GetILGenerator();
 
-            if (!type.IsClass) // structs
-            {
-                var lv = il.DeclareLocal(type);
-                il.Emit(OpCodes.Ldarg_0);
-                il.Emit(OpCodes.Unbox_Any, type);
-                il.Emit(OpCodes.Stloc_0);
-                il.Emit(OpCodes.Ldloca_S, lv);
-                il.Emit(OpCodes.Ldfld, fieldInfo);
-                if (fieldInfo.FieldType.IsValueType)
-                    il.Emit(OpCodes.Box, fieldInfo.FieldType);
-            }
-            else
-            {
-                il.Emit(OpCodes.Ldarg_0);
-                il.Emit(OpCodes.Ldfld, fieldInfo);
-                if (fieldInfo.FieldType.IsValueType)
-                    il.Emit(OpCodes.Box, fieldInfo.FieldType);
-            }
+			if (!type.IsClass) // structs
+			{
+				var lv = il.DeclareLocal(type);
+				il.Emit(OpCodes.Ldarg_0);
+				il.Emit(OpCodes.Unbox_Any, type);
+				il.Emit(OpCodes.Stloc_0);
+				il.Emit(OpCodes.Ldloca_S, lv);
+				il.Emit(OpCodes.Ldfld, fieldInfo);
+				if (fieldInfo.FieldType.IsValueType)
+					il.Emit(OpCodes.Box, fieldInfo.FieldType);
+			}
+			else
+			{
+				il.Emit(OpCodes.Ldarg_0);
+				il.Emit(OpCodes.Ldfld, fieldInfo);
+				if (fieldInfo.FieldType.IsValueType)
+					il.Emit(OpCodes.Box, fieldInfo.FieldType);
+			}
 
-            il.Emit(OpCodes.Ret);
+			il.Emit(OpCodes.Ret);
 
-            return (GenericGetter)dynamicGet.CreateDelegate(typeof(GenericGetter));
-        }
+			return (GenericGetter)dynamicGet.CreateDelegate(typeof(GenericGetter));
+		}
 
-        internal static GenericGetter CreateGetMethod(Type type, PropertyInfo propertyInfo)
-        {
-            MethodInfo getMethod = propertyInfo.GetGetMethod();
-            if (getMethod == null)
-                return null;
+		internal static GenericGetter CreateGetMethod(Type type, PropertyInfo propertyInfo)
+		{
+			MethodInfo getMethod = propertyInfo.GetGetMethod();
+			if (getMethod == null)
+				return null;
 
-            DynamicMethod getter = new DynamicMethod("_", typeof(object), new Type[] { typeof(object) }, type);
+			DynamicMethod getter = new DynamicMethod("_", typeof(object), new Type[] { typeof(object) }, type);
 
-            ILGenerator il = getter.GetILGenerator();
+			ILGenerator il = getter.GetILGenerator();
 
-            if (!type.IsClass) // structs
-            {
-                var lv = il.DeclareLocal(type);
-                il.Emit(OpCodes.Ldarg_0);
-                il.Emit(OpCodes.Unbox_Any, type);
-                il.Emit(OpCodes.Stloc_0);
-                il.Emit(OpCodes.Ldloca_S, lv);
-                il.EmitCall(OpCodes.Call, getMethod, null);
-                if (propertyInfo.PropertyType.IsValueType)
-                    il.Emit(OpCodes.Box, propertyInfo.PropertyType);
-            }
-            else
-            {
-                il.Emit(OpCodes.Ldarg_0);
-                il.Emit(OpCodes.Castclass, propertyInfo.DeclaringType);
-                il.EmitCall(OpCodes.Callvirt, getMethod, null);
-                if (propertyInfo.PropertyType.IsValueType)
-                    il.Emit(OpCodes.Box, propertyInfo.PropertyType);
-            }
+			if (!type.IsClass) // structs
+			{
+				var lv = il.DeclareLocal(type);
+				il.Emit(OpCodes.Ldarg_0);
+				il.Emit(OpCodes.Unbox_Any, type);
+				il.Emit(OpCodes.Stloc_0);
+				il.Emit(OpCodes.Ldloca_S, lv);
+				il.EmitCall(OpCodes.Call, getMethod, null);
+				if (propertyInfo.PropertyType.IsValueType)
+					il.Emit(OpCodes.Box, propertyInfo.PropertyType);
+			}
+			else
+			{
+				il.Emit(OpCodes.Ldarg_0);
+				il.Emit(OpCodes.Castclass, propertyInfo.DeclaringType);
+				il.EmitCall(OpCodes.Callvirt, getMethod, null);
+				if (propertyInfo.PropertyType.IsValueType)
+					il.Emit(OpCodes.Box, propertyInfo.PropertyType);
+			}
 
-            il.Emit(OpCodes.Ret);
+			il.Emit(OpCodes.Ret);
 
-            return (GenericGetter)getter.CreateDelegate(typeof(GenericGetter));
-        }
+			return (GenericGetter)getter.CreateDelegate(typeof(GenericGetter));
+		}
 
-        internal Getters[] GetGetters(Type type, bool ShowReadOnlyProperties, List<Type> IgnoreAttributes)//JSONParameters param)
-        {
-            Getters[] val = null;
-            if (_getterscache.TryGetValue(type, out val))
-                return val;
+		internal Getters[] GetGetters(Type type, bool ShowReadOnlyProperties, List<Type> IgnoreAttributes)//JSONParameters param)
+		{
+			Getters[] val = null;
+			if (_getterscache.TryGetValue(type, out val))
+				return val;
 
-            PropertyInfo[] props = type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
-            List<Getters> getters = new List<Getters>();
-            foreach (PropertyInfo p in props)
-            {
-                if (p.GetIndexParameters().Length > 0)
-                {// Property is an indexer
-                    continue;
-                }
+			PropertyInfo[] props = type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+			List<Getters> getters = new List<Getters>();
+			foreach (PropertyInfo p in props)
+			{
+				if (p.GetIndexParameters().Length > 0)
+				{// Property is an indexer
+					continue;
+				}
 				var ic = AttributeHelper.GetAttribute<IncludeAttribute> (p, true);
-                if (!p.CanWrite && ShowReadOnlyProperties == false && ic == null || ic != null && ic.Include == false) continue;
-                if (IgnoreAttributes != null)
-                {
-                    bool found = false;
-                    foreach (var ignoreAttr in IgnoreAttributes)
-                    {
-                        if (p.IsDefined(ignoreAttr, false))
-                        {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (found)
-                        continue;
-                }
-                GenericGetter g = CreateGetMethod(type, p);
+				if (!p.CanWrite && ShowReadOnlyProperties == false && ic == null || ic != null && ic.Include == false) continue;
+				if (IgnoreAttributes != null)
+				{
+					bool found = false;
+					foreach (var ignoreAttr in IgnoreAttributes)
+					{
+						if (p.IsDefined(ignoreAttr, false))
+						{
+							found = true;
+							break;
+						}
+					}
+					if (found)
+						continue;
+				}
+				GenericGetter g = CreateGetMethod(type, p);
 				AddGetter (getters, p, g);
-            }
+			}
 
-            FieldInfo[] fi = type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static);
-            foreach (var f in fi)
-            {
-                if (IgnoreAttributes != null)
-                {
-                    bool found = false;
-                    foreach (var ignoreAttr in IgnoreAttributes)
-                    {
-                        if (f.IsDefined(ignoreAttr, false))
-                        {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (found)
-                        continue;
-                }
-                if (f.IsLiteral == false)
-                {
+			FieldInfo[] fi = type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static);
+			foreach (var f in fi)
+			{
+				if (IgnoreAttributes != null)
+				{
+					bool found = false;
+					foreach (var ignoreAttr in IgnoreAttributes)
+					{
+						if (f.IsDefined(ignoreAttr, false))
+						{
+							found = true;
+							break;
+						}
+					}
+					if (found)
+						continue;
+				}
+				if (f.IsLiteral == false)
+				{
 					GenericGetter g = CreateGetField (type, f);
 					AddGetter (getters, f, g);
 				}
-            }
-            val = getters.ToArray();
-            _getterscache.Add(type, val);
-            return val;
-        }
+			}
+			val = getters.ToArray();
+			_getterscache.Add(type, val);
+			return val;
+		}
 
 		private static void AddGetter (List<Getters> getters, MemberInfo memberInfo, GenericGetter getter) {
 			if (getter != null) {
@@ -702,22 +702,22 @@ namespace fastJSON
 			}
 		}
 
-        #endregion
+		#endregion
 
-        internal void ResetPropertyCache()
-        {
-            _propertycache = new SafeDictionary<string, Dictionary<string, myPropInfo>>();
-        }
+		internal void ResetPropertyCache()
+		{
+			_propertycache = new SafeDictionary<string, Dictionary<string, myPropInfo>>();
+		}
 
-        internal void ClearReflectionCache()
-        {
-            _tyname = new SafeDictionary<Type, string>();
-            _typecache = new SafeDictionary<string, Type>();
-            _constrcache = new SafeDictionary<Type, CreateObject>();
-            _getterscache = new SafeDictionary<Type, Getters[]>();
-            _propertycache = new SafeDictionary<string, Dictionary<string, myPropInfo>>();
-            _genericTypes = new SafeDictionary<Type, Type[]>();
-            _genericTypeDef = new SafeDictionary<Type, Type>();
-        }
-    }
+		internal void ClearReflectionCache()
+		{
+			_tyname = new SafeDictionary<Type, string>();
+			_typecache = new SafeDictionary<string, Type>();
+			_constrcache = new SafeDictionary<Type, CreateObject>();
+			_getterscache = new SafeDictionary<Type, Getters[]>();
+			_propertycache = new SafeDictionary<string, Dictionary<string, myPropInfo>>();
+			_genericTypes = new SafeDictionary<Type, Type[]>();
+			_genericTypeDef = new SafeDictionary<Type, Type>();
+		}
+	}
 }

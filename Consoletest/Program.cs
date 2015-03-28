@@ -24,6 +24,11 @@ namespace consoletest
 			//if (Console.ReadKey().Key == ConsoleKey.E)
 			//	exotic = true;
 
+			var dv = new NullValueTest ();
+			Console.WriteLine (fastJSON.JSON.ToJSON (dv));
+			Console.WriteLine ((dv = fastJSON.JSON.ToObject<NullValueTest> (@"{ ""Text"": null, ""Number"": null, ""Array"": null, ""Guid"": null }")));
+			Console.WriteLine ((dv = fastJSON.JSON.ToObject<NullValueTest> (@"{}")));
+ 
 			colclass c = CreateObject ();
 			var t = fastJSON.JSON.ToJSON (c);
 			Console.WriteLine ("serialized object: ");

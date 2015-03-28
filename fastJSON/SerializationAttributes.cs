@@ -4,7 +4,7 @@ using System.Reflection;
 namespace fastJSON
 {
 	/// <summary>
-	/// Indicates whether a field or property should be included in serialization.
+	/// Indicates whether a field or property should be included in serialization. To control whether a field or property should be deserialized, use the <see cref="System.ComponentModel.ReadOnlyAttribute"/>.
 	/// </summary>
 	[AttributeUsage (AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false)]
 	public class IncludeAttribute : Attribute
@@ -52,11 +52,14 @@ namespace fastJSON
 		}
 	}
 
+	/// <summary>
+	/// Controls the serialized name of an Enum value.
+	/// </summary>
 	[AttributeUsage (AttributeTargets.Field, AllowMultiple = false)]
 	public class EnumValueAttribute : Attribute
 	{
 		/// <summary>
-		/// Gets or sets the literal name of the enum value.
+		/// Gets or sets the literal name of the Enum value.
 		/// </summary>
 		public string Name { get; set; }
 
@@ -65,6 +68,9 @@ namespace fastJSON
 		}
 	}
 
+	/// <summary>
+	/// Controls data conversion in serialization and deserialization.
+	/// </summary>
 	[AttributeUsage (AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false)]
 	public class DataConverterAttribute : Attribute
 	{
@@ -75,9 +81,7 @@ namespace fastJSON
 			get { return Converter == null ? null : Converter.GetType (); }
 			set { Converter = value != null ? Activator.CreateInstance (value) as IJsonConverter : null; }
 		}
-		/// <summary>
-		/// The extra value converter to convert string to object.
-		/// </summary>
+
 		internal IJsonConverter Converter { get; private set; }
 
 		public DataConverterAttribute (Type converter) {
