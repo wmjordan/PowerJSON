@@ -110,6 +110,56 @@ namespace fastJSON
 		object SerializationConvert (string fieldName, object fieldValue);
 	}
 
+	/// <summary>
+	/// A converter which implements the <see cref="IJsonConverter"/> to convert between two specific types.
+	/// </summary>
+	/// <typeparam name="O">The original type of the data being serialized.</typeparam>
+	/// <typeparam name="S">The serialized type of the data.</typeparam>
+	public abstract class JsonConverter<O, S> : IJsonConverter
+	{
+		/// <summary>
+		/// Reverts the serialized value back to the type of the orginal type. If the serialized value is not the type of <typeparamref name="S"/>, the <paramref name="fieldValue"/> will be returned.
+		/// </summary>
+		/// <param name="fieldName">The name of the annotated member.</param>
+		/// <param name="fieldValue">The serialized value.</param>
+		/// <returns>The reverted value which has the same type as the annotated member.</returns>
+		public object DeserializationConvert (string fieldName, object fieldValue) {
+			if (fieldValue is S) {
+				return Revert (fieldName, (S)fieldValue);
+			}
+			return fieldValue;
+		}
+
+		/// <summary>
+		/// Convert the original value before serialization. If the serialized value is not the type of <typeparamref name="O"/>, the <paramref name="fieldValue"/> will be returned.
+		/// </summary>
+		/// <param name="fieldName">The name of the annotated member.</param>
+		/// <param name="fieldValue">The value being serialized.</param>
+		/// <returns>The converted value.</returns>
+		public object SerializationConvert (string fieldName, object fieldValue) {
+			if (fieldValue is O) {
+				return Convert (fieldName, (O)fieldValue);
+			}
+			return fieldValue;
+		}
+
+		/// <summary>
+		/// Reverts the serialized value to the orginal value.
+		/// </summary>
+		/// <param name="fieldName">The name of the annotated member.</param>
+		/// <param name="fieldValue">The serialized value.</param>
+		/// <returns>The reverted value which has the same type as the annotated member.</returns>
+		public abstract O Revert (string fieldName, S fieldValue);
+
+		/// <summary>
+		/// Converts the original value before serialization.
+		/// </summary>
+		/// <param name="fieldName">The name of the annotated member.</param>
+		/// <param name="fieldValue">The value being serialized.</param>
+		/// <returns>The converted value.</returns>
+		public abstract S Convert (string fieldName, O fieldValue);
+	}
+
 	internal static class AttributeHelper
 	{
 		public static T[] GetAttributes<T> (MemberInfo member, bool inherit) where T : Attribute {

@@ -825,20 +825,13 @@ namespace fastJSON
 
 		private object CreateEnum(Type pt, object v)
 		{
-			// TODO : optimize create enum
 			var s = v as string;
-#if !SILVERLIGHT
 			if (s != null) {
 				return Reflection.Instance.GetEnumValue (pt, s);
 			}
 			else {
 				return Enum.ToObject (pt, v);
 			}
-			// return Enum.Parse(pt, v.ToString());
-#else
-			return Reflection.Instance.GetEnumValue (pt, s);
-			// return Enum.Parse(pt, v, true);
-#endif
 		}
 
 		private Guid CreateGuid(string s)

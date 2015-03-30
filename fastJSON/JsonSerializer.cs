@@ -189,13 +189,16 @@ namespace fastJSON
 		private void WriteEnum (Enum e) {
 			// TODO : optimize enum write
 			if (_params.UseValuesOfEnums == false) {
-				var n = Reflection.Instance.GetEnumName (e);
-				if (n != null) {
-					WriteStringFast (n);
-					return;
-				}
+				WriteValue (Convert.ToInt64 (e));
+				return;
 			}
-			WriteValue (Convert.ToInt64 (e));
+			var n = Reflection.Instance.GetEnumName (e);
+			if (n != null) {
+				WriteStringFast (n);
+			}
+			else {
+				WriteValue (Convert.ToInt64 (e));
+			}
 		}
 
 		private void WriteGuid(Guid g)
