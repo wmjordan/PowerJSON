@@ -321,6 +321,15 @@ namespace UnitTests
             Assert.AreEqual(2312, (o as Retclass).Field2);
         }
 
+		[Test]
+		public static void NameValueCollectionTest () {
+			var nv = new NameValueCollection ();
+			nv.Add ("item1", "value1");
+			nv.Add ("item1", "value2");
+			var s = fastJSON.JSON.ToJSON (nv);
+			var sv = fastJSON.JSON.ToObject<NameValueCollection> (s);
+			Assert.AreEqual (nv.GetValues (0), nv.GetValues (0));
+		}
 
         [Test]
         public static void StructTest()
@@ -886,6 +895,7 @@ namespace UnitTests
         }
 #endif
 
+#if net4
         [Test]
         public static void DynamicTest()
         {
@@ -915,6 +925,7 @@ namespace UnitTests
             var p = d[5].key;
             Assert.AreEqual(90, p);
         }
+#endif
 
         [Test]
         public static void CommaTests()

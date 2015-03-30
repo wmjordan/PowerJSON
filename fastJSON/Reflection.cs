@@ -19,7 +19,7 @@ namespace fastJSON
 		public Reflection.GenericGetter Getter;
 		public bool HasDefaultValue;
 		public object DefaultValue;
-		public Dictionary<Type, string> TypedName;
+		public Dictionary<Type, string> TypedNames;
 		public IJsonConverter Converter;
 	}
 
@@ -615,7 +615,7 @@ namespace fastJSON
 			return (GenericGetter)getter.CreateDelegate(typeof(GenericGetter));
 		}
 
-		internal Getters[] GetGetters(Type type, bool ShowReadOnlyProperties, List<Type> IgnoreAttributes)//JSONParameters param)
+		internal Getters[] GetGetters(Type type, bool showReadOnlyProperties, List<Type> ignoreAttributes)//JSONParameters param)
 		{
 			Getters[] val = null;
 			if (_getterscache.TryGetValue(type, out val))
@@ -630,11 +630,11 @@ namespace fastJSON
 					continue;
 				}
 				var ic = AttributeHelper.GetAttribute<IncludeAttribute> (p, true);
-				if (!p.CanWrite && ShowReadOnlyProperties == false && ic == null || ic != null && ic.Include == false) continue;
-				if (IgnoreAttributes != null)
+				if (!p.CanWrite && showReadOnlyProperties == false && ic == null || ic != null && ic.Include == false) continue;
+				if (ignoreAttributes != null)
 				{
 					bool found = false;
-					foreach (var ignoreAttr in IgnoreAttributes)
+					foreach (var ignoreAttr in ignoreAttributes)
 					{
 						if (p.IsDefined(ignoreAttr, false))
 						{
@@ -652,10 +652,10 @@ namespace fastJSON
 			FieldInfo[] fi = type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static);
 			foreach (var f in fi)
 			{
-				if (IgnoreAttributes != null)
+				if (ignoreAttributes != null)
 				{
 					bool found = false;
-					foreach (var ignoreAttr in IgnoreAttributes)
+					foreach (var ignoreAttr in ignoreAttributes)
 					{
 						if (f.IsDefined(ignoreAttr, false))
 						{
@@ -703,7 +703,7 @@ namespace fastJSON
 					SpecificName = sn,
 					HasDefaultValue = d != null,
 					DefaultValue = d != null ? d.Value : null,
-					TypedName = tn != null && tn.Count > 0 ? tn : null,
+					TypedNames = tn != null && tn.Count > 0 ? tn : null,
 					Converter = cv != null ? cv.Converter : null
 				});
 			}

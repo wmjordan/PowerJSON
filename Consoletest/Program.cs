@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Data;
 using System.Diagnostics;
 using System.IO;
@@ -24,15 +25,19 @@ namespace consoletest
 			if (Console.ReadKey ().Key == ConsoleKey.E)
 				exotic = true;
 
-			colclass c = CreateObject ();
-			var t = fastJSON.JSON.ToJSON (c);
-			Console.WriteLine ("serialized object: ");
-			Console.WriteLine (t);
-			Console.WriteLine ("deserialized object: ");
-			var o = fastJSON.JSON.ToObject<colclass> (t);
-			Console.WriteLine (fastJSON.JSON.ToJSON (o));
+			var nv = new NameValueCollection ();
+			nv.Add ("item1", "value1");
+			nv.Add ("item1", "value2");
+			var c = nv.GetValues (0).Length; // c = 2
+			Console.WriteLine (c);
+			var s = fastJSON.JSON.ToJSON (nv);
+			var sv = fastJSON.JSON.ToObject<NameValueCollection> (s);
+			var c2 = sv.GetValues (0).Length; // c = 1
+			Console.WriteLine (c2);
 			Console.ReadKey ();
 
+			WriteTestObject (CreateObject ());
+			WriteTestObject (CreateNVCollection ());
 			NullValueTest ();
  
 			TestCustomConverterType ();
@@ -72,6 +77,25 @@ namespace consoletest
             //			stack_deserialize();
             #endregion
         }
+
+		private static System.Collections.Specialized.NameValueCollection CreateNVCollection () {
+			var n = new System.Collections.Specialized.NameValueCollection ();
+			n.Add ("new1", "value1");
+			n.Add ("item2", null);
+			n.Add ("item3", "value3");
+			n.Add ("item3", "value3");
+			return n;
+		}
+
+		private static void WriteTestObject<T> (T obj) {
+			var t = fastJSON.JSON.ToJSON (obj);
+			Console.WriteLine ("serialized " + typeof (T).FullName + ": ");
+			Console.WriteLine (t);
+			Console.WriteLine ("deserialized object: ");
+			var o = fastJSON.JSON.ToObject<T> (t);
+			Console.WriteLine (fastJSON.JSON.ToJSON (o));
+			Console.ReadKey ();
+		}
 
 		private static void NullValueTest () {
 			Console.WriteLine ("Null value test");
