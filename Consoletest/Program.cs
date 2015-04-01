@@ -18,8 +18,21 @@ namespace consoletest
         static bool exotic = false;
         static bool dsser = false;
 
-        public static void Main(string[] args)
+		[fastJSON.JsonSerializable]
+		class InternalClass
+		{
+			[fastJSON.Include]
+			public int ReadOnly { get; private set; }
+
+			public InternalClass () {
+				ReadOnly = 1;
+			}
+		}
+		public static void Main (string[] args)
         {
+			var o = new InternalClass ();
+			var so = fastJSON.JSON.ToJSON (o);
+			var p = fastJSON.JSON.ToObject<InternalClass> (so);
 			Console.WriteLine (".net version = " + Environment.Version);
 			Console.WriteLine ("press key : (E)xotic ");
 			if (Console.ReadKey ().Key == ConsoleKey.E)

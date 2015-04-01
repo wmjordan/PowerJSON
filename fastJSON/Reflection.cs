@@ -197,6 +197,7 @@ namespace fastJSON
 				if (iv != 0) {
 					return null;
 				}
+				sl.Reverse ();
 				t = String.Join (",", sl.ToArray ());
 				_enumCache.Add (v, t);
 			}
@@ -433,9 +434,10 @@ namespace fastJSON
 				}
 				else
 				{
+					var s = ShouldSkipTypeVisibilityCheck (objtype);
 					if (objtype.IsClass)
 					{
-						DynamicMethod dynMethod = new DynamicMethod("_", objtype, null);
+						DynamicMethod dynMethod = s ? new DynamicMethod ("_", objtype, null, objtype, true) : new DynamicMethod ("_", objtype, Type.EmptyTypes);
 						ILGenerator ilGen = dynMethod.GetILGenerator();
 						ilGen.Emit(OpCodes.Newobj, objtype.GetConstructor(Type.EmptyTypes));
 						ilGen.Emit(OpCodes.Ret);
@@ -444,7 +446,7 @@ namespace fastJSON
 					}
 					else // structs
 					{
-						DynamicMethod dynMethod = new DynamicMethod("_", typeof(object), null);
+						DynamicMethod dynMethod = s ? new DynamicMethod("_", typeof(object), null, objtype, s) : new DynamicMethod ("_", typeof(object), null, objtype);
 						ILGenerator ilGen = dynMethod.GetILGenerator();
 						var lv = ilGen.DeclareLocal(objtype);
 						ilGen.Emit(OpCodes.Ldloca_S, lv);
@@ -465,12 +467,17 @@ namespace fastJSON
 			}
 		}
 
+		private static bool ShouldSkipTypeVisibilityCheck (Type objtype) {
+			var s = AttributeHelper.GetAttribute<JsonSerializableAttribute> (objtype, false) != null;
+			return s;
+		}
+
 		internal static GenericSetter CreateSetField(Type type, FieldInfo fieldInfo)
 		{
 			Type[] arguments = new Type[2];
 			arguments[0] = arguments[1] = typeof(object);
 
-			DynamicMethod dynamicSet = new DynamicMethod("_", typeof(object), arguments, type);
+			DynamicMethod dynamicSet = new DynamicMethod("_", typeof(object), arguments, type, ShouldSkipTypeVisibilityCheck (type));
 
 			ILGenerator il = dynamicSet.GetILGenerator();
 
@@ -513,7 +520,7 @@ namespace fastJSON
 			Type[] arguments = new Type[2];
 			arguments[0] = arguments[1] = typeof(object);
 
-			DynamicMethod setter = new DynamicMethod("_", typeof(object), arguments);
+			DynamicMethod setter = new DynamicMethod("_", typeof(object), arguments, ShouldSkipTypeVisibilityCheck (type));
 			ILGenerator il = setter.GetILGenerator();
 
 			if (!type.IsClass) // structs
@@ -552,7 +559,7 @@ namespace fastJSON
 
 		internal static GenericGetter CreateGetField(Type type, FieldInfo fieldInfo)
 		{
-			DynamicMethod dynamicGet = new DynamicMethod("_", typeof(object), new Type[] { typeof(object) }, type);
+			DynamicMethod dynamicGet = new DynamicMethod("_", typeof(object), new Type[] { typeof(object) }, type, ShouldSkipTypeVisibilityCheck (type));
 
 			ILGenerator il = dynamicGet.GetILGenerator();
 
@@ -586,7 +593,7 @@ namespace fastJSON
 			if (getMethod == null)
 				return null;
 
-			DynamicMethod getter = new DynamicMethod("_", typeof(object), new Type[] { typeof(object) }, type);
+			DynamicMethod getter = new DynamicMethod("_", typeof(object), new Type[] { typeof(object) }, type, ShouldSkipTypeVisibilityCheck (type));
 
 			ILGenerator il = getter.GetILGenerator();
 
@@ -630,7 +637,10 @@ namespace fastJSON
 					continue;
 				}
 				var ic = AttributeHelper.GetAttribute<IncludeAttribute> (p, true);
-				if (!p.CanWrite && showReadOnlyProperties == false && ic == null || ic != null && ic.Include == false) continue;
+				if (!p.CanWrite && showReadOnlyProperties == false && ic == null
+					|| ic != null && ic.Include == false) {
+					continue;
+				}
 				if (ignoreAttributes != null)
 				{
 					bool found = false;
@@ -652,6 +662,10 @@ namespace fastJSON
 			FieldInfo[] fi = type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static);
 			foreach (var f in fi)
 			{
+				var ic = AttributeHelper.GetAttribute<IncludeAttribute> (f, true);
+				if (ic != null && ic.Include == false) {
+					continue;
+				}
 				if (ignoreAttributes != null)
 				{
 					bool found = false;

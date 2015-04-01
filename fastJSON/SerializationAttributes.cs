@@ -4,6 +4,14 @@ using System.Reflection;
 namespace fastJSON
 {
 	/// <summary>
+	/// Indicates whether a class or a struct could be serialized, even if it is not a public one.
+	/// </summary>
+	[AttributeUsage (AttributeTargets.Class | AttributeTargets.Struct, Inherited=false)]
+	public class JsonSerializableAttribute : Attribute
+	{
+	}
+
+	/// <summary>
 	/// Indicates whether a field or property should be included in serialization. To control whether a field or property should be deserialized, use the <see cref="System.ComponentModel.ReadOnlyAttribute"/>.
 	/// </summary>
 	[AttributeUsage (AttributeTargets.Field | AttributeTargets.Property)]
