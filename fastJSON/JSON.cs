@@ -768,8 +768,12 @@ namespace fastJSON
 			NameValueCollection nv = new NameValueCollection();
 
 			foreach (var o in d) {
-				var ov = o.Value;
 				var k = o.Key;
+				var ov = o.Value;
+				if (ov == null) {
+					nv.Add (k, null);
+					continue;
+				}
 				var s = ov as string;
 				if (s != null) {
 					nv.Add (k, s);

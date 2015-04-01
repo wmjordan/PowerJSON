@@ -13,6 +13,7 @@ The attributes are listed below:
 	* IncludeAttribute: 1) explicitly controls whether a field or property is serialized or not. 2) allows serializing readonly property even when the ShowReadOnlyProperties setting is turned off.
 	* DataConverterAttribute: allows transforming data before serialization and deserialization.
 	* EnumValueAttribute: controls the serialized literal name of an Enum value.
+	* JsonSerializableAttribute: enables serializing and deserializing private or internal types.
 
 Some .NET built-in attributes are also supported.
 	* DefaultValueAttribute: values equal to DefaultValueAttribute.Value are not serialized.

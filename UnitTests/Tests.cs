@@ -302,6 +302,21 @@ namespace UnitTests
             var p = fastJSON.JSON.ToObject(s);
         }
 
+		[Test]
+		public static void MemberNameCase () {
+			var p = new JSONParameters () {
+				NamingConvention = NamingConvention.CamelCase,
+				UseExtensions = false };
+			var o = new A () {
+				DataA = 1
+			};
+			var s = fastJSON.JSON.ToJSON (o, p);
+			StringAssert.Contains ("dataA", s);
+			p.NamingConvention = NamingConvention.UpperCase;
+			s = fastJSON.JSON.ToJSON (o, p);
+			StringAssert.Contains ("DATAA", s);
+		}
+
         [Test]
         public static void ClassTest()
         {

@@ -295,7 +295,7 @@ namespace fastJSON
 			return sd;
 		}
 
-		private static void ProcessAttributes (Dictionary<string, myPropInfo> sd, MemberInfo memberInfo, myPropInfo propInfo) {
+		private void ProcessAttributes (Dictionary<string, myPropInfo> sd, MemberInfo memberInfo, myPropInfo propInfo) {
 			var df = AttributeHelper.GetAttributes<DataFieldAttribute> (memberInfo, true);
 			var cv = AttributeHelper.GetAttribute<DataConverterAttribute> (memberInfo, true);
 			if (cv != null && cv.Converter != null) {
@@ -308,8 +308,11 @@ namespace fastJSON
 			foreach (var item in df) {
 				var n = (item.Name ?? memberInfo.Name).ToLowerInvariant ();
 				if (item.Type != null) {
-					var dt = propInfo.Clone ();
-					dt.pt = item.Type;
+					var dt = CreateMyProp (item.Type, n, false);
+					dt.getter = propInfo.getter;
+					dt.setter = propInfo.setter;
+					dt.Converter = propInfo.Converter;
+					dt.CanWrite = propInfo.CanWrite;
 					sd.Add (n, dt);
 				}
 				else {
