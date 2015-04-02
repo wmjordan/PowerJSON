@@ -66,6 +66,7 @@ namespace UnitTests
             {
                 items = new List<baseclass>();
                 date = DateTime.Now;
+				timeSpan = new TimeSpan (11, 22, 33);
                 multilineString = @"
             AJKLjaskljLA
        ahjksjkAHJKS سلام فارسی
@@ -81,6 +82,7 @@ namespace UnitTests
             }
             public bool booleanValue { get; set; }
             public DateTime date { get; set; }
+			public TimeSpan timeSpan { get; set; }
             public string multilineString { get; set; }
             public List<baseclass> items { get; set; }
             public decimal ordinaryDecimal { get; set; }
@@ -1330,36 +1332,53 @@ namespace UnitTests
         {
             //FastCreateInstance(typeof(colclass));
             //lambdaCreateInstance(typeof(colclass));
-            int count = 100000;
+            int count = 1000000;
             Console.WriteLine("count = " + count.ToString("#,#"));
-            DateTime dt = DateTime.Now;
+			var w = new System.Diagnostics.Stopwatch ();
+			w.Start ();
             for (int i = 0; i < count; i++)
             {
                 object o = new colclass();
+				object s = new Retstruct ();
             }
-            Console.WriteLine("normal new T() time ms = " + DateTime.Now.Subtract(dt).TotalMilliseconds);
+			w.Stop ();
+            Console.WriteLine("normal new T() time ms = " + w.ElapsedMilliseconds);
 
-            dt = DateTime.Now;
-            for (int i = 0; i < count; i++)
+			w.Restart ();
+			for (int i = 0; i < count; i++)
             {
-                object o = System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(colclass));
+				object o = System.Runtime.Serialization.FormatterServices.GetUninitializedObject (typeof (colclass));
+				object s = System.Runtime.Serialization.FormatterServices.GetUninitializedObject (typeof (Retstruct));
             }
-            Console.WriteLine("FormatterServices time ms = " + DateTime.Now.Subtract(dt).TotalMilliseconds);
+			w.Stop ();
+			Console.WriteLine ("FormatterServices time ms = " + w.ElapsedMilliseconds);
 
-            dt = DateTime.Now;
-            for (int i = 0; i < count; i++)
+			w.Restart ();
+			for (int i = 0; i < count; i++)
             {
-                object o = FastCreateInstance(typeof(colclass));
+				object o = FastCreateInstance (typeof (colclass));
+				object s = FastCreateInstance (typeof (Retstruct));
             }
-            Console.WriteLine("IL newobj time ms = " + DateTime.Now.Subtract(dt).TotalMilliseconds);
+			w.Stop ();
+			Console.WriteLine ("IL newobj (FastCreateInstance) time ms = " + w.ElapsedMilliseconds);
 
-            dt = DateTime.Now;
-            for (int i = 0; i < count; i++)
+			w.Restart ();
+			for (int i = 0; i < count; i++)
             {
-                object o = lambdaCreateInstance(typeof(colclass));
+				object o = lambdaCreateInstance (typeof (colclass));
+				object s = lambdaCreateInstance (typeof (Retstruct));
             }
-            Console.WriteLine("lambda time ms = " + DateTime.Now.Subtract(dt).TotalMilliseconds);
-        }
+			w.Stop ();
+			Console.WriteLine ("lambda time ms = " + w.ElapsedMilliseconds);
+
+			w.Restart ();
+			for (int i = 0; i < count; i++) {
+				object o = Activator.CreateInstance (typeof (colclass));
+				object s = Activator.CreateInstance (typeof (Retstruct));
+			}
+			w.Stop ();
+			Console.WriteLine ("Activator.CreateInstance time ms = " + w.ElapsedMilliseconds);
+		}
 
 
         public class o1

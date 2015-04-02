@@ -711,6 +711,7 @@ namespace fastJSON
 						case myPropInfoType.DateTime: oset = CreateDateTime ((string)v); break;
 						case myPropInfoType.Enum: oset = CreateEnum (pi.pt, v); break;
 						case myPropInfoType.Guid: oset = CreateGuid ((string)v); break;
+						case myPropInfoType.TimeSpan: oset = CreateTimeSpan ((string)v); break;
 
 						case myPropInfoType.Array:
 							if (!pi.IsValueType)
@@ -877,6 +878,9 @@ namespace fastJSON
 				return new DateTime(year, month, day, hour, min, sec, ms, DateTimeKind.Utc).ToLocalTime();
 		}
 
+		private object CreateTimeSpan (string value) {
+			return TimeSpan.Parse (value);
+		}
 		private object CreateArray(IList data, Type pt, Type bt, Dictionary<string, object> globalTypes)
 		{
 			Array col = Array.CreateInstance(bt, data.Count);

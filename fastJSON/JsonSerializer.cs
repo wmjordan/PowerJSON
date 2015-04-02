@@ -85,6 +85,9 @@ namespace fastJSON
 			else if (obj is DateTime)
 				WriteDateTime((DateTime)obj);
 
+			else if (obj is TimeSpan) {
+				WriteTimeSpan ((TimeSpan)obj);
+			}
 			else if (_params.KVStyleStringDictionary == false && obj is IDictionary &&
 				obj.GetType().IsGenericType && obj.GetType().GetGenericArguments()[0] == typeof(string))
 
@@ -218,6 +221,9 @@ namespace fastJSON
 #endif
 		}
 
+		private void WriteTimeSpan (TimeSpan timeSpan) {
+			WriteStringFast (timeSpan.ToString ());
+		}
 		private void WriteDateTime(DateTime dateTime)
 		{
 			// datetime format standard : yyyy-MM-dd HH:mm:ss

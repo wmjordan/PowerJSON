@@ -162,6 +162,7 @@ namespace UnitTests
 			[DataField ("number", typeof (Int32))]
 			[DataField ("dateTime", typeof (DateTime))]
 			[DataField ("internalClass", typeof (InternalClass))]
+			[DataField ("variant")]
 			public object Variant { get; set; }
 
 			[DataField ("a", typeof (NamedClassA))]
@@ -194,6 +195,27 @@ namespace UnitTests
 			Assert.AreEqual (n.ToLongTimeString (), ((DateTime)p.Variant).ToLongTimeString ());
 			Assert.AreEqual (1, (p.InterfaceProperty as NamedClassB).Value);
 			Assert.AreEqual ("b", (p.InterfaceProperty as NamedClassB).Name);
+
+			// since the type of 1.3f, float, is not defined in DataFieldAttribute of the Variant property, the serializer will use default type handling methods to serialize and deserialize the value.
+			var d = o.Variant = 1.3f;
+			s = JSON.ToJSON (o, _JP);
+			Console.WriteLine (s);
+			p = JSON.ToObject<DataFieldTestSample> (s);
+			Assert.AreEqual ((float)d, (float)(double)p.Variant);
+
+			//var a = o.Variant = new int[] { 1, 2, 3 };
+			//s = JSON.ToJSON (o, _JP);
+			//Console.WriteLine (s);
+			//p = JSON.ToObject<DataFieldTestSample> (s);
+			//CollectionAssert.AreEqual ((ICollection)a, (ICollection)p.Variant);
+			//Console.WriteLine (p.Variant.GetType ().FullName);
+
+			//var b = o.Variant = new NamedClassA () { Name = "a", Value = true };
+			//s = JSON.ToJSON (o, _JP);
+			//Console.WriteLine (s);
+			//p = JSON.ToObject<DataFieldTestSample> (s);
+			//Assert.AreEqual (((NamedClassA)b).Name, ((NamedClassA)p.Variant).Name);
+			//Console.WriteLine (p.Variant.GetType ().FullName);
 		}
 
 		public class DefaultValueTest

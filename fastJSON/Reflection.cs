@@ -32,6 +32,7 @@ namespace fastJSON
 		DateTime,
 		Enum,
 		Guid,
+		TimeSpan,
 
 		Array,
 		ByteArray,
@@ -330,9 +331,10 @@ namespace fastJSON
 			else if (t == typeof(long) || t == typeof(long?)) d_type = myPropInfoType.Long;
 			else if (t == typeof(string)) d_type = myPropInfoType.String;
 			else if (t == typeof(bool) || t == typeof(bool?)) d_type = myPropInfoType.Bool;
-			else if (t == typeof(DateTime) || t == typeof(DateTime?)) d_type = myPropInfoType.DateTime;
+			else if (t == typeof (DateTime) || t == typeof (DateTime?)) d_type = myPropInfoType.DateTime;
 			else if (t.IsEnum) d_type = myPropInfoType.Enum;
 			else if (t == typeof(Guid) || t == typeof(Guid?)) d_type = myPropInfoType.Guid;
+			else if (t == typeof (TimeSpan) || t == typeof (TimeSpan?)) d_type = myPropInfoType.TimeSpan;
 			else if (t == typeof(StringDictionary)) d_type = myPropInfoType.StringDictionary;
 			else if (t == typeof(NameValueCollection)) d_type = myPropInfoType.NameValue;
 			else if (t.IsArray)

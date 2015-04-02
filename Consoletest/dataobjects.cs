@@ -146,6 +146,7 @@ namespace consoletest
 		{
 			items = new List<baseclass>();
 			date = DateTime.Now;
+			timeSpan = new TimeSpan (11, 22, 33);
 			multilineString = @"
             AJKLjaskljLA
        ahjksjkAHJKS سلام فارسی
@@ -170,7 +171,8 @@ namespace consoletest
 		public string ReadOnlyValue { get { return "I am readonly."; } }
 		[Include (false)]
 		public bool booleanValue { get; set; }
-		public DateTime date {get; set;}
+		public DateTime date { get; set; }
+		public TimeSpan timeSpan { get; set; }
 		public string multilineString { get; set; }
 		public List<baseclass> items { get; set; }
 		public decimal ordinaryDecimal {get; set;}
