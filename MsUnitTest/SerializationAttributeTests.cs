@@ -17,21 +17,57 @@ namespace UnitTests
 		};
 
 		[JsonSerializable]
-		class InternalClass
+		class PrivateClass
 		{
 			public int Field { get; set; }
-			public InternalStruct StructData { get; set; }
+			public PrivateStruct StructData { get; set; }
 
-			public InternalClass () {
+			public PrivateClass () {
 				Field = 1;
-				StructData = new InternalStruct ();
+				StructData = new PrivateStruct ();
 			}
 		}
 		[JsonSerializable]
-		struct InternalStruct
+		struct PrivateStruct
 		{
 			public int Field;
-			public InternalClass ClassData;
+			public PrivateClass ClassData;
+		}
+		class NonSerializableClass
+		{
+			public int Field { get; set; }
+		}
+		[TestMethod]
+		public void CreateNonPublicInstance () {
+			var so = new PrivateStruct () {
+				Field = 2,
+				ClassData = new PrivateClass () {
+					Field = 3
+				}
+			};
+			var ss = fastJSON.JSON.ToJSON (so, _JP);
+			var ps = fastJSON.JSON.ToObject<PrivateStruct> (ss);
+			Console.WriteLine (ss);
+			Assert.AreEqual (so.Field, ps.Field);
+			Assert.AreEqual (2, ps.Field);
+			Assert.AreEqual (3, ps.ClassData.Field);
+
+			var o = new PrivateClass ();
+			o.StructData = new PrivateStruct () { Field = 4 };
+			var s = fastJSON.JSON.ToJSON (o, _JP);
+			var p = fastJSON.JSON.ToObject<PrivateClass> (s);
+			Console.WriteLine (s);
+			Assert.AreEqual (o.Field, p.Field);
+			Assert.AreEqual (4, p.StructData.Field);
+
+		}
+		[TestMethod]
+		[ExpectedException (typeof(Exception))]
+		public void FailOnNonPublicClass () {
+			var ns = new NonSerializableClass ();
+			var s = fastJSON.JSON.ToJSON (ns, _JP);
+			Console.WriteLine (s);
+			var np = fastJSON.JSON.ToObject<NonSerializableClass> (s);
 		}
 
 		public class IncludeAttributeTest
@@ -49,32 +85,6 @@ namespace UnitTests
 				SerializableReadonlyProperty = 1;
 			}
 		}
-
-		[TestMethod]
-		public void CreateNonPublicInstance () {
-			var so = new InternalStruct () {
-				Field = 2,
-				ClassData = new InternalClass () {
-					Field = 3
-				}
-			};
-			var ss = fastJSON.JSON.ToJSON (so, _JP);
-			var ps = fastJSON.JSON.ToObject<InternalStruct> (ss);
-			Console.WriteLine (ss);
-			Assert.AreEqual (so.Field, ps.Field);
-			Assert.AreEqual (2, ps.Field);
-			Assert.AreEqual (3, ps.ClassData.Field);
-
-			var o = new InternalClass ();
-			o.StructData = new InternalStruct () { Field = 4 };
-			var s = fastJSON.JSON.ToJSON (o, _JP);
-			var p = fastJSON.JSON.ToObject<InternalClass> (s);
-			Console.WriteLine (s);
-			Assert.AreEqual (o.Field, p.Field);
-			Assert.AreEqual (4, p.StructData.Field);
-
-		}
-
 		[TestMethod]
 		public void IncludeMember () {
 			var o = new IncludeAttributeTest ();
@@ -161,7 +171,7 @@ namespace UnitTests
 			[DataField ("string", typeof (String))]
 			[DataField ("number", typeof (Int32))]
 			[DataField ("dateTime", typeof (DateTime))]
-			[DataField ("internalClass", typeof (InternalClass))]
+			[DataField ("internalClass", typeof (PrivateClass))]
 			[DataField ("variant")]
 			public object Variant { get; set; }
 
@@ -350,6 +360,41 @@ namespace UnitTests
 			Assert.AreEqual (3, d.ReadWriteProperty); // value got reset
 			s = JSON.ToJSON (d, _JP);
 			Console.WriteLine (s);
+		}
+
+		public class StaticFieldTestSample
+		{
+			public static int StaticProperty { get; set; }
+			public static readonly int MaxValue = 30;
+			public static int StaticReadOnlyProperty { get; private set; }
+
+			public static void ChangeReadOnlyProperty () {
+				StaticReadOnlyProperty = 3;
+			}
+		}
+		[TestMethod]
+		public void SerializeStaticFields () {
+			var d = new StaticFieldTestSample ();
+			StaticFieldTestSample.StaticProperty = 1;
+			var s = JSON.ToJSON (d, _JP);
+			Console.WriteLine (s);
+			StringAssert.Contains (s, @"""MaxValue"":");
+			StringAssert.Contains (s, @"""StaticProperty"":");
+			StaticFieldTestSample.StaticProperty = 2;
+			StaticFieldTestSample.ChangeReadOnlyProperty ();
+			var o = JSON.ToObject<StaticFieldTestSample> (s);
+			Assert.AreEqual (1, StaticFieldTestSample.StaticProperty);
+			Assert.AreEqual (3, StaticFieldTestSample.StaticReadOnlyProperty);
+			s = JSON.ToJSON (d, new JSONParameters () {
+				UseExtensions = false,
+				SerializeStaticMembers = false
+			});
+			Assert.AreEqual ("{}", s);
+			Console.WriteLine (s);
+			Console.WriteLine (JSON.ToJSON (d, _JP));
+			o = JSON.ToObject<StaticFieldTestSample> (@"{""MaxValue"":35}");
+			Assert.AreEqual (30, StaticFieldTestSample.MaxValue);
+			Console.WriteLine (JSON.ToJSON (o, _JP));
 		}
 	}
 }

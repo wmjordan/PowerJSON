@@ -1378,6 +1378,7 @@ namespace UnitTests
 			}
 			w.Stop ();
 			Console.WriteLine ("Activator.CreateInstance time ms = " + w.ElapsedMilliseconds);
+			Console.WriteLine ("The Activaor.CreateInstance method appears to be faster than FastCreateInstance in this test.\nIts implementation caches the most recently used 16 types.\nIf we are to serialize more than 16 types, its performance will not be as good as FastCreateInstance.");
 		}
 
 

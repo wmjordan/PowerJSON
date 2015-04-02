@@ -97,11 +97,19 @@ namespace fastJSON
 			set { _strategy = value ? NamingStrategy.LowerCase : NamingStrategy.Default; }
 		}
 
-		NamingStrategy _strategy = NamingStrategy.Default;
+		/// <summary>
+		/// Control the case of serialized field names.
+		/// </summary>
 		public NamingConvention NamingConvention {
 			get { return _strategy.Convention; }
 			set { _strategy = NamingStrategy.GetStrategy (value); }
 		}
+		/// <summary>
+		/// Serialize static fields or properties into the output (default = true)
+		/// </summary>
+		public bool SerializeStaticMembers = true;
+
+		NamingStrategy _strategy = NamingStrategy.Default;
 		internal NamingStrategy NamingStrategy { get { return _strategy; } }
 		
 		public void FixValues()
@@ -116,9 +124,27 @@ namespace fastJSON
 		}
 	}
 
+	/// <summary>
+	/// Control the letter case of serialized field names.
+	/// </summary>
 	public enum NamingConvention
 	{
-		Default, LowerCase, CamelCase, UpperCase
+		/// <summary>
+		/// The letter case of the serialized field names will not be changed.
+		/// </summary>
+		Default,
+		/// <summary>
+		/// The all letters in the serialized field names will be changed to lowercase.
+		/// </summary>
+		LowerCase,
+		/// <summary>
+		/// The first letter of each serialized field names will be changed to lowercase.
+		/// </summary>
+		CamelCase,
+		/// <summary>
+		/// The all letters in the serialized field names will be changed to uppercase.
+		/// </summary>
+		UpperCase
 	}
 
 	abstract class NamingStrategy

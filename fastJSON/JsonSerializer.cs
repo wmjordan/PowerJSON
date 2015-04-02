@@ -96,9 +96,6 @@ namespace fastJSON
 			else if (_params.KVStyleStringDictionary == false && obj is System.Dynamic.ExpandoObject)
 				WriteStringDictionary((IDictionary<string, object>)obj);
 #endif
-			else if (obj is NameValueCollection) {
-				WriteNameValueCollection ((NameValueCollection)obj);
-			}
 			else if (obj is IDictionary)
 				WriteDictionary((IDictionary)obj);
 #if !SILVERLIGHT
@@ -114,8 +111,9 @@ namespace fastJSON
 			else if (obj is StringDictionary)
 				WriteSD((StringDictionary)obj);
 
-			else if (obj is NameValueCollection)
-				WriteNV((NameValueCollection)obj);
+			else if (obj is NameValueCollection) {
+				WriteNameValueCollection ((NameValueCollection)obj);
+			}
 
 			else if (obj is IEnumerable)
 				WriteArray((IEnumerable)obj);
@@ -128,31 +126,6 @@ namespace fastJSON
 
 			else
 				WriteObject(obj);
-		}
-
-		private void WriteNV(NameValueCollection nameValueCollection)
-		{
-			_output.Append('{');
-
-			bool pendingSeparator = false;
-
-			foreach (string key in nameValueCollection)
-			{
-				if (_params.SerializeNullValues == false && (nameValueCollection[key] == null))
-				{
-				}
-				else
-				{
-					if (pendingSeparator) _output.Append(',');
-					WritePair (_params.NamingStrategy.Rename (key), nameValueCollection[key]);
-					//if (_params.SerializeToLowerCaseNames)
-					//	WritePair(key.ToLower(), nameValueCollection[key]);
-					//else
-					//	WritePair(key, nameValueCollection[key]);
-					pendingSeparator = true;
-				}
-			}
-			_output.Append('}');
 		}
 
 		private void WriteSD(StringDictionary stringDictionary)
@@ -426,6 +399,9 @@ namespace fastJSON
 			for (int ii = 0; ii < c; ii++)
 			{
 				var p = g[ii];
+				if (p.IsStatic && _params.SerializeStaticMembers == false) {
+					continue;
+				}
 				object o = p.Getter(obj);
 				if (_params.SerializeNullValues == false && (o == null || o is DBNull))
 				{

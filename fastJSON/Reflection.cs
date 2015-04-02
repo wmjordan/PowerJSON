@@ -21,6 +21,7 @@ namespace fastJSON
 		public object DefaultValue;
 		public Dictionary<Type, string> TypedNames;
 		public IJsonConverter Converter;
+		public bool IsStatic;
 	}
 
 	internal enum myPropInfoType
@@ -546,14 +547,24 @@ namespace fastJSON
 			}
 			else
 			{
-				il.Emit(OpCodes.Ldarg_0);
-				il.Emit(OpCodes.Castclass, propertyInfo.DeclaringType);
-				il.Emit(OpCodes.Ldarg_1);
-				if (propertyInfo.PropertyType.IsClass)
-					il.Emit(OpCodes.Castclass, propertyInfo.PropertyType);
-				else
-					il.Emit(OpCodes.Unbox_Any, propertyInfo.PropertyType);
-				il.EmitCall(OpCodes.Callvirt, setMethod, null);
+				if (setMethod.IsStatic) {
+					il.Emit (OpCodes.Ldarg_1);
+					if (propertyInfo.PropertyType.IsClass)
+						il.Emit (OpCodes.Castclass, propertyInfo.PropertyType);
+					else
+						il.Emit (OpCodes.Unbox_Any, propertyInfo.PropertyType);
+					il.EmitCall (OpCodes.Call, setMethod, null);
+				}
+				else {
+					il.Emit (OpCodes.Ldarg_0);
+					il.Emit (OpCodes.Castclass, propertyInfo.DeclaringType);
+					il.Emit (OpCodes.Ldarg_1);
+					if (propertyInfo.PropertyType.IsClass)
+						il.Emit (OpCodes.Castclass, propertyInfo.PropertyType);
+					else
+						il.Emit (OpCodes.Unbox_Any, propertyInfo.PropertyType);
+					il.EmitCall (OpCodes.Callvirt, setMethod, null);
+				}
 				il.Emit(OpCodes.Ldarg_0);
 			}
 
@@ -615,9 +626,14 @@ namespace fastJSON
 			}
 			else
 			{
-				il.Emit(OpCodes.Ldarg_0);
-				il.Emit(OpCodes.Castclass, propertyInfo.DeclaringType);
-				il.EmitCall(OpCodes.Callvirt, getMethod, null);
+				if (getMethod.IsStatic) {
+					il.EmitCall (OpCodes.Call, getMethod, null);
+				}
+				else {
+					il.Emit (OpCodes.Ldarg_0);
+					il.Emit (OpCodes.Castclass, propertyInfo.DeclaringType);
+					il.EmitCall (OpCodes.Callvirt, getMethod, null);
+				}
 				if (propertyInfo.PropertyType.IsValueType)
 					il.Emit(OpCodes.Box, propertyInfo.PropertyType);
 			}
@@ -716,6 +732,13 @@ namespace fastJSON
 						tn.Add (item.Type, item.Name);
 					}
 				}
+				bool s;
+				if (memberInfo is FieldInfo) {
+					s = ((FieldInfo)memberInfo).IsStatic;
+				}
+				else { // PropertyInfo
+					s = ((PropertyInfo)memberInfo).GetGetMethod ().IsStatic;
+				}
 				getters.Add (new Getters {
 					Getter = getter,
 					Name = n,
@@ -723,7 +746,8 @@ namespace fastJSON
 					HasDefaultValue = d != null,
 					DefaultValue = d != null ? d.Value : null,
 					TypedNames = tn != null && tn.Count > 0 ? tn : null,
-					Converter = cv != null ? cv.Converter : null
+					Converter = cv != null ? cv.Converter : null,
+					IsStatic = s
 				});
 			}
 		}
