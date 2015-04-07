@@ -165,7 +165,7 @@ namespace fastJSON
 		private void WriteEnum (Enum e) {
 			// TODO : optimize enum write
 			if (_params.UseValuesOfEnums) {
-				WriteValue (Convert.ToInt64 (e));
+				_output.Append(Convert.ToInt64 (e).ToString(NumberFormatInfo.InvariantInfo));
 				return;
 			}
 			var n = Reflection.Instance.GetEnumName (e);
@@ -173,7 +173,7 @@ namespace fastJSON
 				WriteStringFast (n);
 			}
 			else {
-				WriteValue (Convert.ToInt64 (e));
+				_output.Append (Convert.ToInt64 (e).ToString (NumberFormatInfo.InvariantInfo));
 			}
 		}
 
@@ -394,13 +394,17 @@ namespace fastJSON
 				append = true;
 			}
 
-			Getters[] g = Reflection.Instance.GetGetters(t, _params.ShowReadOnlyProperties, _params.IgnoreAttributes);
+			Getters[] g = Reflection.Instance.GetGetters(t, _params.IgnoreAttributes);
 			int c = g.Length;
+			var rp = _params.ShowReadOnlyProperties;
 			for (int ii = 0; ii < c; ii++)
 			{
 				var p = g[ii];
-				if (p.IsStatic && _params.SerializeStaticMembers == false) {
-					continue;
+				if (p.IsStatic && _params.SerializeStaticMembers == false
+					|| p.IsReadOnly && (p.IsProperty && rp == false || p.IsProperty == false && _params.ShowReadOnlyFields == false)) {
+					if (p.AllwaysInclude == false) {
+						continue;
+					}
 				}
 				object o = p.Getter(obj);
 				if (_params.SerializeNullValues == false && (o == null || o is DBNull))

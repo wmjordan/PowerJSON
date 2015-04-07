@@ -4,10 +4,10 @@ using System.Runtime.InteropServices;
 
 
 [assembly: AssemblyTitle("fastJSON")]
-[assembly: AssemblyDescription("smallest fastest polymorphic json serializer")]
+[assembly: AssemblyDescription ("smallest fastest polymorphic json serializer - PowerJSON fork")]
 [assembly: AssemblyProduct("fastJSON")]
-[assembly: AssemblyCopyright("2010-2014")]
+[assembly: AssemblyCopyright ("2010-2015")]
 
 
-[assembly: AssemblyVersion("2.1.0.0")]
-[assembly: AssemblyFileVersion("2.1.9.0")]
+[assembly: AssemblyVersion ("2.2.0.0")]
+[assembly: AssemblyFileVersion ("2.2.0.0")]

@@ -92,6 +92,7 @@ namespace UnitTests
 			o.IgnoreThisField = 2;
 			o.IgnoreThisProperty = 3;
 			var s = fastJSON.JSON.ToJSON (o, _JP);
+			Assert.IsFalse (s.Contains (@"""ReadonlyProperty"":"));
 			var p = fastJSON.JSON.ToObject<IncludeAttributeTest> (s);
 			Console.WriteLine (s);
 			Assert.AreEqual (1, p.ShowMe);
@@ -114,7 +115,16 @@ namespace UnitTests
 			MyFavorites = Apple | Watermelon | Pineapple,
 			All = Apple | Banana | Watermelon | Pineapple
 		}
+		public class NumericEnumConverter : JsonConverter<Fruits, int>
+		{
+			public override Fruits Revert (string fieldName, int fieldValue) {
+				return (Fruits)fieldValue;
+			}
 
+			public override int Convert (string fieldName, Fruits fieldValue) {
+				return (int)fieldValue;
+			}
+		}
 		public class EnumTestSample
 		{
 			public Fruits Apple { get; set; }
@@ -123,6 +133,8 @@ namespace UnitTests
 			public Fruits NoFruit { get; set; }
 			public Fruits FakeFruit { get; set; }
 			public Fruits ConvertedFruit { get; set; }
+			[DataConverter (typeof (NumericEnumConverter))]
+			public Fruits NumericFruit { get; set; }
 
 			public EnumTestSample () {
 				Apple = Fruits.Apple;
@@ -130,6 +142,7 @@ namespace UnitTests
 				MyFruit = Fruits.MyFavorites;
 				FakeFruit = (Fruits)33;
 				ConvertedFruit = (Fruits)5;
+				NumericFruit = Fruits.MyFavorites;
 			}
 		}
 
@@ -137,6 +150,7 @@ namespace UnitTests
 		public void EnumValue () {
 			var so = new EnumTestSample ();
 			var ss = fastJSON.JSON.ToJSON (so, _JP);
+			StringAssert.Contains (ss, @"""NumericFruit"":13");
 			var ps = fastJSON.JSON.ToObject<EnumTestSample> (ss);
 			Console.WriteLine (ss);
 			Assert.AreEqual ("\"bananaaaa\"", fastJSON.JSON.ToJSON (Fruits.Banana));
@@ -147,6 +161,7 @@ namespace UnitTests
 			Assert.AreEqual ((Fruits)33, ps.FakeFruit);
 			Assert.AreEqual (Fruits.None, ps.NoFruit);
 			Assert.AreEqual (Fruits.MyFavorites, ps.MyFruit);
+			Assert.AreEqual (Fruits.MyFavorites, ps.NumericFruit);
 		}
 
 		public interface IName
@@ -180,7 +195,7 @@ namespace UnitTests
 			public IName InterfaceProperty { get; set; }
 		}
 		[TestMethod]
-		public void MemberNameAndTypeControl () {
+		public void PolymorphicControl () {
 			var o = new DataFieldTestSample () {
 				MyProperty = 1,
 				Variant = "test",
@@ -213,19 +228,20 @@ namespace UnitTests
 			p = JSON.ToObject<DataFieldTestSample> (s);
 			Assert.AreEqual ((float)d, (float)(double)p.Variant);
 
-			//var a = o.Variant = new int[] { 1, 2, 3 };
-			//s = JSON.ToJSON (o, _JP);
-			//Console.WriteLine (s);
-			//p = JSON.ToObject<DataFieldTestSample> (s);
-			//CollectionAssert.AreEqual ((ICollection)a, (ICollection)p.Variant);
-			//Console.WriteLine (p.Variant.GetType ().FullName);
+			var a = o.Variant = new int[] { 1, 2, 3 };
+			s = JSON.ToJSON (o, _JP);
+			Console.WriteLine (s);
+			p = JSON.ToObject<DataFieldTestSample> (s);
+			// without data type information the deserialized collection would not match the type of the original, thus the following assertion will fail
+			// CollectionAssert.AreEqual ((ICollection)a, (ICollection)p.Variant);
+			Console.WriteLine (p.Variant.GetType ().FullName);
 
-			//var b = o.Variant = new NamedClassA () { Name = "a", Value = true };
-			//s = JSON.ToJSON (o, _JP);
-			//Console.WriteLine (s);
-			//p = JSON.ToObject<DataFieldTestSample> (s);
+			var b = o.Variant = new NamedClassA () { Name = "a", Value = true };
+			s = JSON.ToJSON (o, _JP);
+			Console.WriteLine (s);
+			p = JSON.ToObject<DataFieldTestSample> (s);
 			//Assert.AreEqual (((NamedClassA)b).Name, ((NamedClassA)p.Variant).Name);
-			//Console.WriteLine (p.Variant.GetType ().FullName);
+			Console.WriteLine (p.Variant.GetType ().FullName);
 		}
 
 		public class DefaultValueTest
@@ -378,7 +394,7 @@ namespace UnitTests
 			StaticFieldTestSample.StaticProperty = 1;
 			var s = JSON.ToJSON (d, _JP);
 			Console.WriteLine (s);
-			StringAssert.Contains (s, @"""MaxValue"":");
+			Assert.IsFalse (s.Contains (@"""MaxValue"":"));
 			StringAssert.Contains (s, @"""StaticProperty"":");
 			StaticFieldTestSample.StaticProperty = 2;
 			StaticFieldTestSample.ChangeReadOnlyProperty ();
@@ -395,6 +411,16 @@ namespace UnitTests
 			o = JSON.ToObject<StaticFieldTestSample> (@"{""MaxValue"":35}");
 			Assert.AreEqual (30, StaticFieldTestSample.MaxValue);
 			Console.WriteLine (JSON.ToJSON (o, _JP));
+			s = JSON.ToJSON (d, new JSONParameters () {
+				UseExtensions = false,
+				SerializeStaticMembers = true,
+				ShowReadOnlyProperties = true,
+				ShowReadOnlyFields = true
+			});
+			StringAssert.Contains (s, @"""MaxValue"":");
+			StringAssert.Contains (s, @"""StaticProperty"":");
+			Assert.AreEqual (30, StaticFieldTestSample.MaxValue);
+			Console.WriteLine (s);
 		}
 	}
 }

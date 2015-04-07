@@ -40,6 +40,7 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.Data" />
   </ItemGroup>
   <Choose>
     <When Condition="('$(VisualStudioVersion)' == '10.0' or '$(VisualStudioVersion)' == '') and '$(TargetFrameworkVersion)' == 'v3.5'">
@@ -56,11 +57,12 @@
   <ItemGroup>
     <Compile Include="SerializationAttributeTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="BonusPackTests.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\fastJSON\fastJSON net35.csproj">
-      <Project>{fdaf5695-e651-4d4d-8e15-0bd9fbef5069}</Project>
-      <Name>fastJSON net35</Name>
+    <ProjectReference Include="..\fastJSON\PowerJSON.csproj">
+      <Project>{508e9933-382c-46e9-950b-0264b21a8a7b}</Project>
+      <Name>PowerJSON</Name>
     </ProjectReference>
   </ItemGroup>
   <Choose>

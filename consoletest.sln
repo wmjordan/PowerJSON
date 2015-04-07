@@ -9,9 +9,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fastJSON", "fastJSON\fastJS
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTests", "UnitTests\UnitTests.csproj", "{F4BFF0D2-45F6-413B-B1E7-BC4A0D6596FC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fastJSON net35", "fastJSON\fastJSON net35.csproj", "{FDAF5695-E651-4D4D-8E15-0BD9FBEF5069}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fastJSON net2", "fastJSON\fastJSON net2.csproj", "{FDAF5695-E651-4D4D-8E15-0BD9FBEF5069}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MsUnitTest", "MsUnitTest\MsUnitTest.csproj", "{06986A96-E884-4807-BECD-8BF5153C2984}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowerJSON", "fastJSON\PowerJSON.csproj", "{508E9933-382C-46E9-950B-0264B21A8A7B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -55,6 +57,12 @@ Global
 		{06986A96-E884-4807-BECD-8BF5153C2984}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{06986A96-E884-4807-BECD-8BF5153C2984}.Release|Any CPU.Build.0 = Release|Any CPU
 		{06986A96-E884-4807-BECD-8BF5153C2984}.Release|x86.ActiveCfg = Release|Any CPU
+		{508E9933-382C-46E9-950B-0264B21A8A7B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{508E9933-382C-46E9-950B-0264B21A8A7B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{508E9933-382C-46E9-950B-0264B21A8A7B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{508E9933-382C-46E9-950B-0264B21A8A7B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{508E9933-382C-46E9-950B-0264B21A8A7B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{508E9933-382C-46E9-950B-0264B21A8A7B}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

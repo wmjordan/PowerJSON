@@ -34,9 +34,13 @@ namespace fastJSON
 		/// </summary>
 		public bool UseUTCDateTime = true;
 		/// <summary>
-		/// Show the readonly properties of types in the output (default = False)
+		/// Show the readonly properties of types in the output (default = False). <see cref="IncludeAttribute"/> has higher precedence than this setting.
 		/// </summary>
 		public bool ShowReadOnlyProperties = false;
+		/// <summary>
+		/// Show the readonly fields of types in the output (default = False). <see cref="IncludeAttribute"/> has higher precedence than this setting.
+		/// </summary>
+		public bool ShowReadOnlyFields = false;
 		/// <summary>
 		/// Use the $types extension to optimise the output json (default = True)
 		/// </summary>
@@ -105,7 +109,7 @@ namespace fastJSON
 			set { _strategy = NamingStrategy.GetStrategy (value); }
 		}
 		/// <summary>
-		/// Serialize static fields or properties into the output (default = true)
+		/// Serialize static fields or properties into the output (default = true).
 		/// </summary>
 		public bool SerializeStaticMembers = true;
 
@@ -365,13 +369,22 @@ namespace fastJSON
 		}
 
 		/// <summary>
-		/// Create a human readable string from the json 
+		/// Create a human readable string from the JSON. 
 		/// </summary>
-		/// <param name="input"></param>
-		/// <returns></returns>
-		public static string Beautify(string input)
+		/// <param name="input">The JSON string to be beautified.</param>
+		/// <returns>A pretty-printed JSON string.</returns>
+		public static string Beautify (string input) {
+			return Formatter.PrettyPrint (input);
+		}
+		/// <summary>
+		/// Create a human readable string from the JSON. 
+		/// </summary>
+		/// <param name="input">The JSON string to be beautified.</param>
+		/// <param name="decodeUnicode">Indicates whether \uXXXX encoded Unicode should be converted into actual Unicode character.</param>
+		/// <returns>A pretty-printed JSON string.</returns>
+		public static string Beautify(string input, bool decodeUnicode)
 		{
-			return Formatter.PrettyPrint(input);
+			return Formatter.PrettyPrint(input, decodeUnicode);
 		}
 		/// <summary>
 		/// Register custom type handlers for your own types not natively handled by fastJSON

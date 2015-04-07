@@ -19,6 +19,8 @@ Some .NET built-in attributes are also supported.
 	* DefaultValueAttribute: values equal to DefaultValueAttribute.Value are not serialized.
 	* ReadOnlyAttribute: values are not deserialized when ReadOnlyAttribute.IsReadOnly is set to true.
 
+The Beautify method of JSON has introduced a new parameter: decodeUnicode, which allows decode "\uXXXX" encoded Unicode characters into human readable ones.
+
 This fork introduced the following settings in JSONParameters:
 	* NamingConvention: control the naming convention of serialized fields and properties. It has added support for camel-case, uppercase names.
 	* SerializeStaticMembers: control whether static fields or properties should be serialized. (2015-4-2)
@@ -28,3 +30,4 @@ This fork also fixed some issues in the original fastJSON project:
 	* Null values were ignored in deserialization (when the constructor of a type initialize the value, in deserialization, the null value should not be ignored).
 	* Multi-value items in NameValueCollection were not serialized correctly.
 	* Serializing TimeSpan type could cause application stack overflow. (2015-4-2)
+

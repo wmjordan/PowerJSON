@@ -1332,7 +1332,7 @@ namespace UnitTests
         {
             //FastCreateInstance(typeof(colclass));
             //lambdaCreateInstance(typeof(colclass));
-            int count = 1000000;
+            int count = 100000;
             Console.WriteLine("count = " + count.ToString("#,#"));
 			var w = new System.Diagnostics.Stopwatch ();
 			w.Start ();
@@ -1611,8 +1611,14 @@ namespace UnitTests
         [Test]
         public static void ReadonlyTest()
         {
-            var s = fastJSON.JSON.ToJSON(new readonlyclass(), new JSONParameters { ShowReadOnlyProperties = true });
-            var o = fastJSON.JSON.ToObject(s);
+			var d = new readonlyclass ();
+			var s = fastJSON.JSON.ToJSON (d, new JSONParameters { ShowReadOnlyProperties = false });
+			var o = fastJSON.JSON.ToObject (s);
+			Console.WriteLine (s);
+			var s2 = fastJSON.JSON.ToJSON (d, new JSONParameters { ShowReadOnlyProperties = true });
+            var o2 = fastJSON.JSON.ToObject(s2);
+			Console.WriteLine (s2);
+			Assert.AreNotEqual (s, s2);
         }
 
         public class container

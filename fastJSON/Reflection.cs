@@ -22,6 +22,10 @@ namespace fastJSON
 		public Dictionary<Type, string> TypedNames;
 		public IJsonConverter Converter;
 		public bool IsStatic;
+		public bool IsProperty;
+		public bool IsReadOnly;
+		public bool AllwaysInclude;
+		public Type MemberType;
 	}
 
 	internal enum myPropInfoType
@@ -283,12 +287,16 @@ namespace fastJSON
 			foreach (FieldInfo f in fi)
 			{
 				myPropInfo d = CreateMyProp(f.FieldType, f.Name, customType);
-				if (f.IsLiteral == false)
-				{
-					d.setter = Reflection.CreateSetField(type, f);
-					if (d.setter != null)
-						d.CanWrite = true;
-					d.getter = Reflection.CreateGetField(type, f);
+				if (f.IsLiteral == false) {
+					if (f.IsInitOnly == false) {
+						var ro = AttributeHelper.GetAttribute<System.ComponentModel.ReadOnlyAttribute> (f, true);
+						if (ro == null || ro.IsReadOnly == false) {
+							d.setter = Reflection.CreateSetField (type, f);
+							if (d.setter != null)
+								d.CanWrite = true;
+						}
+					}
+					d.getter = Reflection.CreateGetField (type, f);
 					ProcessAttributes (sd, f, d);
 				}
 			}
@@ -643,7 +651,7 @@ namespace fastJSON
 			return (GenericGetter)getter.CreateDelegate(typeof(GenericGetter));
 		}
 
-		internal Getters[] GetGetters(Type type, bool showReadOnlyProperties, List<Type> ignoreAttributes)//JSONParameters param)
+		internal Getters[] GetGetters(Type type, List<Type> ignoreAttributes)//JSONParameters param)
 		{
 			Getters[] val = null;
 			if (_getterscache.TryGetValue(type, out val))
@@ -655,11 +663,6 @@ namespace fastJSON
 			{
 				if (p.GetIndexParameters().Length > 0)
 				{// Property is an indexer
-					continue;
-				}
-				var ic = AttributeHelper.GetAttribute<IncludeAttribute> (p, true);
-				if (!p.CanWrite && showReadOnlyProperties == false && ic == null
-					|| ic != null && ic.Include == false) {
 					continue;
 				}
 				if (ignoreAttributes != null)
@@ -718,6 +721,12 @@ namespace fastJSON
 				var d = AttributeHelper.GetAttribute<System.ComponentModel.DefaultValueAttribute> (memberInfo, true);
 				Dictionary<Type, string> tn = new Dictionary<Type, string> ();
 				var cv = AttributeHelper.GetAttribute<DataConverterAttribute> (memberInfo, true);
+				var ic = AttributeHelper.GetAttribute<IncludeAttribute> (memberInfo, true);
+				if (ic != null) {
+					if (ic.Include == false) {
+						return; // don't add members with the [Include(false)] attribute
+					}
+				}
 				var sn = false;
 				var df = AttributeHelper.GetAttributes<DataFieldAttribute> (memberInfo, true);
 				foreach (var item in df) {
@@ -733,11 +742,22 @@ namespace fastJSON
 					}
 				}
 				bool s;
+				bool ro;
+				Type t;
+				bool tp;
 				if (memberInfo is FieldInfo) {
-					s = ((FieldInfo)memberInfo).IsStatic;
+					var f = ((FieldInfo)memberInfo);
+					s = f.IsStatic;
+					ro = f.IsInitOnly;
+					t = f.FieldType;
+					tp = false;
 				}
 				else { // PropertyInfo
-					s = ((PropertyInfo)memberInfo).GetGetMethod ().IsStatic;
+					var p = ((PropertyInfo)memberInfo);
+					s = (p.GetGetMethod () ?? p.GetSetMethod ()).IsStatic;
+					ro = p.GetSetMethod () == null; // p.CanWrite can return true if the setter is non-public
+					t = p.PropertyType;
+					tp = true;
 				}
 				getters.Add (new Getters {
 					Getter = getter,
@@ -747,7 +767,11 @@ namespace fastJSON
 					DefaultValue = d != null ? d.Value : null,
 					TypedNames = tn != null && tn.Count > 0 ? tn : null,
 					Converter = cv != null ? cv.Converter : null,
-					IsStatic = s
+					IsStatic = s,
+					IsProperty = tp,
+					IsReadOnly = ro,
+					AllwaysInclude = ic != null && ic.Include,
+					MemberType = t
 				});
 			}
 		}
