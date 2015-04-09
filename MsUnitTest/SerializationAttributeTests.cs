@@ -60,7 +60,21 @@ namespace UnitTests
 			Assert.AreEqual (o.Field, p.Field);
 			Assert.AreEqual (4, p.StructData.Field);
 
+			var l = new List<PrivateClass> () { new PrivateClass () { Field = 1 } };
+			var sl = fastJSON.JSON.ToJSON (l, _JP);
+			var pl = fastJSON.JSON.ToObject<List<PrivateClass>> (sl);
+			Console.WriteLine (sl);
+			Assert.AreEqual (l[0].Field, pl[0].Field);
+
+			var d = new Dictionary<string, List<PrivateClass>> () { 
+				{ "test", l }
+			};
+			var sd = fastJSON.JSON.ToJSON (d, _JP);
+			var pd = fastJSON.JSON.ToObject<Dictionary<string, List<PrivateClass>>> (sd);
+			Console.WriteLine (sd);
+			Assert.AreEqual (l[0].Field, d["test"][0].Field);
 		}
+
 		[TestMethod]
 		[ExpectedException (typeof(Exception))]
 		public void FailOnNonPublicClass () {

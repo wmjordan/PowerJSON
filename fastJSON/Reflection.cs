@@ -449,9 +449,10 @@ namespace fastJSON
 				else
 				{
 					var s = ShouldSkipTypeVisibilityCheck (objtype);
+					var n = objtype.Name + ".ctor";
 					if (objtype.IsClass)
 					{
-						DynamicMethod dynMethod = s ? new DynamicMethod ("_", objtype, null, objtype, true) : new DynamicMethod ("_", objtype, Type.EmptyTypes);
+						DynamicMethod dynMethod = s ? new DynamicMethod (n, objtype, null, objtype, true) : new DynamicMethod (n, objtype, Type.EmptyTypes);
 						ILGenerator ilGen = dynMethod.GetILGenerator();
 						ilGen.Emit(OpCodes.Newobj, objtype.GetConstructor(Type.EmptyTypes));
 						ilGen.Emit(OpCodes.Ret);
@@ -460,7 +461,7 @@ namespace fastJSON
 					}
 					else // structs
 					{
-						DynamicMethod dynMethod = s ? new DynamicMethod("_", typeof(object), null, objtype, s) : new DynamicMethod ("_", typeof(object), null, objtype);
+						DynamicMethod dynMethod = s ? new DynamicMethod(n, typeof(object), null, objtype, s) : new DynamicMethod (n, typeof(object), null, objtype);
 						ILGenerator ilGen = dynMethod.GetILGenerator();
 						var lv = ilGen.DeclareLocal(objtype);
 						ilGen.Emit(OpCodes.Ldloca_S, lv);
@@ -483,6 +484,14 @@ namespace fastJSON
 
 		private static bool ShouldSkipTypeVisibilityCheck (Type objtype) {
 			var s = AttributeHelper.GetAttribute<JsonSerializableAttribute> (objtype, false) != null;
+			if (s == false && objtype.IsGenericType) {
+				foreach (var item in objtype.GetGenericArguments ()) {
+					s = ShouldSkipTypeVisibilityCheck (item);
+					if (s) {
+						return true;
+					}
+				}
+			}
 			return s;
 		}
 
@@ -534,7 +543,7 @@ namespace fastJSON
 			Type[] arguments = new Type[2];
 			arguments[0] = arguments[1] = typeof(object);
 
-			DynamicMethod setter = new DynamicMethod("_", typeof(object), arguments, ShouldSkipTypeVisibilityCheck (type));
+			DynamicMethod setter = new DynamicMethod("set_" + propertyInfo.Name, typeof(object), arguments, ShouldSkipTypeVisibilityCheck (type));
 			ILGenerator il = setter.GetILGenerator();
 
 			if (!type.IsClass) // structs
@@ -583,7 +592,7 @@ namespace fastJSON
 
 		internal static GenericGetter CreateGetField(Type type, FieldInfo fieldInfo)
 		{
-			DynamicMethod dynamicGet = new DynamicMethod("_", typeof(object), new Type[] { typeof(object) }, type, ShouldSkipTypeVisibilityCheck (type));
+			DynamicMethod dynamicGet = new DynamicMethod (fieldInfo.Name, typeof (object), new Type[] { typeof (object) }, type, ShouldSkipTypeVisibilityCheck (type));
 
 			ILGenerator il = dynamicGet.GetILGenerator();
 
@@ -617,7 +626,7 @@ namespace fastJSON
 			if (getMethod == null)
 				return null;
 
-			DynamicMethod getter = new DynamicMethod("_", typeof(object), new Type[] { typeof(object) }, type, ShouldSkipTypeVisibilityCheck (type));
+			DynamicMethod getter = new DynamicMethod ("get_" + propertyInfo.Name, typeof (object), new Type[] { typeof (object) }, type, ShouldSkipTypeVisibilityCheck (type));
 
 			ILGenerator il = getter.GetILGenerator();
 

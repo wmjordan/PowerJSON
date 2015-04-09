@@ -618,11 +618,13 @@ namespace fastJSON
 						v = ParseDictionary(kv.Value as Dictionary<string, object>, null, t2, null);
 
 					else if (t2.IsArray)
-						v = CreateArray((IList)kv.Value, t2, t2.GetElementType(), null);
+						v = CreateArray ((List<object>)kv.Value, t2, t2.GetElementType (), null);
 
+					else if (t2.IsGenericType && t2.GetGenericTypeDefinition ().Equals (typeof (List<>))) {
+						v = CreateGenericList ((List<object>)kv.Value, t2, t2.GetGenericArguments ()[0], null);
+					}
 					else if (kv.Value is IList)
-						v = CreateGenericList((List<object>)kv.Value, t2, t1, null);
-
+						v = CreateGenericList ((List<object>)kv.Value, t2, t1, null);
 					else
 						v = ChangeType(kv.Value, t2);
 
