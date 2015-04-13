@@ -47,19 +47,20 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>Full</DebugType>
     <Optimize>True</Optimize>
-    <OutputPath>..\output\net40\</OutputPath>
+    <OutputPath>bin\net40\</OutputPath>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <DefineConstants>DEBUG;net4</DefineConstants>
+    <DefineConstants>DEBUG;</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>full</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
+    <OutputPath>..\output\net40\</OutputPath>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <DebugSymbols>true</DebugSymbols>
-    <DefineConstants>TRACE;net4</DefineConstants>
+    <DefineConstants>TRACE;</DefineConstants>
+    <DocumentationFile>..\output\net40\fastJSON.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <CheckForOverflowUnderflow>False</CheckForOverflowUnderflow>
@@ -72,9 +73,9 @@
     <BaseAddress>4194304</BaseAddress>
     <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DefineConstants>TRACE</DefineConstants>
-  </PropertyGroup>
+<PropertyGroup Condition=" '$(TargetFrameworkVersion.Replace(&quot;v&quot;,&quot;&quot;))' &gt;= '4.0' ">
+    <DefineConstants>$(DefineConstants);NET_40_OR_GREATER</DefineConstants>
+</PropertyGroup>
   <PropertyGroup>
     <AssemblyOriginatorKeyFile>fastJSON.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
@@ -91,6 +92,7 @@
     <Compile Include="dynamic.cs" />
     <Compile Include="Getters.cs" />
     <Compile Include="Formatter.cs" />
+    <Compile Include="JsonSerializationException.cs" />
     <Compile Include="JsonSerializer.cs" />
     <Compile Include="JSON.cs" />
     <Compile Include="JsonParser.cs" />

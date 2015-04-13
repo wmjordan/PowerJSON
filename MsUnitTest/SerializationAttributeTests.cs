@@ -16,6 +16,7 @@ namespace UnitTests
 			UseExtensions = false
 		};
 
+		#region Non-public types
 		[JsonSerializable]
 		class PrivateClass
 		{
@@ -76,23 +77,25 @@ namespace UnitTests
 		}
 
 		[TestMethod]
-		[ExpectedException (typeof(Exception))]
+		[ExpectedException (typeof (Exception))]
 		public void FailOnNonPublicClass () {
 			var ns = new NonSerializableClass ();
 			var s = fastJSON.JSON.ToJSON (ns, _JP);
 			Console.WriteLine (s);
 			var np = fastJSON.JSON.ToObject<NonSerializableClass> (s);
-		}
+		} 
+		#endregion
 
+		#region IncludeAttribute
 		public class IncludeAttributeTest
 		{
-			[Include (false)]
+			[JsonInclude (false)]
 			public int IgnoreThisProperty { get; set; }
-			[Include (false)]
+			[JsonInclude (false)]
 			public int IgnoreThisField;
 			public int ShowMe { get; set; }
 			public int ReadonlyProperty { get; private set; }
-			[Include (true)]
+			[JsonInclude (true)]
 			public int SerializableReadonlyProperty { get; private set; }
 
 			public IncludeAttributeTest () {
@@ -114,15 +117,17 @@ namespace UnitTests
 			Assert.AreEqual (0, p.IgnoreThisField);
 			Assert.AreEqual (1, p.SerializableReadonlyProperty);
 			Assert.AreEqual (0, p.ReadonlyProperty);
-		}
+		} 
+		#endregion
 
+		#region Enums
 		[Flags]
 		public enum Fruits
 		{
 			None,
-			[EnumValue ("@pple")]
+			[JsonEnumValue ("@pple")]
 			Apple = 1,
-			[EnumValue ("bananaaaa")]
+			[JsonEnumValue ("bananaaaa")]
 			Banana = 2,
 			Watermelon = 4,
 			Pineapple = 8,
@@ -147,7 +152,7 @@ namespace UnitTests
 			public Fruits NoFruit { get; set; }
 			public Fruits FakeFruit { get; set; }
 			public Fruits ConvertedFruit { get; set; }
-			[DataConverter (typeof (NumericEnumConverter))]
+			[JsonConverter (typeof (NumericEnumConverter))]
 			public Fruits NumericFruit { get; set; }
 
 			public EnumTestSample () {
@@ -161,7 +166,7 @@ namespace UnitTests
 		}
 
 		[TestMethod]
-		public void EnumValue () {
+		public void JsonEnumValueTest () {
 			var so = new EnumTestSample ();
 			var ss = fastJSON.JSON.ToJSON (so, _JP);
 			StringAssert.Contains (ss, @"""NumericFruit"":13");
@@ -176,8 +181,10 @@ namespace UnitTests
 			Assert.AreEqual (Fruits.None, ps.NoFruit);
 			Assert.AreEqual (Fruits.MyFavorites, ps.MyFruit);
 			Assert.AreEqual (Fruits.MyFavorites, ps.NumericFruit);
-		}
+		} 
+		#endregion
 
+		#region Polymorphy
 		public interface IName
 		{
 			string Name { get; set; }
@@ -192,25 +199,25 @@ namespace UnitTests
 			public string Name { get; set; }
 			public int Value { get; set; }
 		}
-		public class DataFieldTestSample
+		public class JsonFieldTestSample
 		{
-			[DataField ("my_property")]
+			[JsonField ("my_property")]
 			public int MyProperty { get; set; }
 
-			[DataField ("string", typeof (String))]
-			[DataField ("number", typeof (Int32))]
-			[DataField ("dateTime", typeof (DateTime))]
-			[DataField ("internalClass", typeof (PrivateClass))]
-			[DataField ("variant")]
+			[JsonField ("string", typeof (String))]
+			[JsonField ("number", typeof (Int32))]
+			[JsonField ("dateTime", typeof (DateTime))]
+			[JsonField ("internalClass", typeof (PrivateClass))]
+			[JsonField ("variant")]
 			public object Variant { get; set; }
 
-			[DataField ("a", typeof (NamedClassA))]
-			[DataField ("b", typeof (NamedClassB))]
+			[JsonField ("a", typeof (NamedClassA))]
+			[JsonField ("b", typeof (NamedClassB))]
 			public IName InterfaceProperty { get; set; }
 		}
 		[TestMethod]
 		public void PolymorphicControl () {
-			var o = new DataFieldTestSample () {
+			var o = new JsonFieldTestSample () {
 				MyProperty = 1,
 				Variant = "test",
 				InterfaceProperty = new NamedClassA () { Name = "a", Value = true }
@@ -218,7 +225,7 @@ namespace UnitTests
 			var s = JSON.ToJSON (o, _JP);
 			Console.WriteLine (s);
 			StringAssert.Contains (s, "my_property");
-			var p = JSON.ToObject<DataFieldTestSample> (s);
+			var p = JSON.ToObject<JsonFieldTestSample> (s);
 			Assert.AreEqual ("test", p.Variant);
 			Assert.AreEqual ("NamedClassA", p.InterfaceProperty.GetType ().Name);
 			Assert.AreEqual (true, (p.InterfaceProperty as NamedClassA).Value);
@@ -229,23 +236,23 @@ namespace UnitTests
 			o.InterfaceProperty = new NamedClassB () { Name = "b", Value = 1 };
 			s = JSON.ToJSON (o, _JP);
 			Console.WriteLine (s);
-			p = JSON.ToObject<DataFieldTestSample> (s);
+			p = JSON.ToObject<JsonFieldTestSample> (s);
 			Assert.AreEqual (n.ToLongDateString (), ((DateTime)p.Variant).ToLongDateString ());
 			Assert.AreEqual (n.ToLongTimeString (), ((DateTime)p.Variant).ToLongTimeString ());
 			Assert.AreEqual (1, (p.InterfaceProperty as NamedClassB).Value);
 			Assert.AreEqual ("b", (p.InterfaceProperty as NamedClassB).Name);
 
-			// since the type of 1.3f, float, is not defined in DataFieldAttribute of the Variant property, the serializer will use default type handling methods to serialize and deserialize the value.
+			// since the type of 1.3f, float, is not defined in JsonFieldAttribute of the Variant property, the serializer will use default type handling methods to serialize and deserialize the value.
 			var d = o.Variant = 1.3f;
 			s = JSON.ToJSON (o, _JP);
 			Console.WriteLine (s);
-			p = JSON.ToObject<DataFieldTestSample> (s);
+			p = JSON.ToObject<JsonFieldTestSample> (s);
 			Assert.AreEqual ((float)d, (float)(double)p.Variant);
 
 			var a = o.Variant = new int[] { 1, 2, 3 };
 			s = JSON.ToJSON (o, _JP);
 			Console.WriteLine (s);
-			p = JSON.ToObject<DataFieldTestSample> (s);
+			p = JSON.ToObject<JsonFieldTestSample> (s);
 			// without data type information the deserialized collection would not match the type of the original, thus the following assertion will fail
 			// CollectionAssert.AreEqual ((ICollection)a, (ICollection)p.Variant);
 			Console.WriteLine (p.Variant.GetType ().FullName);
@@ -253,11 +260,13 @@ namespace UnitTests
 			var b = o.Variant = new NamedClassA () { Name = "a", Value = true };
 			s = JSON.ToJSON (o, _JP);
 			Console.WriteLine (s);
-			p = JSON.ToObject<DataFieldTestSample> (s);
+			p = JSON.ToObject<JsonFieldTestSample> (s);
 			//Assert.AreEqual (((NamedClassA)b).Name, ((NamedClassA)p.Variant).Name);
 			Console.WriteLine (p.Variant.GetType ().FullName);
-		}
+		} 
+		#endregion
 
+		#region DefaultValueAttribute
 		public class DefaultValueTest
 		{
 			[DefaultValue (0)]
@@ -272,8 +281,49 @@ namespace UnitTests
 			s = JSON.ToJSON (o, _JP);
 			var p = JSON.ToObject<DefaultValueTest> (s);
 			Assert.AreEqual (1, p.MyProperty);
+		} 
+		#endregion
+
+		#region InterceptorAttribute
+		[JsonInterceptor (typeof (TestInterceptor))]
+		public class InterceptorTestSample
+		{
+			public int Value;
+		}
+		class TestInterceptor : JsonInterceptor<InterceptorTestSample>
+		{
+			public override bool OnSerializing (InterceptorTestSample obj) {
+				obj.Value = 1;
+				Console.WriteLine ("serializing.");
+				return true;
+			}
+			public override void OnSerialized (InterceptorTestSample obj) {
+				obj.Value = 2;
+				Console.WriteLine ("serialized.");
+			}
+			public override void OnDeserializing (InterceptorTestSample obj) {
+				obj.Value = 3;
+				Console.WriteLine ("deserializing.");
+			}
+			public override void OnDeserialized (InterceptorTestSample obj) {
+				obj.Value = 4;
+				Console.WriteLine ("deserialized.");
+			}
 		}
 
+		[TestMethod]
+		public void IntercepterTest () {
+			var d = new InterceptorTestSample ();
+			var s = JSON.ToJSON (d, _JP);
+			Console.WriteLine (s);
+			Assert.AreEqual (2, d.Value);
+
+			var o = JSON.ToObject<InterceptorTestSample> (s);
+			Assert.AreEqual (4, o.Value);
+		} 
+		#endregion
+
+		#region JsonConverterAttribute
 		class FakeEncryptionConverter : IJsonConverter
 		{
 			public object SerializationConvert (string fieldName, object fieldValue) {
@@ -291,39 +341,39 @@ namespace UnitTests
 				return fieldValue;
 			}
 		}
-		public class DataConverterTestSample
+		public class JsonConverterTestSample
 		{
-			[DataConverter (typeof(FakeEncryptionConverter))]
+			[JsonConverter (typeof (FakeEncryptionConverter))]
 			public string MyProperty { get; set; }
 		}
 		[TestMethod]
 		public void ConvertData () {
 			var s = "connection string";
-			var d = new DataConverterTestSample () { MyProperty = s };
+			var d = new JsonConverterTestSample () { MyProperty = s };
 			var ss = JSON.ToJSON (d, _JP);
 			Console.WriteLine (ss);
 			StringAssert.Contains (ss, "Encrypted: ");
 
-			var o = JSON.ToObject<DataConverterTestSample> (ss);
+			var o = JSON.ToObject<JsonConverterTestSample> (ss);
 			Assert.AreEqual (s, o.MyProperty);
 		}
 
 		public class CustomConverterType
 		{
-			[DataConverter (typeof (Int32ArrayConverter))]
-			[DataField ("arr")]
+			[JsonConverter (typeof (Int32ArrayConverter))]
+			[JsonField ("arr")]
 			public int[] Array { get; set; }
 
 			public int[] NormalArray { get; set; }
 
-			[DataConverter (typeof (Int32ArrayConverter))]
-			[DataField ("intArray1", typeof (int[]))]
-			[DataField ("listInt1", typeof (List<int>))]
+			[JsonConverter (typeof (Int32ArrayConverter))]
+			[JsonField ("intArray1", typeof (int[]))]
+			[JsonField ("listInt1", typeof (List<int>))]
 			public IList<int> Variable1 { get; set; }
 
-			[DataConverter (typeof (Int32ArrayConverter))]
-			[DataField ("intArray2", typeof (int[]))]
-			[DataField ("listInt2", typeof (List<int>))]
+			[JsonConverter (typeof (Int32ArrayConverter))]
+			[JsonField ("intArray2", typeof (int[]))]
+			[JsonField ("listInt2", typeof (List<int>))]
 			public IList<int> Variable2 { get; set; }
 		}
 		class Int32ArrayConverter : IJsonConverter
@@ -361,8 +411,10 @@ namespace UnitTests
 			CollectionAssert.AreEqual (c.NormalArray, o.NormalArray);
 			CollectionAssert.AreEqual ((ICollection)c.Variable1, (ICollection)o.Variable1);
 			CollectionAssert.AreEqual ((ICollection)c.Variable2, (ICollection)o.Variable2);
-		}
+		} 
+		#endregion
 
+		#region ReadOnly members
 		public class ReadOnlyTestSample
 		{
 			[ReadOnly (true)]
@@ -390,8 +442,10 @@ namespace UnitTests
 			Assert.AreEqual (3, d.ReadWriteProperty); // value got reset
 			s = JSON.ToJSON (d, _JP);
 			Console.WriteLine (s);
-		}
+		} 
+		#endregion
 
+		#region Static members
 		public class StaticFieldTestSample
 		{
 			public static int StaticProperty { get; set; }
@@ -436,5 +490,6 @@ namespace UnitTests
 			Assert.AreEqual (30, StaticFieldTestSample.MaxValue);
 			Console.WriteLine (s);
 		}
+		#endregion
 	}
 }

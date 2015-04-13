@@ -912,7 +912,7 @@ namespace UnitTests
         }
 #endif
 
-#if net4
+#if NET_40_OR_GREATER
         [Test]
         public static void DynamicTest()
         {
@@ -944,7 +944,7 @@ namespace UnitTests
         }
 #endif
 
-        [Test]
+		[Test]
         public static void CommaTests()
         {
             var s = JSON.ToJSON(new commaclass(), new JSONParameters());

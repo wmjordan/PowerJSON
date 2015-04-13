@@ -54,6 +54,11 @@ namespace fastJSON
 					case '{':
 					case '[':
 						output.Append(ch);
+						//if (chars[i+1] == ch+2) {
+						//	output.Append ((char)(ch + 2));
+						//	++i;
+						//	break;
+						//}
 						output.AppendLine();
 						AppendIndent(output, ++depth);
 						break;

@@ -92,7 +92,7 @@ namespace fastJSON
 				obj.GetType().IsGenericType && obj.GetType().GetGenericArguments()[0] == typeof(string))
 
 				WriteStringDictionary((IDictionary)obj);
-#if net4
+#if NET_40_OR_GREATER
 			else if (_params.KVStyleStringDictionary == false && obj is System.Dynamic.ExpandoObject)
 				WriteStringDictionary((IDictionary<string, object>)obj);
 #endif
@@ -354,6 +354,11 @@ namespace fastJSON
 					return;
 				}
 			}
+			Type t = obj.GetType ();
+			var si = Reflection.Instance.GetInterceptor (t);
+			if (si != null && si.OnSerializing (obj) == false) {
+				return;
+			}
 			if (_params.UsingGlobalTypes == false)
 				_output.Append('{');
 			else
@@ -370,11 +375,10 @@ namespace fastJSON
 			_TypesWritten = true;
 			_current_depth++;
 			if (_current_depth > _MAX_DEPTH)
-				throw new Exception("Serializer encountered maximum depth of " + _MAX_DEPTH);
+				throw new JsonSerializationException ("Serializer encountered maximum depth of " + _MAX_DEPTH);
 
 
 			Dictionary<string, string> map = new Dictionary<string, string>();
-			Type t = obj.GetType();
 			bool append = false;
 			if (_params.UseExtensions)
 			{
@@ -450,6 +454,9 @@ namespace fastJSON
 			}
 			_output.Append('}');
 			_current_depth--;
+			if (si != null) {
+				si.OnSerialized (obj);
+			}
 		}
 
 		private void WritePairFast(string name, string value)

@@ -70,7 +70,7 @@ namespace fastJSON
                             // :
                             if (NextToken() != Token.Colon)
                             {
-                                throw new Exception("Expected colon at index " + index);
+								throw new JsonSerializationException ("Expected colon at index " + index);
                             }
 
                             // value
@@ -136,7 +136,7 @@ namespace fastJSON
                     return null;
             }
 
-            throw new Exception("Unrecognized token at index" + index);
+			throw new JsonSerializationException ("Unrecognized token at index " + index);
         }
 
         private string ParseString()
@@ -229,7 +229,7 @@ namespace fastJSON
                 }
             }
 
-            throw new Exception("Unexpectedly reached end of string");
+			throw new JsonSerializationException ("Unexpectedly reached end of string");
         }
 
         private uint ParseSingleChar(char c1, uint multipliyer)
@@ -333,18 +333,19 @@ namespace fastJSON
             char c;
 
             // Skip past whitespace
-            do
+            while (index < json.Length)
             {
                 c = json[index];
 
                 if (c > ' ') break;
                 if (c != ' ' && c != '\t' && c != '\n' && c != '\r') break;
 
-            } while (++index < json.Length);
+				++index;
+            }
 
             if (index == json.Length)
             {
-                throw new Exception("Reached end of string unexpectedly");
+				throw new JsonSerializationException ("Reached end of string unexpectedly");
             }
 
             c = json[index];
@@ -423,7 +424,7 @@ namespace fastJSON
                     }
                     break;
             }
-            throw new Exception("Could not find token at index " + --index);
+			throw new JsonSerializationException ("Could not find token at index " + --index);
         }
     }
 }

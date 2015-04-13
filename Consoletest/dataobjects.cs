@@ -65,7 +65,7 @@ namespace consoletest
 	}
 	public class Test
 	{
-		[DataField ("multiple_1")]
+		[JsonField ("multiple_1")]
 		public FreeTypeTest Multiple1 { get; set; }
 		public FreeTypeTest Multiple2 { get; set; }
 		public FreeTypeTest Multiple3 { get; set; }
@@ -74,28 +74,28 @@ namespace consoletest
 
 	public class FreeTypeTest
 	{
-		[DataField ("class1", typeof (class1))]
-		[DataField ("class2", typeof (class2))]
-		[DataField ("defaultName")]
+		[JsonField ("class1", typeof (class1))]
+		[JsonField ("class2", typeof (class2))]
+		[JsonField ("defaultName")]
 		public object FreeType { get; set; }
 	}
 
 	public class CustomConverterType
 	{
-		[DataConverter (typeof(Int32ArrayConverter))]
-		[DataField ("arr")]
+		[JsonConverter (typeof(Int32ArrayConverter))]
+		[JsonField ("arr")]
 		public int[] Array { get; set; }
 
 		public int[] NormalArray { get; set; }
 
-		[DataConverter (typeof (Int32ArrayConverter))]
-		[DataField ("intArray1", typeof(int[]))]
-		[DataField ("listInt1", typeof (List<int>))]
+		[JsonConverter (typeof (Int32ArrayConverter))]
+		[JsonField ("intArray1", typeof(int[]))]
+		[JsonField ("listInt1", typeof (List<int>))]
 		public IList<int> Variable1 { get; set; }
 
-		[DataConverter (typeof (Int32ArrayConverter))]
-		[DataField ("intArray2", typeof (int[]))]
-		[DataField ("listInt2", typeof (List<int>))]
+		[JsonConverter (typeof (Int32ArrayConverter))]
+		[JsonField ("intArray2", typeof (int[]))]
+		[JsonField ("listInt2", typeof (List<int>))]
 		public IList<int> Variable2 { get; set; }
 	}
 
@@ -121,16 +121,16 @@ namespace consoletest
 
 	public enum Gender
 	{
-		[EnumValue ("man")]
+		[JsonEnumValue ("man")]
 		Male,
-		[EnumValue ("woman")]
+		[JsonEnumValue ("woman")]
 		Female
 	}
 	[Flags]
 	public enum Fruits
 	{
 		None,
-		[EnumValue ("appppppple")]
+		[JsonEnumValue ("appppppple")]
 		Apple = 1,
 		Pineapple = 2,
 		Watermelon = 4,
@@ -166,10 +166,10 @@ namespace consoletest
 			notsoFruits = new Fruits[] { 0, (Fruits)3, (Fruits)98 };
 			intarray = new int[5] {1,2,3,4,5};
 		}
-		[DataField ("readonly")]
-		[Include (true)]
+		[JsonField ("readonly")]
+		[JsonInclude (true)]
 		public string ReadOnlyValue { get { return "I am readonly."; } }
-		[Include (false)]
+		[JsonInclude (false)]
 		public bool booleanValue { get; set; }
 		public DateTime date { get; set; }
 		public TimeSpan timeSpan { get; set; }

@@ -106,6 +106,7 @@ namespace fastJSON
 		private SafeDictionary<Type, string> _tyname = new SafeDictionary<Type, string>();
 		private SafeDictionary<string, Type> _typecache = new SafeDictionary<string, Type>();
 		private SafeDictionary<Type, CreateObject> _constrcache = new SafeDictionary<Type, CreateObject>();
+		private SafeDictionary<Type, IJsonInterceptor> _interceptorCache = new SafeDictionary<Type, IJsonInterceptor> ();
 		private SafeDictionary<Type, Getters[]> _getterscache = new SafeDictionary<Type, Getters[]>();
 		private SafeDictionary<string, Dictionary<string, myPropInfo>> _propertycache = new SafeDictionary<string, Dictionary<string, myPropInfo>>();
 		private SafeDictionary<Type, Type[]> _genericTypes = new SafeDictionary<Type, Type[]>();
@@ -144,6 +145,20 @@ namespace fastJSON
 			return _customSerializer.TryGetValue(t, out s);
 		}
 		#endregion
+
+		public IJsonInterceptor GetInterceptor (Type t) {
+			IJsonInterceptor i;
+			if (_interceptorCache.TryGetValue (t, out i)) {
+				return i;
+			}
+			var a = AttributeHelper.GetAttribute<JsonInterceptorAttribute> (t, true);
+			if (a != null) {
+				_interceptorCache.Add (t, a.Interceptor);
+				return a.Interceptor;
+			}
+			_interceptorCache.Add (t, null);
+			return null;
+		}
 
 		public Type GetGenericTypeDefinition(Type t)
 		{
@@ -220,7 +235,7 @@ namespace fastJSON
 					var en = ns[i];
 					var ev = (Enum)vs.GetValue (i);
 					var m = enumType.GetMember (en)[0];
-					var a = AttributeHelper.GetAttribute<EnumValueAttribute> (m, false);
+					var a = AttributeHelper.GetAttribute<JsonEnumValueAttribute> (m, false);
 					if (a != null) {
 						en = a.Name;
 					}
@@ -306,8 +321,8 @@ namespace fastJSON
 		}
 
 		private void ProcessAttributes (Dictionary<string, myPropInfo> sd, MemberInfo memberInfo, myPropInfo propInfo) {
-			var df = AttributeHelper.GetAttributes<DataFieldAttribute> (memberInfo, true);
-			var cv = AttributeHelper.GetAttribute<DataConverterAttribute> (memberInfo, true);
+			var df = AttributeHelper.GetAttributes<JsonFieldAttribute> (memberInfo, true);
+			var cv = AttributeHelper.GetAttribute<JsonConverterAttribute> (memberInfo, true);
 			if (cv != null && cv.Converter != null) {
 				propInfo.Converter = cv.Converter;
 			}
@@ -477,7 +492,7 @@ namespace fastJSON
 			}
 			catch (Exception exc)
 			{
-				throw new Exception(string.Format("Failed to fast create instance for type '{0}' from assembly '{1}'",
+				throw new JsonSerializationException(string.Format("Failed to fast create instance for type '{0}' from assembly '{1}'",
 					objtype.FullName, objtype.AssemblyQualifiedName), exc);
 			}
 		}
@@ -695,7 +710,7 @@ namespace fastJSON
 			FieldInfo[] fi = type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static);
 			foreach (var f in fi)
 			{
-				var ic = AttributeHelper.GetAttribute<IncludeAttribute> (f, true);
+				var ic = AttributeHelper.GetAttribute<JsonIncludeAttribute> (f, true);
 				if (ic != null && ic.Include == false) {
 					continue;
 				}
@@ -729,15 +744,15 @@ namespace fastJSON
 				var n = memberInfo.Name;
 				var d = AttributeHelper.GetAttribute<System.ComponentModel.DefaultValueAttribute> (memberInfo, true);
 				Dictionary<Type, string> tn = new Dictionary<Type, string> ();
-				var cv = AttributeHelper.GetAttribute<DataConverterAttribute> (memberInfo, true);
-				var ic = AttributeHelper.GetAttribute<IncludeAttribute> (memberInfo, true);
+				var cv = AttributeHelper.GetAttribute<JsonConverterAttribute> (memberInfo, true);
+				var ic = AttributeHelper.GetAttribute<JsonIncludeAttribute> (memberInfo, true);
 				if (ic != null) {
 					if (ic.Include == false) {
 						return; // don't add members with the [Include(false)] attribute
 					}
 				}
 				var sn = false;
-				var df = AttributeHelper.GetAttributes<DataFieldAttribute> (memberInfo, true);
+				var df = AttributeHelper.GetAttributes<JsonFieldAttribute> (memberInfo, true);
 				foreach (var item in df) {
 					if (String.IsNullOrEmpty (item.Name)) {
 						continue;

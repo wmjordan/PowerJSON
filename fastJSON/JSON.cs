@@ -34,11 +34,11 @@ namespace fastJSON
 		/// </summary>
 		public bool UseUTCDateTime = true;
 		/// <summary>
-		/// Show the readonly properties of types in the output (default = False). <see cref="IncludeAttribute"/> has higher precedence than this setting.
+		/// Show the readonly properties of types in the output (default = False). <see cref="JsonIncludeAttribute"/> has higher precedence than this setting.
 		/// </summary>
 		public bool ShowReadOnlyProperties = false;
 		/// <summary>
-		/// Show the readonly fields of types in the output (default = False). <see cref="IncludeAttribute"/> has higher precedence than this setting.
+		/// Show the readonly fields of types in the output (default = False). <see cref="JsonIncludeAttribute"/> has higher precedence than this setting.
 		/// </summary>
 		public bool ShowReadOnlyFields = false;
 		/// <summary>
@@ -77,7 +77,8 @@ namespace fastJSON
 		/// <summary>
 		/// If you have parametric and no default constructor for you classes (default = False)
 		/// 
-		/// IMPORTANT NOTE : If True then all initial values within the class will be ignored and will be not set
+		/// IMPORTANT NOTE : If True then all initial values within the class will be ignored and will be not set.
+		/// In this case, you can use <see cref="JsonInterceptorAttribute"/> to assign an <see cref="IJsonInterceptor"/> to initialize the object.
 		/// </summary>
 		public bool ParametricConstructorOverride = false;
 		/// <summary>
@@ -275,7 +276,7 @@ namespace fastJSON
 		{
 			return new JsonParser(json).Decode();
 		}
-#if net4
+#if NET_40_OR_GREATER
 		/// <summary>
 		/// Create a .net4 dynamic object from the json string
 		/// </summary>
@@ -294,7 +295,7 @@ namespace fastJSON
 		/// <returns></returns>
 		public static T ToObject<T>(string json)
 		{
-			return new deserializer(Parameters).ToObject<T>(json);
+			return new Deserializer(Parameters).ToObject<T>(json);
 		}
 		/// <summary>
 		/// Create a typed generic object from the json with parameter override on this call
@@ -305,7 +306,7 @@ namespace fastJSON
 		/// <returns></returns>
 		public static T ToObject<T>(string json, JSONParameters param)
 		{
-			return new deserializer(param).ToObject<T>(json);
+			return new Deserializer(param).ToObject<T>(json);
 		}
 		/// <summary>
 		/// Create an object from the json
@@ -314,7 +315,7 @@ namespace fastJSON
 		/// <returns></returns>
 		public static object ToObject(string json)
 		{
-			return new deserializer(Parameters).ToObject(json, null);
+			return new Deserializer(Parameters).ToObject(json, null);
 		}
 		/// <summary>
 		/// Create an object from the json with parameter override on this call
@@ -324,7 +325,7 @@ namespace fastJSON
 		/// <returns></returns>
 		public static object ToObject(string json, JSONParameters param)
 		{
-			return new deserializer(param).ToObject(json, null);
+			return new Deserializer(param).ToObject(json, null);
 		}
 		/// <summary>
 		/// Create an object of type from the json
@@ -334,7 +335,7 @@ namespace fastJSON
 		/// <returns></returns>
 		public static object ToObject(string json, Type type)
 		{
-			return new deserializer(Parameters).ToObject(json, type);
+			return new Deserializer(Parameters).ToObject(json, type);
 		}
 		/// <summary>
 		/// Fill a given object with the json represenation
@@ -346,7 +347,7 @@ namespace fastJSON
 		{
 			Dictionary<string, object> ht = new JsonParser(json).Decode() as Dictionary<string, object>;
 			if (ht == null) return null;
-			return new deserializer(Parameters).ParseDictionary(ht, null, input.GetType(), input);
+			return new Deserializer(Parameters).ParseDictionary(ht, null, input.GetType(), input);
 		}
 		/// <summary>
 		/// Deep copy an object i.e. clone to a new object
@@ -355,7 +356,7 @@ namespace fastJSON
 		/// <returns></returns>
 		public static object DeepCopy(object obj)
 		{
-			return new deserializer(Parameters).ToObject(ToJSON(obj));
+			return new Deserializer(Parameters).ToObject(ToJSON(obj));
 		}
 		/// <summary>
 		/// 
@@ -365,7 +366,7 @@ namespace fastJSON
 		/// <returns></returns>
 		public static T DeepCopy<T>(T obj)
 		{
-			return new deserializer(Parameters).ToObject<T>(ToJSON(obj));
+			return new Deserializer(Parameters).ToObject<T>(ToJSON(obj));
 		}
 
 		/// <summary>
@@ -428,9 +429,9 @@ namespace fastJSON
 		}
 	}
 
-	internal class deserializer
+	internal class Deserializer
 	{
-		public deserializer(JSONParameters param)
+		public Deserializer(JSONParameters param)
 		{
 			_params = param;
 		}
@@ -683,7 +684,7 @@ namespace fastJSON
 			}
 
 			if (type == null)
-				throw new Exception("Cannot determine type");
+				throw new JsonSerializationException ("Cannot determine type");
 
 			string typename = type.FullName;
 			object o = input;
@@ -694,6 +695,10 @@ namespace fastJSON
 					o = System.Runtime.Serialization.FormatterServices.GetUninitializedObject(type);
 				else
 					o = r.FastCreateInstance(type);
+			}
+			var si = r.GetInterceptor (type);
+			if (si != null) {
+				si.OnDeserializing (o);
 			}
 			int circount = 0;
 			if (_circobj.TryGetValue(o, out circount) == false)
@@ -791,6 +796,9 @@ namespace fastJSON
 
 					o = pi.setter (o, oset);
 				}
+			}
+			if (si != null) {
+				si.OnDeserialized (o);
 			}
 			return o;
 		}

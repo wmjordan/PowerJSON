@@ -15,14 +15,21 @@ namespace fastJSON
 	/// Indicates whether a field or property should be included in serialization. To control whether a field or property should be deserialized, use the <see cref="System.ComponentModel.ReadOnlyAttribute"/>.
 	/// </summary>
 	[AttributeUsage (AttributeTargets.Field | AttributeTargets.Property)]
-	public class IncludeAttribute : Attribute
+	public class JsonIncludeAttribute : Attribute
 	{
 		/// <summary>
 		/// Gets or sets whether the annotated field or property should be included in serialization disregard whether it is readonly or not. The default value is true.
 		/// </summary>
 		public bool Include { get; set; }
-		public IncludeAttribute () { Include = true; }
-		public IncludeAttribute (bool include) {
+		/// <summary>
+		/// Indicates a member should be included in serialization.
+		/// </summary>
+		public JsonIncludeAttribute () { Include = true; }
+		/// <summary>
+		/// Indicates whether a member should be included in serialization.
+		/// </summary>
+		/// <param name="include">Indicates whether a member should be included in serialization.</param>
+		public JsonIncludeAttribute (bool include) {
 			Include = include;
 		}
 	}
@@ -31,14 +38,14 @@ namespace fastJSON
 	/// Indicates the name and data type of a field or property.
 	/// </summary>
 	[AttributeUsage (AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = true)]
-	public class DataFieldAttribute : Attribute
+	public class JsonFieldAttribute : Attribute
 	{
 		/// <summary>
 		/// Gets or sets the name when the annotated field or property is serialized or deserialized. This overrides the <see cref="JSONParameters.NamingConvention"/> setting in <see cref="JSONParameters"/>.
 		/// </summary>
 		public string Name { get; set; }
 		/// <summary>
-		/// The type of the field or property. The same field or property with multiple <see cref="DataFieldAttribute"/> can have various names mapped to various types.
+		/// The type of the field or property. The same field or property with multiple <see cref="JsonFieldAttribute"/> can have various names mapped to various types.
 		/// </summary>
 		public Type Type { get; set; }
 
@@ -46,7 +53,7 @@ namespace fastJSON
 		/// Specifies the name of the serialized field or property.
 		/// </summary>
 		/// <param name="name">The name of the serialized field or property.</param>
-		public DataFieldAttribute (string name) {
+		public JsonFieldAttribute (string name) {
 			Name = name;
 		}
 		/// <summary>
@@ -54,7 +61,7 @@ namespace fastJSON
 		/// </summary>
 		/// <param name="name">The name of the serialized field or property.</param>
 		/// <param name="type">The name is only used when the value is of this data type.</param>
-		public DataFieldAttribute (string name, Type type) {
+		public JsonFieldAttribute (string name, Type type) {
 			Name = name;
 			Type = type;
 		}
@@ -64,15 +71,121 @@ namespace fastJSON
 	/// Controls the serialized name of an Enum value.
 	/// </summary>
 	[AttributeUsage (AttributeTargets.Field)]
-	public class EnumValueAttribute : Attribute
+	public class JsonEnumValueAttribute : Attribute
 	{
 		/// <summary>
 		/// Gets or sets the literal name of the Enum value.
 		/// </summary>
 		public string Name { get; set; }
 
-		public EnumValueAttribute (string name) {
+		/// <summary>
+		/// Specifies the serialized name of the annotated Enum value.
+		/// </summary>
+		/// <param name="name"></param>
+		public JsonEnumValueAttribute (string name) {
 			this.Name = name;
+		}
+	}
+
+	/// <summary>
+	/// Controls the object being serialized or deserialized.
+	/// </summary>
+	[AttributeUsage (AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Enum)]
+	public class JsonInterceptorAttribute : Attribute
+	{
+		/// <summary>
+		/// The type of interceptor. The type should implement <see cref="IJsonInterceptor"/>. During serialization and deserialization, an instance of <see cref="IJsonInterceptor"/> will be used to process values of the object being processed.
+		/// </summary>
+		public Type InterceptorType {
+			get { return Interceptor == null ? null : Interceptor.GetType (); }
+			set { Interceptor = value != null ? Activator.CreateInstance (value) as IJsonInterceptor : null; }
+		}
+
+		internal IJsonInterceptor Interceptor { get; private set; }
+
+		public JsonInterceptorAttribute (Type interceptorType) {
+			InterceptorType = interceptorType;
+		}
+	}
+
+	public interface IJsonInterceptor
+	{
+		/// <summary>
+		/// This method is called before values are written out during serialization. If the method returns false, the object will not be serialized.
+		/// </summary>
+		/// <param name="obj">The object being serialized.</param>
+		/// <returns>Whether the object should be serialized.</returns>
+		bool OnSerializing (object obj);
+		/// <summary>
+		/// This method is called after the object has been fully serialized.
+		/// </summary>
+		/// <param name="obj">The object being serialized.</param>
+		void OnSerialized (object obj);
+
+		/// <summary>
+		/// This method is called between the object has been created and the values are filled during deserialization. This method provides an opportunity to initialize an object before deserialization.
+		/// </summary>
+		/// <param name="obj">The object being deserialized.</param>
+		void OnDeserializing (object obj);
+
+		/// <summary>
+		/// This method is called after the object has been fully deserialized. Data validation could be done onto the serialized object.
+		/// </summary>
+		/// <param name="obj">The object created from deserialization.</param>
+		void OnDeserialized (object obj);
+	}
+
+	/// <summary>
+	/// This is a default implementation of <see cref="IJsonInterceptor"/>, which restricts the type of the object being serialized or deserialized.
+	/// </summary>
+	/// <typeparam name="T">The type of the object being serialized or deserialized.</typeparam>
+	public abstract class JsonInterceptor<T> : IJsonInterceptor
+	{
+		/// <summary>
+		/// This method is called before values are written out during serialization. If the method returns false, the object will not be serialized.
+		/// </summary>
+		/// <param name="obj">The object being serialized.</param>
+		/// <returns>Whether the object should be serialized.</returns>
+		public virtual bool OnSerializing (T obj) { return true; }
+
+		/// <summary>
+		/// This method is called after the object has been fully serialized.
+		/// </summary>
+		/// <param name="obj">The object being serialized.</param>
+		public virtual void OnSerialized (T obj) { }
+
+		/// <summary>
+		/// This method is called between the object has been created and the values are filled during deserialization. This method provides an opportunity to initialize an object before deserialization.
+		/// </summary>
+		/// <param name="obj">The object being deserialized.</param>
+		public virtual void OnDeserializing (T obj) { }
+
+		/// <summary>
+		/// This method is called after the object has been fully deserialized. Data validation could be done onto the serialized object.
+		/// </summary>
+		/// <param name="obj">The object created from deserialization.</param>
+		public virtual void OnDeserialized (T obj) { }
+
+		bool IJsonInterceptor.OnSerializing (object obj) {
+			return (obj is T) ? OnSerializing ((T)obj) : false;
+		}
+
+		void IJsonInterceptor.OnSerialized (object obj) {
+			if (obj is T) {
+				OnSerialized ((T)obj);
+			}
+		}
+
+		void IJsonInterceptor.OnDeserializing (object obj) {
+			if (obj is T) {
+				OnDeserializing ((T)obj);
+			}
+		}
+
+		void IJsonInterceptor.OnDeserialized (object obj) {
+			if (obj is T) {
+				OnDeserialized ((T)obj);
+			}
 		}
 	}
 
@@ -80,7 +193,7 @@ namespace fastJSON
 	/// Controls data conversion in serialization and deserialization.
 	/// </summary>
 	[AttributeUsage (AttributeTargets.Field | AttributeTargets.Property)]
-	public class DataConverterAttribute : Attribute
+	public class JsonConverterAttribute : Attribute
 	{
 		/// <summary>
 		/// The type of converter to convert string to object. The type should implement <see cref="IJsonConverter"/>. During serialization and deserialization, an instance of <see cref="IJsonConverter"/> will be used to convert values to target type.
@@ -92,14 +205,17 @@ namespace fastJSON
 
 		internal IJsonConverter Converter { get; private set; }
 
-		public DataConverterAttribute (Type converter) {
+		public JsonConverterAttribute (Type converter) {
 			if (converter.IsInterface || typeof(IJsonConverter).IsAssignableFrom (converter) == false) {
-				throw new InvalidCastException (String.Concat ("The type ", converter.FullName, " defined in ", typeof(DataConverterAttribute).FullName, " does not implement interface ", typeof (IJsonConverter).FullName));
+				throw new InvalidCastException (String.Concat ("The type ", converter.FullName, " defined in ", typeof(JsonConverterAttribute).FullName, " does not implement interface ", typeof (IJsonConverter).FullName));
 			}
 			ConverterType = converter;
 		}
 	}
 
+	/// <summary>
+	/// Converts the member value being serialized or deserialized.
+	/// </summary>
 	public interface IJsonConverter
 	{
 		/// <summary>
@@ -110,7 +226,7 @@ namespace fastJSON
 		/// <returns>The converted value.</returns>
 		object SerializationConvert (string fieldName, object fieldValue);
 		/// <summary>
-		/// Converts fieldValue to a new value during deserialization.
+		/// Converts fieldValue to a new value during deserialization. The type of the <paramref name="fieldValue"/> and the returned value can be different types, which enables adapting various data types from deserialization.
 		/// </summary>
 		/// <param name="fieldName">The name of the field or property.</param>
 		/// <param name="fieldValue">The value of the field of property.</param>
@@ -119,7 +235,7 @@ namespace fastJSON
 	}
 
 	/// <summary>
-	/// A converter which implements the <see cref="IJsonConverter"/> to convert between two specific types.
+	/// A helper converter which implements the <see cref="IJsonConverter"/> to convert between two specific types.
 	/// </summary>
 	/// <typeparam name="O">The original type of the data being serialized.</typeparam>
 	/// <typeparam name="S">The serialized type of the data.</typeparam>

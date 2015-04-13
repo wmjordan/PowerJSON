@@ -53,10 +53,10 @@ namespace MsUnitTest
 
 		public class TestClass
 		{
-			[Include (false)]
+			[JsonInclude (false)]
 			public bool Excluded { get; set; }
 
-			[DataField ("renamed")]
+			[JsonField ("renamed")]
 			public int MyProperty { get; set; }
 			public TestClass (int v) {
 				MyProperty = v;
