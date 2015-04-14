@@ -77,7 +77,7 @@ namespace UnitTests
 		}
 
 		[TestMethod]
-		[ExpectedException (typeof (Exception))]
+		[ExpectedException (typeof (JsonSerializationException))]
 		public void FailOnNonPublicClass () {
 			var ns = new NonSerializableClass ();
 			var s = fastJSON.JSON.ToJSON (ns, _JP);

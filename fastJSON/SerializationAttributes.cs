@@ -104,6 +104,9 @@ namespace fastJSON
 		internal IJsonInterceptor Interceptor { get; private set; }
 
 		public JsonInterceptorAttribute (Type interceptorType) {
+			if (interceptorType.IsInterface || typeof (IJsonInterceptor).IsAssignableFrom (interceptorType) == false) {
+				throw new JsonSerializationException (String.Concat ("The type ", interceptorType.FullName, " defined in ", typeof (JsonInterceptorAttribute).FullName, " does not implement interface ", typeof (IJsonInterceptor).FullName));
+			}
 			InterceptorType = interceptorType;
 		}
 	}
@@ -207,7 +210,7 @@ namespace fastJSON
 
 		public JsonConverterAttribute (Type converter) {
 			if (converter.IsInterface || typeof(IJsonConverter).IsAssignableFrom (converter) == false) {
-				throw new InvalidCastException (String.Concat ("The type ", converter.FullName, " defined in ", typeof(JsonConverterAttribute).FullName, " does not implement interface ", typeof (IJsonConverter).FullName));
+				throw new JsonSerializationException (String.Concat ("The type ", converter.FullName, " defined in ", typeof (JsonConverterAttribute).FullName, " does not implement interface ", typeof (IJsonConverter).FullName));
 			}
 			ConverterType = converter;
 		}

@@ -441,7 +441,7 @@ namespace fastJSON
 				//	WritePair(p.Name, o);
 				if (o != null && _params.UseExtensions)
 				{
-					Type tt = o.GetType();
+					Type tt = o.GetType ();
 					if (tt == typeof(System.Object))
 						map.Add(p.Name, tt.ToString());
 				}
@@ -504,18 +504,16 @@ namespace fastJSON
 			{
 				if (_params.SerializeNullValues == false && (entry.Value == null))
 				{
+					continue;
 				}
-				else
-				{
-					if (pendingSeparator) _output.Append(',');
-					WritePair (_params.NamingStrategy.Rename ((string)entry.Key), entry.Value);
-					//string k = (string)entry.Key;
-					//if (_params.SerializeToLowerCaseNames)
-					//	WritePair(k.ToLower(), entry.Value);
-					//else
-					//	WritePair(k, entry.Value);
-					pendingSeparator = true;
-				}
+				if (pendingSeparator) _output.Append(',');
+				WritePair (_params.NamingStrategy.Rename ((string)entry.Key), entry.Value);
+				//string k = (string)entry.Key;
+				//if (_params.SerializeToLowerCaseNames)
+				//	WritePair(k.ToLower(), entry.Value);
+				//else
+				//	WritePair(k, entry.Value);
+				pendingSeparator = true;
 			}
 			_output.Append('}');
 		}
@@ -524,18 +522,29 @@ namespace fastJSON
 			_output.Append ('{');
 			bool pendingSeparator = false;
 			var length = collection.Count;
+			string n;
 			for (int i = 0; i < length; i++) {
 				var v = collection.GetValues (i);
 				if (v == null && _params.SerializeNullValues == false) {
 					continue;
 				}
 				if (pendingSeparator) _output.Append (',');
-				WritePair (_params.NamingStrategy.Rename (collection.GetKey (i)),
-					v == null ? null
-					: v.Length == 0 ? (object)String.Empty
-					: v.Length == 1 ? (object)v[0]
-					: (object)v);
-					pendingSeparator = true;
+				n = _params.NamingStrategy.Rename (collection.GetKey (i));
+				if (v == null) {
+					WritePair (n, null);
+				}
+				else if (v.Length == 0) {
+					WritePairFast (n, String.Empty);
+				}
+				else if (v.Length == 1) {
+					WritePairFast (n, v[0]);
+				}
+				else {
+					WriteStringFast (n);
+					_output.Append (':');
+					WriteArray (v);
+				}
+				pendingSeparator = true;
 			}
 			_output.Append ('}');
 		}

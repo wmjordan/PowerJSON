@@ -146,7 +146,7 @@ namespace consoletest
 		{
 			items = new List<baseclass>();
 			date = DateTime.Now;
-			timeSpan = new TimeSpan (11, 22, 33);
+			//timeSpan = new TimeSpan (11, 22, 33);
 			multilineString = @"
             AJKLjaskljLA
        ahjksjkAHJKS سلام فارسی
@@ -158,21 +158,20 @@ namespace consoletest
 			booleanValue = true;
 			ordinaryDouble = 0.001;
 			gender = Gender.Male;
-			fruits = new Fruits[] {
-				Fruits.Apple | Fruits.Pineapple | Fruits.Banana,
-				Fruits.MyFavorites,
-				Fruits.MyFavorites | Fruits.Banana
-			};
-			notsoFruits = new Fruits[] { 0, (Fruits)3, (Fruits)98 };
+			//fruits = new Fruits[] {
+			//	Fruits.Apple | Fruits.Pineapple | Fruits.Banana,
+			//	Fruits.MyFavorites,
+			//	Fruits.MyFavorites | Fruits.Banana
+			//};
+			//notsoFruits = new Fruits[] { 0, (Fruits)3, (Fruits)98 };
 			intarray = new int[5] {1,2,3,4,5};
 		}
-		[JsonField ("readonly")]
-		[JsonInclude (true)]
-		public string ReadOnlyValue { get { return "I am readonly."; } }
-		[JsonInclude (false)]
+		//[JsonField ("readonly")]
+		//[JsonInclude (true)]
+		//public string ReadOnlyValue { get { return "I am readonly."; } }
+		//[JsonInclude (false)]
 		public bool booleanValue { get; set; }
 		public DateTime date { get; set; }
-		public TimeSpan timeSpan { get; set; }
 		public string multilineString { get; set; }
 		public List<baseclass> items { get; set; }
 		public decimal ordinaryDecimal {get; set;}
@@ -180,8 +179,9 @@ namespace consoletest
 		public bool isNew { get; set; }
 		public string laststring { get; set; }
 		public Gender gender { get; set; }
-		public Fruits[] fruits { get; set; }
-		public Fruits[] notsoFruits { get; set; }
+		//public TimeSpan timeSpan { get; set; }
+		//public Fruits[] fruits { get; set; }
+		//public Fruits[] notsoFruits { get; set; }
 		
 		public DataSet dataset { get; set; }
 		public Dictionary<string,baseclass> stringDictionary { get; set; }

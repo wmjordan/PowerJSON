@@ -124,8 +124,10 @@ namespace fastJSON
 				UsingGlobalTypes = false;
 				InlineCircularReferences = true;
 			}
-			if (EnableAnonymousTypes)
+			if (EnableAnonymousTypes) {
 				ShowReadOnlyProperties = true;
+				ShowReadOnlyFields = true;
+			}
 		}
 	}
 
@@ -497,16 +499,17 @@ namespace fastJSON
 
 			if (o is List<object>)
 			{
-				if (type != null && t == typeof(Dictionary<,>)) // kv format
-					return RootDictionary(o, type);
+				if (type != null) {
+					if (t == typeof(Dictionary<,>)) // kv format
+						return RootDictionary(o, type);
 
-				if (type != null && t == typeof(List<>)) // deserialize to generic list
-					return RootList(o, type);
+					if (t == typeof(List<>)) // deserialize to generic list
+						return RootList(o, type);
 
-				if (type == typeof(Hashtable))
-					return RootHashTable((List<object>)o);
-				else
-					return (o as List<object>).ToArray();
+					if (type == typeof(Hashtable))
+						return RootHashTable((List<object>)o);
+				}
+				return (o as List<object>).ToArray();
 			}
 
 			if (type != null && o.GetType() != type)
@@ -541,29 +544,29 @@ namespace fastJSON
 			if (conversionType == typeof(int))
 				return (int)((long)value);
 
-			else if (conversionType == typeof(long))
+			if (conversionType == typeof(long))
 				return (long)value;
 
-			else if (conversionType == typeof(string))
+			if (conversionType == typeof(string))
 				return (string)value;
 
-			else if (conversionType.IsEnum)
+			if (conversionType.IsEnum)
 				return CreateEnum(conversionType, value);
 
-			else if (conversionType == typeof(DateTime))
+			if (conversionType == typeof(DateTime))
 				return CreateDateTime((string)value);
 
-			else if (Reflection.Instance.IsTypeRegistered(conversionType))
+			if (Reflection.Instance.IsTypeRegistered(conversionType))
 				return Reflection.Instance.CreateCustom((string)value, conversionType);
 
 			// 8-30-2014 - James Brooks - Added code for nullable types.
-			if (Reflection.IsNullable(conversionType))
+			if (Reflection.Instance.IsNullable(conversionType))
 			{
 				if (value == null)
 				{
 					return value;
 				}
-				conversionType = UnderlyingTypeOf(conversionType);
+				conversionType = Reflection.Instance.GetGenericArguments (conversionType)[0];
 			}
 
 			// 8-30-2014 - James Brooks - Nullable Guid is a special case so it was moved after the "IsNullable" check.
@@ -571,11 +574,6 @@ namespace fastJSON
 				return CreateGuid((string)value);
 
 			return Convert.ChangeType(value, conversionType, CultureInfo.InvariantCulture);
-		}
-
-		private Type UnderlyingTypeOf(Type t)
-		{
-			return t.GetGenericArguments()[0];
 		}
 
 		private object RootList(object parse, Type type)
@@ -621,8 +619,8 @@ namespace fastJSON
 					else if (t2.IsArray)
 						v = CreateArray ((List<object>)kv.Value, t2, t2.GetElementType (), null);
 
-					else if (t2.IsGenericType && t2.GetGenericTypeDefinition ().Equals (typeof (List<>))) {
-						v = CreateGenericList ((List<object>)kv.Value, t2, t2.GetGenericArguments ()[0], null);
+					else if (t2.IsGenericType && Reflection.Instance.GetGenericTypeDefinition (t2).Equals (typeof (List<>))) {
+						v = CreateGenericList ((List<object>)kv.Value, t2, Reflection.Instance.GetGenericArguments (t2)[0], null);
 					}
 					else if (kv.Value is IList)
 						v = CreateGenericList ((List<object>)kv.Value, t2, t1, null);

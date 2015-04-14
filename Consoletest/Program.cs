@@ -12,7 +12,7 @@ namespace consoletest
 {
     public class Program
     {
-        static int count = 100000;
+        static int count = 10000;
         static int tcount = 5;
         static DataSet ds = new DataSet();
         static bool exotic = false;
@@ -21,44 +21,57 @@ namespace consoletest
 		public static void Main (string[] args)
         {
 			Console.WriteLine (".net version = " + Environment.Version);
-			Console.WriteLine ("press key : (E)xotic ");
-			if (Console.ReadKey ().Key == ConsoleKey.E)
-				exotic = true;
+			Console.WriteLine ("==== fastJSON console test program ====");
+			Console.WriteLine ("\t1, Serialization Benchmark");
+			Console.WriteLine ("\t2, Deserialization Benchmark");
+			Console.WriteLine ("\t3, Misc. Tests");
+			Console.WriteLine ("\t4, Exotic Serialization Benchmark");
+			Console.WriteLine ("\t5, Exotic Deserialization Benchmark");
+			Console.WriteLine ("\t6, Exotic Misc. Tests");
+			Console.WriteLine ("Please select an option: ");
+			var k = Console.ReadKey ().Key;
+			Console.WriteLine();
+			switch (k) {
+				case ConsoleKey.D4:
+					exotic = true;
+					goto case ConsoleKey.D1;
+				case ConsoleKey.D1:
+					ds = CreateDataset();
+					Console.WriteLine("-dataset");
+					dsser = false;
+					//bin_serialize();
+					fastjson_serialize();
+					dsser = true;
+					Console.WriteLine("+dataset");
+					//bin_serialize();
+					fastjson_serialize();
+					break;
+				case ConsoleKey.D5:
+					exotic = true;
+					goto case ConsoleKey.D2;
+				case ConsoleKey.D2:
+					ds = CreateDataset ();
+					Console.WriteLine ("-dataset");
+					dsser = false;
+					//bin_deserialize();
+					fastjson_deserialize ();
+					dsser = true;
+					Console.WriteLine ("+dataset");
+					//bin_deserialize();
+					fastjson_deserialize ();
+					break;
+				case ConsoleKey.D6:
+					exotic = true;
+					goto default;
+				default:
+					WriteTestObject (CreateObject ());
+					WriteTestObject (CreateNVCollection ());
+					NullValueTest ();
+					TestCustomConverterType ();
+					break;
+			}
 
-			var nv = new NameValueCollection ();
-			nv.Add ("item1", "value1");
-			nv.Add ("item1", "value2");
-			var c = nv.GetValues (0).Length; // c = 2
-			Console.WriteLine (c);
-			var s = fastJSON.JSON.ToJSON (nv);
-			var sv = fastJSON.JSON.ToObject<NameValueCollection> (s);
-			var c2 = sv.GetValues (0).Length; // c = 1
-			Console.WriteLine (c2);
-			Console.ReadKey ();
-
-			WriteTestObject (CreateObject ());
-			WriteTestObject (CreateNVCollection ());
-			NullValueTest ();
- 
-			TestCustomConverterType ();
-
-            ds = CreateDataset();
-            Console.WriteLine("-dataset");
-            dsser = false;
-            //bin_serialize();
-            fastjson_serialize();
-            //bin_deserialize();
-            fastjson_deserialize();
-
-            dsser = true;
-            Console.WriteLine();
-            Console.WriteLine("+dataset");
-            //bin_serialize();
-            fastjson_serialize();
-            //bin_deserialize();
-            fastjson_deserialize();
-
-            Console.WriteLine();
+            Console.WriteLine("Press any key to exit.");
 			Console.ReadKey ();
 			#region [ other tests]
 
@@ -259,13 +272,15 @@ namespace consoletest
 				stopwatch.Stop();
 				Console.Write("\t" + stopwatch.ElapsedMilliseconds);
             }
-        }
+			Console.WriteLine ();
+		}
 
         private static void fastjson_serialize()
         {
             Console.WriteLine();
             Console.Write("fastjson serialize");
             colclass c = CreateObject();
+			fastJSON.JSON.ToJSON (c);
 			var stopwatch = new Stopwatch();
             for (int pp = 0; pp < tcount; pp++)
             {
@@ -278,6 +293,7 @@ namespace consoletest
 				stopwatch.Stop();
 				Console.Write("\t" + stopwatch.ElapsedMilliseconds);
             }
+			Console.WriteLine ();
         }
 
         private static void bin_deserialize()
@@ -304,6 +320,7 @@ namespace consoletest
 				stopwatch.Stop();
 				Console.Write("\t" + stopwatch.ElapsedMilliseconds);
             }
+			Console.WriteLine ();
         }
 
         private static void bin_serialize()

@@ -11,7 +11,7 @@ using System.Collections.Specialized;
 
 namespace fastJSON
 {
-	internal class Getters
+	internal sealed class Getters
 	{
 		public string Name;
 		public bool SpecificName;
@@ -54,7 +54,7 @@ namespace fastJSON
 		Unknown,
 	}
 
-	internal class myPropInfo : ICloneable
+	internal sealed class myPropInfo : ICloneable
 	{
 		public Type pt;
 		public Type bt;
@@ -393,7 +393,7 @@ namespace fastJSON
 			if (t.IsGenericType)
 			{
 				d.IsGenericType = true;
-				d.bt = t.GetGenericArguments()[0];
+				d.bt = GetGenericArguments(t)[0];
 			}
 
 			d.pt = t;
@@ -406,15 +406,15 @@ namespace fastJSON
 
 		private Type GetChangeType(Type conversionType)
 		{
-			if (conversionType.IsGenericType && conversionType.GetGenericTypeDefinition().Equals(typeof(Nullable<>)))
+			if (conversionType.IsGenericType && GetGenericTypeDefinition (conversionType).Equals (typeof (Nullable<>)))
 				return GetGenericArguments(conversionType)[0];// conversionType.GetGenericArguments()[0];
 
 			return conversionType;
 		}
 
-		public static bool IsNullable (Type t) {
+		public bool IsNullable (Type t) {
 			if (!t.IsGenericType) return false;
-			Type g = t.GetGenericTypeDefinition ();
+			Type g = GetGenericTypeDefinition (t);
 			return g.Equals (typeof (Nullable<>));
 		}
 
@@ -515,7 +515,7 @@ namespace fastJSON
 			Type[] arguments = new Type[2];
 			arguments[0] = arguments[1] = typeof(object);
 
-			DynamicMethod dynamicSet = new DynamicMethod("_", typeof(object), arguments, type, ShouldSkipTypeVisibilityCheck (type));
+			DynamicMethod dynamicSet = new DynamicMethod(fieldInfo.Name, typeof(object), arguments, type, ShouldSkipTypeVisibilityCheck (type));
 
 			ILGenerator il = dynamicSet.GetILGenerator();
 
