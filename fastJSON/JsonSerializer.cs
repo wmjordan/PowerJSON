@@ -62,16 +62,16 @@ namespace fastJSON
 		private void WriteValue(object obj)
 		{
 			if (obj == null || obj is DBNull)
-				_output.Append("null");
+				_output.Append ("null");
 
 			else if (obj is string || obj is char)
-				WriteString(obj.ToString());
+				WriteString (obj.ToString ());
 
 			else if (obj is Guid)
-				WriteGuid((Guid)obj);
+				WriteGuid ((Guid)obj);
 
 			else if (obj is bool)
-				_output.Append(((bool)obj) ? "true" : "false"); // conform to standard
+				_output.Append (((bool)obj) ? "true" : "false"); // conform to standard
 
 			else if (
 				obj is int || obj is long || obj is double ||
@@ -80,52 +80,52 @@ namespace fastJSON
 				obj is sbyte || obj is ushort ||
 				obj is uint || obj is ulong
 			)
-				_output.Append(((IConvertible)obj).ToString(NumberFormatInfo.InvariantInfo));
+				_output.Append (((IConvertible)obj).ToString (NumberFormatInfo.InvariantInfo));
 
 			else if (obj is DateTime)
-				WriteDateTime((DateTime)obj);
+				WriteDateTime ((DateTime)obj);
 
 			else if (obj is TimeSpan) {
 				WriteTimeSpan ((TimeSpan)obj);
 			}
 			else if (_params.KVStyleStringDictionary == false && obj is IDictionary &&
-				obj.GetType().IsGenericType && obj.GetType().GetGenericArguments()[0] == typeof(string))
+				obj.GetType ().IsGenericType && obj.GetType ().GetGenericArguments ()[0] == typeof (string))
 
-				WriteStringDictionary((IDictionary)obj);
+				WriteStringDictionary ((IDictionary)obj);
 #if NET_40_OR_GREATER
 			else if (_params.KVStyleStringDictionary == false && obj is System.Dynamic.ExpandoObject)
-				WriteStringDictionary((IDictionary<string, object>)obj);
+				WriteStringDictionary ((IDictionary<string, object>)obj);
 #endif
 			else if (obj is IDictionary)
-				WriteDictionary((IDictionary)obj);
+				WriteDictionary ((IDictionary)obj);
 #if !SILVERLIGHT
 			else if (obj is DataSet)
-				WriteDataset((DataSet)obj);
+				WriteDataset ((DataSet)obj);
 
 			else if (obj is DataTable)
-				this.WriteDataTable((DataTable)obj);
+				this.WriteDataTable ((DataTable)obj);
 #endif
 			else if (obj is byte[])
-				WriteBytes((byte[])obj);
+				WriteBytes ((byte[])obj);
 
 			else if (obj is StringDictionary)
-				WriteSD((StringDictionary)obj);
+				WriteSD ((StringDictionary)obj);
 
 			else if (obj is NameValueCollection) {
 				WriteNameValueCollection ((NameValueCollection)obj);
 			}
 
 			else if (obj is IEnumerable)
-				WriteArray((IEnumerable)obj);
+				WriteArray ((IEnumerable)obj);
 
 			else if (obj is Enum)
-				WriteEnum((Enum)obj);
+				WriteEnum ((Enum)obj);
 
-			else if (Reflection.Instance.IsTypeRegistered(obj.GetType()))
-				WriteCustom(obj);
+			else if (Reflection.Instance.IsTypeRegistered (obj.GetType ()))
+				WriteCustom (obj);
 
 			else
-				WriteObject(obj);
+				WriteObject (obj);
 		}
 
 		private void WriteSD(StringDictionary stringDictionary)
@@ -481,15 +481,28 @@ namespace fastJSON
 		{
 			_output.Append('[');
 
-			bool pendingSeperator = false;
+			var list = array as IList;
+			if (list != null) {
+				WriteValue (list[0]);
+				var length = list.Count;
+				if (length > 1) {
+					for (int i = 1; i < length; i++) {
+						_output.Append (',');
+						WriteValue (list[i]);
+					}
+				}
+			}
+			else {
+				bool pendingSeperator = false;
 
-			foreach (object obj in array)
-			{
-				if (pendingSeperator) _output.Append(',');
+				foreach (object obj in array)
+				{
+					if (pendingSeperator) _output.Append(',');
 
-				WriteValue(obj);
+					WriteValue(obj);
 
-				pendingSeperator = true;
+					pendingSeperator = true;
+				}
 			}
 			_output.Append(']');
 		}
@@ -530,18 +543,19 @@ namespace fastJSON
 				}
 				if (pendingSeparator) _output.Append (',');
 				n = _params.NamingStrategy.Rename (collection.GetKey (i));
+				_output.Append ('\"');
+				_output.Append (n);
+				_output.Append ("\":");
 				if (v == null) {
-					WritePair (n, null);
+					_output.Append ("null");
 				}
 				else if (v.Length == 0) {
-					WritePairFast (n, String.Empty);
+					_output.Append ("\"\"");
 				}
 				else if (v.Length == 1) {
-					WritePairFast (n, v[0]);
+					WriteString (v[0]);
 				}
 				else {
-					WriteStringFast (n);
-					_output.Append (':');
 					WriteArray (v);
 				}
 				pendingSeparator = true;

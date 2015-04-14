@@ -232,7 +232,7 @@ namespace fastJSON
 			throw new JsonSerializationException ("Unexpectedly reached end of string");
         }
 
-        private uint ParseSingleChar(char c1, uint multipliyer)
+		private static uint ParseSingleChar (char c1, uint multipliyer)
         {
             uint p1 = 0;
             if (c1 >= '0' && c1 <= '9')
@@ -244,7 +244,7 @@ namespace fastJSON
             return p1;
         }
 
-        private uint ParseUnicode(char c1, char c2, char c3, char c4)
+		private static uint ParseUnicode (char c1, char c2, char c3, char c4)
         {
             uint p1 = ParseSingleChar(c1, 0x1000);
             uint p2 = ParseSingleChar(c2, 0x100);
@@ -254,25 +254,25 @@ namespace fastJSON
             return p1 + p2 + p3 + p4;
         }
 
-        private long CreateLong(string s)
-        {
-            long num = 0;
-            bool neg = false;
-            foreach (char cc in s)
-            {
-                if (cc == '-')
-                    neg = true;
-                else if (cc == '+')
-                    neg = false;
-                else
-                {
-                    num *= 10;
-                    num += (int)(cc - '0');
-                }
-            }
+		private static long CreateLong (string s, int index, int count) {
+			long num = 0;
+			bool neg = false;
+			for (int x = 0; x < count; x++, index++) {
+				char cc = s[index];
 
-            return neg ? -num : num;
-        }
+				if (cc == '-')
+					neg = true;
+				else if (cc == '+')
+					neg = false;
+				else {
+					num *= 10;
+					num += (int)(cc - '0');
+				}
+			}
+			if (neg) num = -num;
+
+			return num;
+		}
 
         private object ParseNumber()
         {
@@ -303,8 +303,7 @@ namespace fastJSON
 				string s = json.Substring(startIndex, index - startIndex);
 				return double.Parse(s, NumberFormatInfo.InvariantInfo);
 			}
-			long num;
-			return JSON.CreateLong(out num, json, startIndex, index - startIndex);
+			return CreateLong(json, startIndex, index - startIndex);
         }
 
         private Token LookAhead()

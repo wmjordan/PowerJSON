@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Reflection;
 
 namespace fastJSON
@@ -230,6 +231,7 @@ namespace fastJSON
 		object SerializationConvert (string fieldName, object fieldValue);
 		/// <summary>
 		/// Converts fieldValue to a new value during deserialization. The type of the <paramref name="fieldValue"/> and the returned value can be different types, which enables adapting various data types from deserialization.
+		/// At this moment the type of the fieldValue could be one of the following six primitive types returned from the JSON Parser: <see cref="Boolean"/>, <see cref="Int64"/>, <see cref="Double"/>, <see cref="String"/>, <see cref="List&lt;Object&gt;"/> and <see cref="Dictionary&lt;String, Object&gt;"/>.
 		/// </summary>
 		/// <param name="fieldName">The name of the field or property.</param>
 		/// <param name="fieldValue">The value of the field of property.</param>
@@ -237,13 +239,37 @@ namespace fastJSON
 		object DeserializationConvert (string fieldName, object fieldValue);
 	}
 
+	internal interface ITypeConverter
+	{
+		Type SerializedType { get; }
+		Type ElementType { get; }
+	}
+
 	/// <summary>
 	/// A helper converter which implements the <see cref="IJsonConverter"/> to convert between two specific types.
 	/// </summary>
 	/// <typeparam name="O">The original type of the data being serialized.</typeparam>
 	/// <typeparam name="S">The serialized type of the data.</typeparam>
-	public abstract class JsonConverter<O, S> : IJsonConverter
+	public abstract class JsonConverter<O, S> : IJsonConverter, ITypeConverter
 	{
+		Type _SerializedType, _ElementType;
+		Type ITypeConverter.SerializedType { get { return _SerializedType; } }
+		Type ITypeConverter.ElementType { get { return _ElementType; } }
+
+		protected JsonConverter () {
+			var s = typeof (S);
+			if (s == typeof (bool) || s == typeof (string) || s == typeof (double) || s == typeof (long)
+				|| s == typeof (List<object>)
+				|| s == typeof (Dictionary<string, object>)
+			) {
+				return;
+			}
+			_SerializedType = s;
+			if (s.IsGenericType && typeof(System.Collections.IList).IsAssignableFrom (s)) {
+				_ElementType = s.GetGenericArguments ()[0];
+			}
+		}
+
 		/// <summary>
 		/// Convert the original value before serialization. If the serialized value is not the type of <typeparamref name="O"/>, the <paramref name="fieldValue"/> will be returned.
 		/// </summary>

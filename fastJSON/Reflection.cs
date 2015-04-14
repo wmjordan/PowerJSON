@@ -56,8 +56,8 @@ namespace fastJSON
 
 	internal sealed class myPropInfo : ICloneable
 	{
-		public Type pt;
-		public Type bt;
+		public Type PropertyType; // pt
+		public Type ElementType; // bt
 		public Type changeType;
 		public Reflection.GenericSetter setter;
 		public Reflection.GenericGetter getter;
@@ -363,7 +363,7 @@ namespace fastJSON
 			else if (t == typeof(NameValueCollection)) d_type = myPropInfoType.NameValue;
 			else if (t.IsArray)
 			{
-				d.bt = t.GetElementType();
+				d.ElementType = t.GetElementType();
 				if (t == typeof(byte[]))
 					d_type = myPropInfoType.ByteArray;
 				else
@@ -393,10 +393,10 @@ namespace fastJSON
 			if (t.IsGenericType)
 			{
 				d.IsGenericType = true;
-				d.bt = GetGenericArguments(t)[0];
+				d.ElementType = GetGenericArguments(t)[0];
 			}
 
-			d.pt = t;
+			d.PropertyType = t;
 			d.Name = name;
 			d.changeType = GetChangeType(t);
 			d.Type = d_type;

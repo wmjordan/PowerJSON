@@ -358,6 +358,11 @@ namespace UnitTests
 			Assert.AreEqual (s, o.MyProperty);
 		}
 
+		public class PersonInfo
+		{
+			public string Name { get; set; }
+			public bool Vip { get; set; }
+		}
 		public class CustomConverterType
 		{
 			[JsonConverter (typeof (Int32ArrayConverter))]
@@ -375,6 +380,16 @@ namespace UnitTests
 			[JsonField ("intArray2", typeof (int[]))]
 			[JsonField ("listInt2", typeof (List<int>))]
 			public IList<int> Variable2 { get; set; }
+
+			[JsonConverter (typeof (PersonInfoConverter))]
+			public string Master { get; set; }
+			[JsonConverter (typeof (PersonInfoConverter))]
+			public string Worker { get; set; }
+
+			[JsonConverter (typeof (IdConverter))]
+			public string Id { get; set; }
+			[JsonConverter (typeof (IdListConverter))]
+			public List<string> IdList { get; set; }
 		}
 		class Int32ArrayConverter : IJsonConverter
 		{
@@ -395,23 +410,72 @@ namespace UnitTests
 				return fieldValue;
 			}
 		}
+		class PersonInfoConverter : JsonConverter<string, PersonInfo>
+		{
+			public override PersonInfo Convert (string fieldName, string fieldValue) {
+				return new PersonInfo () {
+					Name = fieldValue.EndsWith ("*") ? fieldValue.Substring (0, fieldValue.Length - 1) : fieldValue,
+					Vip = fieldValue.EndsWith ("*")
+				};
+			}
+
+			public override string Revert (string fieldName, PersonInfo fieldValue) {
+				return fieldValue.Name + (fieldValue.Vip ? "*" : null);
+			}
+		}
+		class IdConverter : JsonConverter<string, int>
+		{
+			public override int Convert (string fieldName, string fieldValue) {
+				return Int32.Parse (fieldValue.Substring (2));
+			}
+
+			public override string Revert (string fieldName, int fieldValue) {
+				return "id" + fieldValue.ToString ();
+			}
+		}
+		class IdListConverter : JsonConverter<List<string>, List<int>>
+		{
+			public override List<int> Convert (string fieldName, List<string> fieldValue) {
+				return fieldValue.ConvertAll ((s) => { return Int32.Parse (s.Substring (2)); });
+			}
+
+			public override List<string> Revert (string fieldName, List<int> fieldValue) {
+				return fieldValue.ConvertAll ((i) => { return "id" + i.ToString (); });
+			}
+		}
+
 		[TestMethod]
 		public void ConvertDataAndType () {
 			var c = new CustomConverterType () {
 				Array = new int[] { 1, 2, 3 },
 				NormalArray = new int[] { 2, 3, 4 },
 				Variable1 = new int[] { 3, 4 },
-				Variable2 = new List<int> { 5, 6 }
+				Variable2 = new List<int> { 5, 6 },
+				Master = "WMJ*",
+				Worker = "Gates",
+				Id = "id123",
+				IdList = new List<string> () { "id1", "id2", "id3" }
 			};
 			var t = JSON.ToJSON (c, _JP);
 			Console.WriteLine (t);
+			StringAssert.Contains (t, "\"Vip\":true");
+			StringAssert.Contains (t, "\"Id\":123");
 			var o = fastJSON.JSON.ToObject<CustomConverterType> (t);
 			Console.WriteLine (JSON.ToJSON (o, _JP));
 			CollectionAssert.AreEqual (c.Array, o.Array);
 			CollectionAssert.AreEqual (c.NormalArray, o.NormalArray);
 			CollectionAssert.AreEqual ((ICollection)c.Variable1, (ICollection)o.Variable1);
 			CollectionAssert.AreEqual ((ICollection)c.Variable2, (ICollection)o.Variable2);
+			Assert.AreEqual ("WMJ*", o.Master);
+			Assert.AreEqual ("Gates", o.Worker);
+			Assert.AreEqual (c.Id, o.Id);
+			CollectionAssert.AreEqual (c.IdList, o.IdList);
+
+			o = fastJSON.JSON.ToObject<CustomConverterType> ("{\"Id\":\"id123\", \"intArray1\": [ 1, 2, 3 ] }");
+			Assert.AreEqual ("id123", o.Id);
+			CollectionAssert.AreEqual ((ICollection)new int[] { 1, 2, 3 }, (ICollection)o.Variable1);
 		} 
+
 		#endregion
 
 		#region ReadOnly members

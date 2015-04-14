@@ -723,8 +723,21 @@ namespace fastJSON
 					object v = d[n];
 
 					if (pi.Converter != null) {
-						var cv = pi.Converter.DeserializationConvert (name, v);
-						if (Object.ReferenceEquals (cv, v) == false) {
+						var tc = pi.Converter as ITypeConverter;
+						var xv = v;
+						if (tc != null && xv != null && tc.SerializedType != null) {
+							if (v is Dictionary<string, object>) {
+								xv = ParseDictionary ((Dictionary<string,object>)xv, globaltypes, tc.SerializedType, pi.getter (o));
+							}
+							else if (v is List<object>) {
+								xv = CreateGenericList ((List<object>)xv, tc.SerializedType, tc.ElementType, globaltypes);
+							}
+							else if (pi.PropertyType.Equals (xv.GetType ()) == false) {
+								xv = ChangeType (xv, tc.SerializedType);
+							}
+						}
+						var cv = pi.Converter.DeserializationConvert (name, xv);
+						if (Object.ReferenceEquals (cv, xv) == false) {
 							// use the converted type
 							if (cv != null) {
 								o = pi.setter (o, cv);
@@ -753,13 +766,13 @@ namespace fastJSON
 						case myPropInfoType.String: oset = (string)v; break;
 						case myPropInfoType.Bool: oset = (bool)v; break;
 						case myPropInfoType.DateTime: oset = CreateDateTime ((string)v); break;
-						case myPropInfoType.Enum: oset = CreateEnum (pi.pt, v); break;
+						case myPropInfoType.Enum: oset = CreateEnum (pi.PropertyType, v); break;
 						case myPropInfoType.Guid: oset = CreateGuid ((string)v); break;
 						case myPropInfoType.TimeSpan: oset = CreateTimeSpan ((string)v); break;
 
 						case myPropInfoType.Array:
 							if (!pi.IsValueType)
-								oset = CreateArray ((IList)v, pi.pt, pi.bt, globaltypes);
+								oset = CreateArray ((List<object>)v, pi.PropertyType, pi.ElementType, globaltypes);
 							// what about 'else'?
 							break;
 						case myPropInfoType.ByteArray: oset = Convert.FromBase64String ((string)v); break;
@@ -768,20 +781,20 @@ namespace fastJSON
 						case myPropInfoType.DataTable: oset = CreateDataTable ((Dictionary<string, object>)v, globaltypes); break;
 						case myPropInfoType.Hashtable: // same case as Dictionary
 #endif
-						case myPropInfoType.Dictionary: oset = CreateDictionary ((List<object>)v, pi.pt, pi.GenericTypes, globaltypes); break;
-						case myPropInfoType.StringKeyDictionary: oset = CreateStringKeyDictionary ((Dictionary<string, object>)v, pi.pt, pi.GenericTypes, globaltypes); break;
+						case myPropInfoType.Dictionary: oset = CreateDictionary ((List<object>)v, pi.PropertyType, pi.GenericTypes, globaltypes); break;
+						case myPropInfoType.StringKeyDictionary: oset = CreateStringKeyDictionary ((Dictionary<string, object>)v, pi.PropertyType, pi.GenericTypes, globaltypes); break;
 						case myPropInfoType.NameValue: oset = CreateNV ((Dictionary<string, object>)v); break;
 						case myPropInfoType.StringDictionary: oset = CreateSD ((Dictionary<string, object>)v); break;
-						case myPropInfoType.Custom: oset = Reflection.Instance.CreateCustom ((string)v, pi.pt); break;
+						case myPropInfoType.Custom: oset = Reflection.Instance.CreateCustom ((string)v, pi.PropertyType); break;
 						default: {
 								if (pi.IsGenericType && pi.IsValueType == false && v is List<object>)
-									oset = CreateGenericList ((List<object>)v, pi.pt, pi.bt, globaltypes);
+									oset = CreateGenericList ((List<object>)v, pi.PropertyType, pi.ElementType, globaltypes);
 
 								else if ((pi.IsClass || pi.IsStruct) && v is Dictionary<string, object>)
-									oset = ParseDictionary ((Dictionary<string, object>)v, globaltypes, pi.pt, pi.getter (o));
+									oset = ParseDictionary ((Dictionary<string, object>)v, globaltypes, pi.PropertyType, pi.getter (o));
 
 								else if (v is List<object>)
-									oset = CreateArray ((List<object>)v, pi.pt, typeof (object), globaltypes);
+									oset = CreateArray ((List<object>)v, pi.PropertyType, typeof (object), globaltypes);
 
 								else if (pi.IsValueType)
 									oset = ChangeType (v, pi.changeType);
@@ -928,11 +941,12 @@ namespace fastJSON
 		private object CreateTimeSpan (string value) {
 			return TimeSpan.Parse (value);
 		}
-		private object CreateArray(IList data, Type pt, Type bt, Dictionary<string, object> globalTypes)
+		private object CreateArray (List<object> data, Type pt, Type bt, Dictionary<string, object> globalTypes)
 		{
-			Array col = Array.CreateInstance(bt, data.Count);
+			var c = data.Count;
+			Array col = Array.CreateInstance (bt, c);
 			// create an array of objects
-			for (int i = 0; i < data.Count; i++)
+			for (int i = 0; i < c; i++)
 			{
 				object ob = data[i];
 				if (ob is IDictionary)
@@ -987,7 +1001,7 @@ namespace fastJSON
 					val = ParseDictionary((Dictionary<string, object>)values.Value, globalTypes, t2, null);
 
 				else if (types != null && t2.IsArray)
-					val = CreateArray ((IList)values.Value, t2, t2.GetElementType (), globalTypes);
+					val = CreateArray ((List<object>)values.Value, t2, t2.GetElementType (), globalTypes);
 
 				else if (values.Value is IList)
 					val = CreateGenericList((List<object>)values.Value, t2, t1, globalTypes);
