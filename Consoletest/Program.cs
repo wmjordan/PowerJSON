@@ -12,7 +12,7 @@ namespace consoletest
 {
     public class Program
     {
-        static int count = 10000;
+        static int count = 1000;
         static int tcount = 5;
         static DataSet ds = new DataSet();
         static bool exotic = false;
@@ -21,6 +21,7 @@ namespace consoletest
 		public static void Main (string[] args)
         {
 			Console.WriteLine (".net version = " + Environment.Version);
+			START:
 			Console.WriteLine ("==== fastJSON console test program ====");
 			Console.WriteLine ("\t1, Serialization Benchmark");
 			Console.WriteLine ("\t2, Deserialization Benchmark");
@@ -28,51 +29,45 @@ namespace consoletest
 			Console.WriteLine ("\t4, Exotic Serialization Benchmark");
 			Console.WriteLine ("\t5, Exotic Deserialization Benchmark");
 			Console.WriteLine ("\t6, Exotic Misc. Tests");
+			Console.WriteLine ("\tOther key: Exit");
 			Console.WriteLine ("Please select an option: ");
 			var k = Console.ReadKey ().Key;
 			Console.WriteLine();
 			switch (k) {
 				case ConsoleKey.D4:
 					exotic = true;
-					goto case ConsoleKey.D1;
+					SerializationTest ();
+					break;
 				case ConsoleKey.D1:
-					ds = CreateDataset();
-					Console.WriteLine("-dataset");
-					dsser = false;
-					//bin_serialize();
-					fastjson_serialize();
-					dsser = true;
-					Console.WriteLine("+dataset");
-					//bin_serialize();
-					fastjson_serialize();
+					exotic = true;
+					SerializationTest ();
 					break;
 				case ConsoleKey.D5:
 					exotic = true;
-					goto case ConsoleKey.D2;
+					DeserializationTest ();
+					break;
 				case ConsoleKey.D2:
-					ds = CreateDataset ();
-					Console.WriteLine ("-dataset");
-					dsser = false;
-					//bin_deserialize();
-					fastjson_deserialize ();
-					dsser = true;
-					Console.WriteLine ("+dataset");
-					//bin_deserialize();
-					fastjson_deserialize ();
+					exotic = false;
+					DeserializationTest ();
 					break;
 				case ConsoleKey.D6:
 					exotic = true;
-					goto default;
-				default:
 					WriteTestObject (CreateObject ());
 					WriteTestObject (CreateNVCollection ());
 					NullValueTest ();
 					TestCustomConverterType ();
 					break;
+				case ConsoleKey.D3:
+					exotic = false;
+					WriteTestObject (CreateObject ());
+					WriteTestObject (CreateNVCollection ());
+					NullValueTest ();
+					TestCustomConverterType ();
+					break;
+				default: return;
 			}
 
-            Console.WriteLine("Press any key to exit.");
-			Console.ReadKey ();
+			goto START;
 			#region [ other tests]
 
             //			litjson_serialize();
@@ -90,6 +85,30 @@ namespace consoletest
             //			stack_deserialize();
             #endregion
         }
+
+		private static void DeserializationTest () {
+			ds = CreateDataset ();
+			Console.WriteLine ("-dataset");
+			dsser = false;
+			//bin_deserialize();
+			fastjson_deserialize ();
+			dsser = true;
+			Console.WriteLine ("+dataset");
+			//bin_deserialize();
+			fastjson_deserialize ();
+		}
+
+		private static void SerializationTest () {
+			ds = CreateDataset ();
+			Console.WriteLine ("-dataset");
+			dsser = false;
+			//bin_serialize();
+			fastjson_serialize ();
+			dsser = true;
+			Console.WriteLine ("+dataset");
+			//bin_serialize();
+			fastjson_serialize ();
+		}
 
 		private static System.Collections.Specialized.NameValueCollection CreateNVCollection () {
 			var n = new System.Collections.Specialized.NameValueCollection ();

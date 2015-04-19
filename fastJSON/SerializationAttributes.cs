@@ -5,7 +5,7 @@ using System.Reflection;
 namespace fastJSON
 {
 	/// <summary>
-	/// Indicates whether a class or a struct could be serialized, even if it is not a public one.
+	/// Indicates whether a class or a struct could be deserialized, even if it is not a public one.
 	/// </summary>
 	[AttributeUsage (AttributeTargets.Class | AttributeTargets.Struct, Inherited=false)]
 	public class JsonSerializableAttribute : Attribute
@@ -65,6 +65,21 @@ namespace fastJSON
 		public JsonFieldAttribute (string name, Type type) {
 			Name = name;
 			Type = type;
+		}
+	}
+
+	public class JsonFieldOrderAttribute : Attribute
+	{
+		/// <summary>
+		/// Gets or sets the serialization order of the annotated field or property.
+		/// </summary>
+		public int Order { get; set; }
+		/// <summary>
+		/// Specifies the order of the serialized field or property.
+		/// </summary>
+		/// <param name="order">The name of the serialized field or property.</param>
+		public JsonFieldOrderAttribute (int order) {
+			Order = order;
 		}
 	}
 

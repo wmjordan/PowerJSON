@@ -13,7 +13,8 @@ namespace UnitTests
 	public class SerializationAttributeTests
 	{
 		JSONParameters _JP = new JSONParameters () {
-			UseExtensions = false
+			UseExtensions = false,
+			UseUTCDateTime = false
 		};
 
 		#region Non-public types
@@ -34,7 +35,7 @@ namespace UnitTests
 			public int Field;
 			public PrivateClass ClassData;
 		}
-		class NonSerializableClass
+		private class NonSerializableClass
 		{
 			public int Field { get; set; }
 		}
@@ -67,6 +68,12 @@ namespace UnitTests
 			Console.WriteLine (sl);
 			Assert.AreEqual (l[0].Field, pl[0].Field);
 
+			var a = new PrivateClass[] { new PrivateClass () { Field = 1 } };
+			var sa = fastJSON.JSON.ToJSON (a, _JP);
+			var pa = fastJSON.JSON.ToObject<PrivateClass[]> (sa);
+			Console.WriteLine (sa);
+			Assert.AreEqual (a[0].Field, pa[0].Field);
+
 			var d = new Dictionary<string, List<PrivateClass>> () { 
 				{ "test", l }
 			};
@@ -79,10 +86,11 @@ namespace UnitTests
 		[TestMethod]
 		[ExpectedException (typeof (JsonSerializationException))]
 		public void FailOnNonPublicClass () {
-			var ns = new NonSerializableClass ();
+			var ns = new NonSerializableClass () { Field = 1 };
 			var s = fastJSON.JSON.ToJSON (ns, _JP);
 			Console.WriteLine (s);
 			var np = fastJSON.JSON.ToObject<NonSerializableClass> (s);
+			np.Field = 2;
 		} 
 		#endregion
 
@@ -169,6 +177,7 @@ namespace UnitTests
 		public void JsonEnumValueTest () {
 			var so = new EnumTestSample ();
 			var ss = fastJSON.JSON.ToJSON (so, _JP);
+			Console.WriteLine (ss);
 			StringAssert.Contains (ss, @"""NumericFruit"":13");
 			var ps = fastJSON.JSON.ToObject<EnumTestSample> (ss);
 			Console.WriteLine (ss);
@@ -347,7 +356,7 @@ namespace UnitTests
 			public string MyProperty { get; set; }
 		}
 		[TestMethod]
-		public void ConvertData () {
+		public void SimpleConvertData () {
 			var s = "connection string";
 			var d = new JsonConverterTestSample () { MyProperty = s };
 			var ss = JSON.ToJSON (d, _JP);
@@ -385,6 +394,8 @@ namespace UnitTests
 			public string Master { get; set; }
 			[JsonConverter (typeof (PersonInfoConverter))]
 			public string Worker { get; set; }
+			[JsonConverter (typeof (DateConverter))]
+			public DateTime Date { get; set; }
 
 			[JsonConverter (typeof (IdConverter))]
 			public string Id { get; set; }
@@ -423,6 +434,16 @@ namespace UnitTests
 				return fieldValue.Name + (fieldValue.Vip ? "*" : null);
 			}
 		}
+		class DateConverter : JsonConverter<DateTime, DateTime>
+		{
+			public override DateTime Convert (string fieldName, DateTime fieldValue) {
+				return fieldValue.AddHours (1);
+			}
+
+			public override DateTime Revert (string fieldName, DateTime fieldValue) {
+				return fieldValue.AddHours (-1);
+			}
+		}
 		class IdConverter : JsonConverter<string, int>
 		{
 			public override int Convert (string fieldName, string fieldValue) {
@@ -454,13 +475,15 @@ namespace UnitTests
 				Master = "WMJ*",
 				Worker = "Gates",
 				Id = "id123",
-				IdList = new List<string> () { "id1", "id2", "id3" }
+				IdList = new List<string> () { "id1", "id2", "id3" },
+				Date = new DateTime (1999, 12, 31, 23, 0, 0)
 			};
 			var t = JSON.ToJSON (c, _JP);
 			Console.WriteLine (t);
 			StringAssert.Contains (t, "\"Vip\":true");
 			StringAssert.Contains (t, "\"Id\":123");
-			var o = fastJSON.JSON.ToObject<CustomConverterType> (t);
+			StringAssert.Contains (t, "\"Date\":\"2000-01-01T00:00:00\"");
+			var o = fastJSON.JSON.ToObject<CustomConverterType> (t, _JP);
 			Console.WriteLine (JSON.ToJSON (o, _JP));
 			CollectionAssert.AreEqual (c.Array, o.Array);
 			CollectionAssert.AreEqual (c.NormalArray, o.NormalArray);
@@ -469,6 +492,7 @@ namespace UnitTests
 			Assert.AreEqual ("WMJ*", o.Master);
 			Assert.AreEqual ("Gates", o.Worker);
 			Assert.AreEqual (c.Id, o.Id);
+			Assert.AreEqual (c.Date, o.Date);
 			CollectionAssert.AreEqual (c.IdList, o.IdList);
 
 			o = fastJSON.JSON.ToObject<CustomConverterType> ("{\"Id\":\"id123\", \"intArray1\": [ 1, 2, 3 ] }");

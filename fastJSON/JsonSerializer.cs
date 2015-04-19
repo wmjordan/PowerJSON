@@ -21,12 +21,14 @@ namespace fastJSON
 		private Dictionary<object, int> _cirobj = new Dictionary<object, int>();
 		private JSONParameters _params;
 		private bool _useEscapedUnicode = false;
+		private SerializationManager _manager;
 
 		internal JSONSerializer(JSONParameters param)
 		{
 			_params = param;
 			_useEscapedUnicode = _params.UseEscapedUnicode;
 			_MAX_DEPTH = _params.SerializerMaxDepth;
+			_manager = param.Manager;
 		}
 
 		internal string ConvertToJSON(object obj)
@@ -168,7 +170,7 @@ namespace fastJSON
 				_output.Append(Convert.ToInt64 (e).ToString(NumberFormatInfo.InvariantInfo));
 				return;
 			}
-			var n = Reflection.Instance.GetEnumName (e);
+			var n = _manager.GetEnumName (e);
 			if (n != null) {
 				WriteStringFast (n);
 			}
@@ -354,8 +356,8 @@ namespace fastJSON
 					return;
 				}
 			}
-			Type t = obj.GetType ();
-			var si = Reflection.Instance.GetInterceptor (t);
+			DefinitionCache def = _manager.GetDefinition (obj.GetType ());
+			var si = def.Interceptor;
 			if (si != null && si.OnSerializing (obj) == false) {
 				return;
 			}
@@ -383,11 +385,11 @@ namespace fastJSON
 			if (_params.UseExtensions)
 			{
 				if (_params.UsingGlobalTypes == false)
-					WritePairFast("$type", Reflection.Instance.GetTypeAssemblyName(t));
+					WritePairFast("$type", def.AssemblyName);
 				else
 				{
 					int dt = 0;
-					string ct = Reflection.Instance.GetTypeAssemblyName(t);
+					string ct = def.AssemblyName;
 					if (_globalTypes.TryGetValue(ct, out dt) == false)
 					{
 						dt = _globalTypes.Count + 1;
@@ -398,7 +400,7 @@ namespace fastJSON
 				append = true;
 			}
 
-			Getters[] g = Reflection.Instance.GetGetters(t, _params.IgnoreAttributes);
+			Getters[] g = def.Getters;
 			int c = g.Length;
 			var rp = _params.ShowReadOnlyProperties;
 			for (int ii = 0; ii < c; ii++)
@@ -406,7 +408,7 @@ namespace fastJSON
 				var p = g[ii];
 				if (p.IsStatic && _params.SerializeStaticMembers == false
 					|| p.IsReadOnly && (p.IsProperty && rp == false || p.IsProperty == false && _params.ShowReadOnlyFields == false)) {
-					if (p.AllwaysInclude == false) {
+					if (p.AlwaysInclude == false) {
 						continue;
 					}
 				}
@@ -483,6 +485,10 @@ namespace fastJSON
 
 			var list = array as IList;
 			if (list != null) {
+				if (list.Count == 0) {
+					_output.Append (']');
+					return;
+				}
 				WriteValue (list[0]);
 				var length = list.Count;
 				if (length > 1) {

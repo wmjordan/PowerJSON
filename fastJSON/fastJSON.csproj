@@ -41,7 +41,7 @@
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
     <NoWin32Manifest>False</NoWin32Manifest>
-    <IntermediateOutputPath>obj\$(Configuration)\</IntermediateOutputPath>
+    <IntermediateOutputPath>obj\net40\$(Configuration)\</IntermediateOutputPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -63,7 +63,7 @@
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <CheckForOverflowUnderflow>False</CheckForOverflowUnderflow>
     <StartAction>Project</StartAction>
-    <BaseIntermediateOutputPath>obj\</BaseIntermediateOutputPath>
+    <BaseIntermediateOutputPath>obj\net40\</BaseIntermediateOutputPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Platform)' == 'AnyCPU' ">
     <RegisterForComInterop>False</RegisterForComInterop>
@@ -90,6 +90,8 @@
     <Compile Include="dynamic.cs" />
     <Compile Include="Getters.cs" />
     <Compile Include="Formatter.cs" />
+    <Compile Include="JsonDeserializer.cs" />
+    <Compile Include="JSONParameters.cs" />
     <Compile Include="JsonSerializationException.cs" />
     <Compile Include="JsonSerializer.cs" />
     <Compile Include="JSON.cs" />
@@ -97,6 +99,7 @@
     <Compile Include="Reflection.cs" />
     <Compile Include="SafeDictionary.cs" />
     <Compile Include="SerializationAttributes.cs" />
+    <Compile Include="SerializationManager.cs" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.0">

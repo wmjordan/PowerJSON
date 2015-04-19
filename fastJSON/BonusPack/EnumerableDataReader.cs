@@ -80,7 +80,7 @@ namespace fastJSON.BonusPack
 				throw new NotSupportedException (t.FullName + " is not supported.");
 			}
 			_enumerator = collection.GetEnumerator ();
-			var p = Reflection.Instance.GetGetters (t, null);
+			var p = SerializationManager.Instance.GetDefinition (t).Getters;
 			_fieldCount = p.Length;
 			_memberNames = new string[_fieldCount];
 			_accessors = new Getters[_fieldCount];
