@@ -39,7 +39,7 @@ namespace consoletest
 					SerializationTest ();
 					break;
 				case ConsoleKey.D1:
-					exotic = true;
+					exotic = false;
 					SerializationTest ();
 					break;
 				case ConsoleKey.D5:
