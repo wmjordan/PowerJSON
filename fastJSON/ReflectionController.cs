@@ -69,12 +69,10 @@ namespace fastJSON
     	/// If null is returned, the serialization of the member will be determined by the setting in <see cref="JSONParameters"/>.
     	/// </summary>
     	/// <param name="member">The member to be serialized.</param>
-    	/// <param name="isProperty">True for that the member is a property, false for a field.</param>
-    	/// <param name="isReadOnly">Whether the member is readonly.</param>
-    	/// <param name="isStatic">Whether the member is static.</param>
-    	/// <returns>True is returned if the member is serializable, otherwise, false.</returns>
-    	public virtual bool? IsMemberSerializable (MemberInfo member, bool isProperty, bool isReadOnly, bool isStatic) {
-    		bool? s = null;
+		/// <param name="info">Reflection infomation for the member.</param>
+		/// <returns>True is returned if the member is serializable, otherwise, false.</returns>
+		public virtual bool? IsMemberSerializable (MemberInfo member, IMemberInfo info) {
+			bool? s = null;
     		var ic = AttributeHelper.GetAttribute<JsonIncludeAttribute> (member, true);
     		if (ic != null) {
     			s = ic.Include;
@@ -171,14 +169,14 @@ namespace fastJSON
 		/// </summary>
 		/// <param name="type">The type to be deserialized.</param>
 		/// <returns>Whether the type can be deserialized even if it is a non-public type.</returns>
-		public bool IsAlwaysDeserializable (Type type) { return false; }
+		public virtual bool IsAlwaysDeserializable (Type type) { return false; }
 
 		/// <summary>
 		/// This method is called to get the <see cref="IJsonInterceptor"/> for the type. If no interceptor, null should be returned.
 		/// </summary>
 		/// <param name="type">The type to be checked.</param>
 		/// <returns>The interceptor.</returns>
-		public IJsonInterceptor GetInterceptor (Type type) { return null; }
+		public virtual IJsonInterceptor GetInterceptor (Type type) { return null; }
 
 		/// <summary>
 		/// This method is called to determine whether a field or a property is serializable.
@@ -187,11 +185,9 @@ namespace fastJSON
 		/// If null is returned, the serialization of the member will be determined by the settings in <see cref="JSONParameters"/>.
 		/// </summary>
 		/// <param name="member">The member to be serialized.</param>
-		/// <param name="isProperty">True for that the member is a property, false for a field.</param>
-		/// <param name="isReadOnly">Whether the member is readonly.</param>
-		/// <param name="isStatic">Whether the member is static.</param>
+		/// <param name="info">Reflection infomation for the member.</param>
 		/// <returns>True is returned if the member is serializable, otherwise, false.</returns>
-		public bool? IsMemberSerializable (MemberInfo member, bool isProperty, bool isReadOnly, bool isStatic) {
+		public virtual bool? IsMemberSerializable (MemberInfo member, IMemberInfo info) {
 			return null;
 		}
 
@@ -200,14 +196,14 @@ namespace fastJSON
 		/// </summary>
 		/// <param name="member">The member to be serialized.</param>
 		/// <returns>True is returned if the member is serializable, otherwise, false.</returns>
-		public bool IsMemberDeserializable (MemberInfo member) { return true; }
+		public virtual bool IsMemberDeserializable (MemberInfo member) { return true; }
 
 		/// <summary>
 		/// This method returns possible names for corrsponding types of a field or a property. This enables polymorphic serialization and deserialization for abstract, interface, or object types, with pre-determined concrete types. If polymorphic serialization is not used, null or an empty dictionary could be returned.
 		/// </summary>
 		/// <param name="member">The <see cref="MemberInfo"/> of the field or property.</param>
 		/// <returns>The dictionary contains types and their corrsponding names.</returns>
-		public SerializedNames GetSerializedNames (MemberInfo member) { return null; }
+		public virtual SerializedNames GetSerializedNames (MemberInfo member) { return null; }
 
 		/// <summary>
 		/// This method returns a default value for a field or a property. When the value of the member matches the default value, it will not be serialized. The return value of this method indicates whether the default value should be used.
@@ -215,14 +211,14 @@ namespace fastJSON
 		/// <param name="member">The <see cref="MemberInfo"/> of the field or property.</param>
 		/// <param name="defaultValue">The default value of the member.</param>
 		/// <returns>Whether the member has a default value.</returns>
-		public bool GetDefaultValue (MemberInfo member, out object defaultValue) { defaultValue = null; return false; }
+		public virtual bool GetDefaultValue (MemberInfo member, out object defaultValue) { defaultValue = null; return false; }
 
 		/// <summary>
 		/// This method returns the <see cref="IJsonConverter"/> to convert values for a field or a property during serialization and deserialization. If no converter is used, null can be returned.
 		/// </summary>
 		/// <param name="member">The <see cref="MemberInfo"/> of the field or property.</param>
 		/// <returns>The converter.</returns>
-		public IJsonConverter GetMemberConverter (MemberInfo member) { return null; }
+		public virtual IJsonConverter GetMemberConverter (MemberInfo member) { return null; }
 	}
  
 	/// <summary>
@@ -260,11 +256,9 @@ namespace fastJSON
 		/// If null is returned, the serialization of the member will be determined by the settings in <see cref="JSONParameters"/>.
 		/// </summary>
 		/// <param name="member">The member to be serialized.</param>
-		/// <param name="isProperty">True for that the member is a property, false for a field.</param>
-		/// <param name="isReadOnly">Whether the member is readonly.</param>
-		/// <param name="isStatic">Whether the member is static.</param>
+		/// <param name="info">Reflection infomation for the member.</param>
 		/// <returns>True is returned if the member is serializable, otherwise, false.</returns>
-		bool? IsMemberSerializable (MemberInfo member, bool isProperty, bool isReadOnly, bool isStatic);
+		bool? IsMemberSerializable (MemberInfo member, IMemberInfo info);
 
 		/// <summary>
 		/// This method is called to determine whether a field or a property is deserializable. If false is returned, the member will be excluded from deserialization. By default, writable fields or properties are deserializable.

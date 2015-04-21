@@ -11,7 +11,16 @@ using System.Collections.Specialized;
 
 namespace fastJSON
 {
-	internal sealed class Getters
+	public interface IMemberInfo
+	{
+		string MemberName { get; }
+		Type MemberType { get; }
+		bool IsProperty { get; }
+		bool IsReadOnly { get; }
+		bool IsStatic { get; }
+	}
+
+	internal sealed class Getters : IMemberInfo
 	{
 		internal string MemberName;
 		internal Type MemberType;
@@ -27,6 +36,12 @@ namespace fastJSON
 		internal IDictionary<Type, string> TypedNames;
 		internal IJsonConverter Converter;
 		internal bool AlwaysInclude;
+
+		string IMemberInfo.MemberName { get { return MemberName; } }
+		Type IMemberInfo.MemberType { get { return MemberType; } }
+		bool IMemberInfo.IsProperty { get { return IsProperty; } }
+		bool IMemberInfo.IsReadOnly { get { return IsReadOnly; } }
+		bool IMemberInfo.IsStatic { get { return IsStatic; } }
 	}
 
 	internal enum JsonDataType // myPropInfoType

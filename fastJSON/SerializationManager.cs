@@ -354,13 +354,6 @@ namespace fastJSON
 				t = p.PropertyType;
 				tp = true;
 			}
-			bool? ms = null;
-			if (controller != null) {
-				ms = controller.IsMemberSerializable (memberInfo, tp, ro, s);
-				if (ms.HasValue && ms.Value == false) {
-					return;
-				}
-			}
 			var g = new Getters {
 				MemberName = memberInfo.Name,
 				Getter = getter,
@@ -371,6 +364,10 @@ namespace fastJSON
 				MemberType = t
 			};
 			if (controller != null) {
+				bool? ms = controller.IsMemberSerializable (memberInfo, g);
+				if (ms.HasValue && ms.Value == false) {
+					return;
+				}
 				object dv;
 				if (ms.HasValue) {
 					g.AlwaysInclude = ms.Value;
