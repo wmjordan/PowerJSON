@@ -298,6 +298,10 @@ namespace UnitTests
 		public class InterceptorTestSample
 		{
 			public int Value;
+			public string Text;
+			public bool Toggle;
+			public string HideWhenToggleTrue = "Show when toggle false";
+			public DateTime Timestamp;
 		}
 		class TestInterceptor : JsonInterceptor<InterceptorTestSample>
 		{
@@ -310,6 +314,17 @@ namespace UnitTests
 				obj.Value = 2;
 				Console.WriteLine ("serialized.");
 			}
+			public override bool OnSerializing (InterceptorTestSample obj, ref string memberName, ref object memberValue) {
+				Console.WriteLine ("serializing " + memberName);
+				if (memberName == "Text") {
+					obj.Timestamp = DateTime.Now;
+					memberValue = "Changed at " + obj.Timestamp.ToString ();
+				}
+				else if (memberName == "HideWhenToggleTrue" && obj.Toggle) {
+					return false;
+				}
+				return true;
+			}
 			public override void OnDeserializing (InterceptorTestSample obj) {
 				obj.Value = 3;
 				Console.WriteLine ("deserializing.");
@@ -317,6 +332,13 @@ namespace UnitTests
 			public override void OnDeserialized (InterceptorTestSample obj) {
 				obj.Value = 4;
 				Console.WriteLine ("deserialized.");
+			}
+			public override bool OnDeserializing (InterceptorTestSample obj, string memberName, ref object memberValue) {
+				Console.WriteLine ("deserializing " + memberName);
+				if (memberName == "Text") {
+					memberValue = "1";
+				}
+				return true;
 			}
 		}
 
@@ -326,9 +348,17 @@ namespace UnitTests
 			var s = JSON.ToJSON (d, _JP);
 			Console.WriteLine (s);
 			Assert.AreEqual (2, d.Value);
+			StringAssert.Contains (s,"HideWhenToggleTrue");
+			StringAssert.Contains (s, @"""Text"":""Changed at " + d.Timestamp.ToString () + @"""");
 
 			var o = JSON.ToObject<InterceptorTestSample> (s);
 			Assert.AreEqual (4, o.Value);
+			Assert.AreEqual ("1", o.Text);
+
+			d.Toggle = true;
+			s = JSON.ToJSON (d, _JP);
+			Console.WriteLine (s);
+			Assert.IsFalse (s.Contains ("HideWhenToggleTrue"));
 		} 
 		#endregion
 
@@ -578,6 +608,53 @@ namespace UnitTests
 			Assert.AreEqual (30, StaticFieldTestSample.MaxValue);
 			Console.WriteLine (s);
 		}
+		#endregion
+
+		#region SerializationManager
+		public class WebExceptionJsonInterceptor : JsonInterceptor<System.Net.WebException>
+		{
+			public override IEnumerable<KeyValuePair<string, object>> SerializeExtraValues (System.Net.WebException obj) {
+				return new KeyValuePair<string, object>[] {
+					new KeyValuePair<string, object> ("exceptionTime", DateTime.Now),
+					new KeyValuePair<string, object> ("machine", Environment.MachineName)
+				};
+			}
+			public override bool OnSerializing (System.Net.WebException obj, ref string memberName, ref object memberValue) {
+				switch (memberName) {
+					case "Response":
+					case "Status":
+					case "Message":
+						return true;
+					default:
+						return false;
+				}
+			}
+		}
+		[TestMethod]
+		public void SerializationManagerTest () {
+			var p = new JSONParameters () {
+				UseExtensions = false,
+				UseEscapedUnicode = false,
+				ShowReadOnlyProperties = true,
+				NamingConvention = NamingConvention.CamelCase
+			};
+			p.Manager.RegisterTypeInterceptor<System.Net.WebException> (new WebExceptionJsonInterceptor ());
+			p.Manager.RegisterMemberName<System.Net.WebException> ("Status", "httpstatus");
+			try {
+				var c = System.Net.WebRequest.Create ("http://inexistent-domain.com");
+				using (var r = c.GetResponse ()) {
+
+				}
+			}
+			catch (System.Net.WebException ex) {
+				string s = JSON.ToJSON (ex, p);
+				Console.WriteLine (s);
+				StringAssert.Contains (s, @"""response"":");
+				StringAssert.Contains (s, @"""httpstatus"":");
+				StringAssert.Contains (s, @"""exceptionTime"":");
+				StringAssert.Contains (s, @"""machine"":""" + Environment.MachineName + "\"");
+			}
+		} 
 		#endregion
 	}
 }

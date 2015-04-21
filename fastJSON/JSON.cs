@@ -12,9 +12,23 @@ using System.Collections.Specialized;
 
 namespace fastJSON
 {
+	/// <summary>
+	/// A delegate to turn object into JSON string.
+	/// </summary>
+	/// <param name="data">The data to be serialized.</param>
+	/// <returns>The JSON segment representing <paramref name="data"/>.</returns>
 	public delegate string Serialize(object data);
+
+	/// <summary>
+	/// A delegate to turn JSON segment into object data.
+	/// </summary>
+	/// <param name="data">The JSON string.</param>
+	/// <returns>The object represented by <paramref name="data"/>.</returns>
 	public delegate object Deserialize(string data);
 
+	/// <summary>
+	/// The operation center of JSON serialization and deserialization.
+	/// </summary>
 	public static class JSON
 	{
 		/// <summary>
@@ -34,7 +48,7 @@ namespace fastJSON
 			return Beautify(s);
 		}
 		/// <summary>
-		/// Create a json representation for an object
+		/// Create a json representation for an object with the default <see cref="Parameters"/>.
 		/// </summary>
 		/// <param name="obj"></param>
 		/// <returns></returns>
@@ -86,7 +100,7 @@ namespace fastJSON
 		}
 #endif
 		/// <summary>
-		/// Create a typed generic object from the json
+		/// Create a typed generic object from the json with the default <see cref="Parameters"/>.
 		/// </summary>
 		/// <typeparam name="T"></typeparam>
 		/// <param name="json"></param>
@@ -107,7 +121,7 @@ namespace fastJSON
 			return new JSONDeserializer(param).ToObject<T>(json);
 		}
 		/// <summary>
-		/// Create an object from the json
+		/// Create an object from the json with the default <see cref="Parameters"/>.
 		/// </summary>
 		/// <param name="json"></param>
 		/// <returns></returns>
@@ -126,7 +140,7 @@ namespace fastJSON
 			return new JSONDeserializer(param).ToObject(json, null);
 		}
 		/// <summary>
-		/// Create an object of type from the json
+		/// Create an object of type from the json with the default <see cref="Parameters"/>.
 		/// </summary>
 		/// <param name="json"></param>
 		/// <param name="type"></param>
@@ -136,7 +150,7 @@ namespace fastJSON
 			return new JSONDeserializer(Parameters).ToObject(json, type);
 		}
 		/// <summary>
-		/// Fill a given object with the json represenation
+		/// Fill a given object with the json represenation with the default <see cref="Parameters"/>.
 		/// </summary>
 		/// <param name="input"></param>
 		/// <param name="json"></param>

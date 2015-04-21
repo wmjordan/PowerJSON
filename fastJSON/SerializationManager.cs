@@ -11,11 +11,13 @@ using System.Text;
 namespace fastJSON
 {
 	internal delegate object CreateObject ();
+	internal delegate object GenericSetter (object target, object value);
+	internal delegate object GenericGetter (object obj);
 
 	/// <summary>
 	/// The cached serialization infomation used by the reflection engine during serialization and deserialization.
 	/// </summary>
-	internal sealed class SerializationManager
+	public sealed class SerializationManager
 	{
 		private static readonly char[] __enumSeperatorCharArray = { ',' };
 
@@ -23,15 +25,22 @@ namespace fastJSON
 		private readonly IReflectionController _controller;
 		internal readonly SafeDictionary<Enum, string> EnumValueCache = new SafeDictionary<Enum, string> ();
 
+		/// <summary>
+		/// Returns the <see cref="IReflectionController"/> currently used by the <see cref="SerializationManager"/>. The instance could be casted to concrete type for more functionalities.
+		/// </summary>
 		public IReflectionController ReflectionController { get { return _controller; } }
 
 		/// <summary>
 		/// Gets the singleton instance.
 		/// </summary>
-		public static readonly SerializationManager Instance = new SerializationManager (new DefaultReflectionController ());
+		public static readonly SerializationManager Instance = new SerializationManager (new FastJsonReflectionController ());
 
-		public SerializationManager (IReflectionController provider) {
-			_controller = provider;
+		/// <summary>
+		/// Creates a new instance of <see cref="SerializationManager"/> with a specific <see cref="IReflectionController"/>.
+		/// </summary>
+		/// <param name="controller">The controller to control object reflections before serialization.</param>
+		public SerializationManager (IReflectionController controller) {
+			_controller = controller;
 		}
 
 		internal DefinitionCache GetDefinition (Type type) {
@@ -49,6 +58,86 @@ namespace fastJSON
 			c.Constructor = CreateConstructorMethod (type, skip | c.AlwaysDeserializable);
 			_memberDefinitions[type] = c;
 			return c;
+		}
+
+		/// <summary>
+		/// Assigns an <see cref="IJsonInterceptor"/> to process a specific type.
+		/// </summary>
+		/// <typeparam name="T">The type to be processed by the interceptor.</typeparam>
+		/// <param name="interceptor">The interceptor to intercept the serialization and deserialization.</param>
+		public void RegisterTypeInterceptor<T> (IJsonInterceptor interceptor) {
+			RegisterTypeInterceptor (typeof (T), interceptor);
+		}
+
+		/// <summary>
+		/// Assigns an <see cref="IJsonInterceptor"/> to process a specific type.
+		/// </summary>
+		/// <param name="type">The type to be processed by the interceptor.</param>
+		/// <param name="interceptor">The interceptor to intercept the serialization and deserialization.</param>
+		public void RegisterTypeInterceptor (Type type, IJsonInterceptor interceptor) {
+			var c = GetDefinition (type);
+			c.Interceptor = interceptor;
+		}
+
+		/// <summary>
+		/// Assigns the serialized name of a field or property.
+		/// </summary>
+		/// <typeparam name="T">The type containing the member.</typeparam>
+		/// <param name="memberName">The name of the field or property.</param>
+		/// <param name="serializedName">The serialized name of the member.</param>
+		public void RegisterMemberName<T> (string memberName, string serializedName) {
+			RegisterMemberName (typeof (T), memberName, serializedName);
+		}
+
+		/// <summary>
+		/// Assigns the serialized name of a field or property.
+		/// </summary>
+		/// <param name="type">The type containing the member.</param>
+		/// <param name="memberName">The name of the field or property.</param>
+		/// <param name="serializedName">The serialized name of the member.</param>
+		public void RegisterMemberName (Type type, string memberName, string serializedName) {
+			var c = GetDefinition (type);
+			string n = null;
+			foreach (var item in c.Getters) {
+				if (item.MemberName == memberName) {
+					item.SpecificName = serializedName != memberName
+						|| item.TypedNames != null && item.TypedNames.Count > 0;
+					if (n == serializedName) {
+						return;
+					}
+					n = item.SerializedName;
+					item.SerializedName = serializedName;
+					break;
+				}
+			}
+			myPropInfo p;
+			if (c.Properties.TryGetValue (n, out p)) {
+				p.Name = serializedName;
+			}
+			c.Properties.Remove (n);
+			c.Properties.Add (serializedName, p);
+		}
+
+		/// <summary>
+		/// Assigns an <see cref="IJsonConverter"/> to convert the value of the specific member.
+		/// </summary>
+		/// <param name="type">The type containing the member.</param>
+		/// <param name="memberName">The member to be assigned.</param>
+		/// <param name="converter">The converter to process the member value.</param>
+		public void RegisterMemberInterceptor (Type type, string memberName, IJsonConverter converter) {
+			var c = GetDefinition (type);
+			string n = null;
+			foreach (var item in c.Getters) {
+				if (item.MemberName == memberName) {
+					item.Converter = converter;
+					n = item.SerializedName;
+					break;
+				}
+			}
+			myPropInfo p;
+			if (c.Properties.TryGetValue (n, out p)) {
+				p.Converter = converter;
+			}
 		}
 
 		private bool ShouldSkipVisibilityCheck (Type type) {
@@ -114,19 +203,19 @@ namespace fastJSON
 			return c;
 		}
 
-		public string GetEnumName (Enum v) {
+		internal string GetEnumName (Enum value) {
 			string t;
-			if (EnumValueCache.TryGetValue (v, out t)) {
+			if (EnumValueCache.TryGetValue (value, out t)) {
 				return t;
 			}
-			var et = v.GetType ();
+			var et = value.GetType ();
 			var f = GetDefinition (et);
-			if (EnumValueCache.TryGetValue (v, out t)) {
+			if (EnumValueCache.TryGetValue (value, out t)) {
 				return t;
 			}
 			if (f.IsFlaggedEnum) {
 				var vs = Enum.GetValues (et);
-				var iv = (ulong)Convert.ToInt64 (v);
+				var iv = (ulong)Convert.ToInt64 (value);
 				var ov = iv;
 				if (iv == 0) {
 					return "0"; // should not be here
@@ -148,12 +237,12 @@ namespace fastJSON
 				}
 				sl.Reverse ();
 				t = String.Join (",", sl.ToArray ());
-				EnumValueCache.Add (v, t);
+				EnumValueCache.Add (value, t);
 			}
 			return t;
 		}
 
-		public Enum GetEnumValue (Type type, string name) {
+		internal Enum GetEnumValue (Type type, string name) {
 			var def = GetDefinition (type);
 			Enum e;
 			if (def.EnumNames.TryGetValue (name, out e)) {
@@ -176,15 +265,13 @@ namespace fastJSON
 
 	class DefinitionCache
 	{
-		internal delegate object GenericSetter (object target, object value);
-		internal delegate object GenericGetter (object obj);
 
 		public readonly string TypeName;
 		public readonly string AssemblyName;
 
 		public readonly bool AlwaysDeserializable;
 		internal CreateObject Constructor;
-		public readonly IJsonInterceptor Interceptor;
+		public IJsonInterceptor Interceptor;
 		public readonly Getters[] Getters;
 		public readonly Dictionary<string, myPropInfo> Properties;
 
@@ -275,8 +362,9 @@ namespace fastJSON
 				}
 			}
 			var g = new Getters {
+				MemberName = memberInfo.Name,
 				Getter = getter,
-				Name = n,
+				SerializedName = n,
 				IsStatic = s,
 				IsProperty = tp,
 				IsReadOnly = ro,
@@ -294,10 +382,10 @@ namespace fastJSON
 				}
 				var tn = controller.GetSerializedNames (memberInfo);
 				if (tn != null) {
-					if (String.IsNullOrEmpty (tn.DefaultName) == false && tn.DefaultName != g.Name) {
+					if (String.IsNullOrEmpty (tn.DefaultName) == false && tn.DefaultName != g.SerializedName) {
 						g.SpecificName = true;
 					}
-					g.Name = tn.DefaultName ?? g.Name;
+					g.SerializedName = tn.DefaultName ?? g.SerializedName;
 					if (tn.Count > 0) {
 						g.TypedNames = new Dictionary<Type, string> (tn);
 						g.SpecificName = true;
@@ -527,39 +615,39 @@ namespace fastJSON
 
 		private static myPropInfo CreateMyProp (Type type, string name, bool customType) {
 			myPropInfo d = new myPropInfo ();
-			myPropInfoType d_type = myPropInfoType.Unknown;
+			JsonDataType d_type = JsonDataType.Unknown;
 
-			if (type == typeof (int) || type == typeof (int?)) d_type = myPropInfoType.Int;
-			else if (type == typeof (long) || type == typeof (long?)) d_type = myPropInfoType.Long;
-			else if (type == typeof (string)) d_type = myPropInfoType.String;
-			else if (type == typeof (bool) || type == typeof (bool?)) d_type = myPropInfoType.Bool;
-			else if (type == typeof (DateTime) || type == typeof (DateTime?)) d_type = myPropInfoType.DateTime;
-			else if (type.IsEnum) d_type = myPropInfoType.Enum;
-			else if (type == typeof (Guid) || type == typeof (Guid?)) d_type = myPropInfoType.Guid;
-			else if (type == typeof (TimeSpan) || type == typeof (TimeSpan?)) d_type = myPropInfoType.TimeSpan;
-			else if (type == typeof (StringDictionary)) d_type = myPropInfoType.StringDictionary;
-			else if (type == typeof (NameValueCollection)) d_type = myPropInfoType.NameValue;
+			if (type == typeof (int) || type == typeof (int?)) d_type = JsonDataType.Int;
+			else if (type == typeof (long) || type == typeof (long?)) d_type = JsonDataType.Long;
+			else if (type == typeof (string)) d_type = JsonDataType.String;
+			else if (type == typeof (bool) || type == typeof (bool?)) d_type = JsonDataType.Bool;
+			else if (type == typeof (DateTime) || type == typeof (DateTime?)) d_type = JsonDataType.DateTime;
+			else if (type.IsEnum) d_type = JsonDataType.Enum;
+			else if (type == typeof (Guid) || type == typeof (Guid?)) d_type = JsonDataType.Guid;
+			else if (type == typeof (TimeSpan) || type == typeof (TimeSpan?)) d_type = JsonDataType.TimeSpan;
+			else if (type == typeof (StringDictionary)) d_type = JsonDataType.StringDictionary;
+			else if (type == typeof (NameValueCollection)) d_type = JsonDataType.NameValue;
 			else if (type.IsArray) {
 				d.ElementType = type.GetElementType ();
 				if (type == typeof (byte[]))
-					d_type = myPropInfoType.ByteArray;
+					d_type = JsonDataType.ByteArray;
 				else
-					d_type = myPropInfoType.Array;
+					d_type = JsonDataType.Array;
 			}
 			else if (type.Name.Contains ("Dictionary")) {
 				d.GenericTypes = Reflection.Instance.GetGenericArguments (type);// t.GetGenericArguments();
 				if (d.GenericTypes.Length > 0 && d.GenericTypes[0] == typeof (string))
-					d_type = myPropInfoType.StringKeyDictionary;
+					d_type = JsonDataType.StringKeyDictionary;
 				else
-					d_type = myPropInfoType.Dictionary;
+					d_type = JsonDataType.Dictionary;
 			}
 #if !SILVERLIGHT
-			else if (type == typeof (Hashtable)) d_type = myPropInfoType.Hashtable;
-			else if (type == typeof (DataSet)) d_type = myPropInfoType.DataSet;
-			else if (type == typeof (DataTable)) d_type = myPropInfoType.DataTable;
+			else if (type == typeof (Hashtable)) d_type = JsonDataType.Hashtable;
+			else if (type == typeof (DataSet)) d_type = JsonDataType.DataSet;
+			else if (type == typeof (DataTable)) d_type = JsonDataType.DataTable;
 #endif
 			else if (customType)
-				d_type = myPropInfoType.Custom;
+				d_type = JsonDataType.Custom;
 
 			if (type.IsValueType && !type.IsPrimitive && !type.IsEnum && type != typeof (decimal))
 				d.IsStruct = true;
@@ -604,176 +692,6 @@ namespace fastJSON
 				vm.Add (en, ev);
 			}
 			return vm;
-		}
-	}
-	/// <summary>
-	/// The controller interface to control type reflections for serialization and deserialization. The controller works in the reflection phase which is executed typically once and the result will be cached.
-	/// </summary>
-	internal interface IReflectionController
-	{
-		/// <summary>
-		/// This method is called to override the serialized name of an enum value. If null or empty string is returned, the original name of the enum value is used.
-		/// </summary>
-		/// <param name="member">The enum value member.</param>
-		/// <returns>The name of the enum value.</returns>
-		string GetEnumValueName (MemberInfo member);
-
-		/// <summary>
-		/// This method is called before the constructor of a type is built for deserialization. If the generic parameters of a generic type, or the element type of an array type may also be checked. When this method returns true, the type can be deserialized regardless it is a non-public type. Publich types are always deserializable.
-		/// </summary>
-		/// <param name="type">The type to be deserialized.</param>
-		/// <returns>Whether the type can be deserialized even if it is a non-public type.</returns>
-		bool IsAlwaysDeserializable (Type type);
-
-		/// <summary>
-		/// This method is called to get the <see cref="IJsonInterceptor"/> for the type. If no interceptor, null should be returned.
-		/// </summary>
-		/// <param name="type">The type to be checked.</param>
-		/// <returns>The interceptor.</returns>
-		IJsonInterceptor GetInterceptor (Type type);
-
-		/// <summary>
-		/// This method is called to determine whether a field or a property is serializable.
-		/// If false is returned, the member will be excluded from serialization.
-		/// If true is returned, the member will always get serialized.
-		/// If null is returned, the serialization of the member will be determined by the setting in <see cref="JSONParameters"/>.
-		/// </summary>
-		/// <param name="member">The member to be serialized.</param>
-		/// <param name="isProperty">True for that the member is a property, false for a field.</param>
-		/// <param name="isReadOnly">Whether the member is readonly.</param>
-		/// <param name="isStatic">Whether the member is static.</param>
-		/// <returns>True is returned if the member is serializable, otherwise, false.</returns>
-		bool? IsMemberSerializable (MemberInfo member, bool isProperty, bool isReadOnly, bool isStatic);
-
-		/// <summary>
-		/// This method is called to determine whether a field or a property is deserializable. If false is returned, the member will be excluded from deserialization. By default, writable fields or properties are deserializable.
-		/// </summary>
-		/// <param name="member">The member to be serialized.</param>
-		/// <returns>True is returned if the member is serializable, otherwise, false.</returns>
-		bool IsMemberDeserializable (MemberInfo member);
-
-		/// <summary>
-		/// This method returns possible names for corrsponding types of a field or a property. This enables polymorphic serialization and deserialization for abstract, interface, or object types, with pre-determined concrete types. If polymorphic serialization is not used, null or an empty dictionary could be returned.
-		/// </summary>
-		/// <param name="member">The <see cref="MemberInfo"/> of the field or property.</param>
-		/// <returns>The dictionary contains types and their corrsponding names.</returns>
-		SerializedNames GetSerializedNames (MemberInfo member);
-
-		/// <summary>
-		/// This method returns a default value for a field or a property. When the value of the member has the default value, it will not be serialized. The return value of this method indicates whether the default value should be used.
-		/// </summary>
-		/// <param name="member">The <see cref="MemberInfo"/> of the field or property.</param>
-		/// <param name="defaultValue">The default value of the member.</param>
-		/// <returns>Whether the member has a default value.</returns>
-		bool GetDefaultValue (MemberInfo member, out object defaultValue);
-
-		/// <summary>
-		/// This method returns the <see cref="IJsonConverter"/> to convert values for a field or a property during serialization and deserialization. If no converter is used, null can be returned.
-		/// </summary>
-		/// <param name="member">The <see cref="MemberInfo"/> of the field or property.</param>
-		/// <returns>The converter.</returns>
-		IJsonConverter GetMemberConverter (MemberInfo member);
-	}
-
-	/// <summary>
-	/// Contains the names for a serialized member.
-	/// </summary>
-	public class SerializedNames : Dictionary<Type, string>
-	{
-		/// <summary>
-		/// Gets the default name for the serialized member.
-		/// </summary>
-		public string DefaultName { get; set; }
-	}
-
-	public class DefaultReflectionController : IReflectionController
-	{
-		/// <summary>
-		/// Ignore attributes to check for (default : XmlIgnoreAttribute).
-		/// </summary>
-		public List<Type> IgnoreAttributes { get; private set; }
-
-		public DefaultReflectionController () {
-			IgnoreAttributes = new List<Type> () { typeof (System.Xml.Serialization.XmlIgnoreAttribute) };
-		}
-
-		public virtual string GetEnumValueName (MemberInfo member) {
-			var a = AttributeHelper.GetAttribute<JsonEnumValueAttribute> (member, false);
-			if (a != null) {
-				return a.Name;
-			}
-			return member.Name;
-		}
-
-		public virtual bool IsAlwaysDeserializable (Type type) {
-			return AttributeHelper.GetAttribute<JsonSerializableAttribute> (type, false) != null;
-		}
-
-		public virtual IJsonInterceptor GetInterceptor (Type type) {
-			var ia = AttributeHelper.GetAttribute<JsonInterceptorAttribute> (type, true);
-			if (ia != null) {
-				return ia.Interceptor;
-			}
-			return null;
-		}
-
-		public virtual bool? IsMemberSerializable (MemberInfo member, bool isProperty, bool isReadOnly, bool isStatic) {
-			bool? s = null;
-			var ic = AttributeHelper.GetAttribute<JsonIncludeAttribute> (member, true);
-			if (ic != null) {
-				s = ic.Include;
-			}
-			if (IgnoreAttributes != null && IgnoreAttributes.Count > 0) {
-				foreach (var item in IgnoreAttributes) {
-					if (member.IsDefined (item, false)) {
-						return false;
-					}
-				}
-			}
-			return s;
-		}
-
-		public virtual bool IsMemberDeserializable (MemberInfo member) {
-			var ro = AttributeHelper.GetAttribute<System.ComponentModel.ReadOnlyAttribute> (member, true);
-			if (ro != null) {
-				return ro.IsReadOnly == false;
-			}
-			return true;
-		}
-
-		public virtual SerializedNames GetSerializedNames (MemberInfo member) {
-			SerializedNames tn = new SerializedNames ();
-			var jf = AttributeHelper.GetAttributes<JsonFieldAttribute> (member, true);
-			foreach (var item in jf) {
-				if (String.IsNullOrEmpty (item.Name)) {
-					continue;
-				}
-				if (item.Type == null) {
-					tn.DefaultName = item.Name;
-				}
-				else {
-					tn.Add (item.Type, item.Name);
-				}
-			}
-			return tn;
-		}
-
-		public virtual bool GetDefaultValue (MemberInfo member, out object defaultValue) {
-			var a = AttributeHelper.GetAttribute<System.ComponentModel.DefaultValueAttribute> (member, true);
-			if (a != null) {
-				defaultValue = a.Value;
-				return true;
-			}
-			defaultValue = null;
-			return false;
-		}
-
-		public virtual IJsonConverter GetMemberConverter (MemberInfo member) {
-			var cv = AttributeHelper.GetAttribute<JsonConverterAttribute> (member, true);
-			if (cv != null) {
-				return cv.Converter;
-			}
-			return null;
 		}
 	}
 

@@ -138,7 +138,7 @@ namespace fastJSON
 
 			foreach (DictionaryEntry entry in stringDictionary)
 			{
-				if (_params.SerializeNullValues == false && (entry.Value == null))
+				if (_params.SerializeNullValues == false && entry.Value == null)
 				{
 				}
 				else
@@ -146,11 +146,6 @@ namespace fastJSON
 					if (pendingSeparator) _output.Append(',');
 
 					WritePair (_params.NamingStrategy.Rename ((string)entry.Key), entry.Value);
-					//string k = (string)entry.Key;
-					//if (_params.SerializeToLowerCaseNames)
-					//	WritePair(k.ToLower(), entry.Value);
-					//else
-					//	WritePair(k, entry.Value);
 					pendingSeparator = true;
 				}
 			}
@@ -413,39 +408,43 @@ namespace fastJSON
 					}
 				}
 				object o = p.Getter(obj);
+				string n = p.MemberName;
+				if (p.Converter != null) {
+					o = p.Converter.SerializationConvert (n, o);
+				}
+				if (si != null && si.OnSerializing (obj, ref n, ref o) == false) {
+					continue;
+				}
+				if (p.SpecificName) {
+					if (o == null || p.TypedNames == null || p.TypedNames.TryGetValue (o.GetType (), out n) == false) {
+						n = p.SerializedName;
+					}
+				}
+				else {
+					n = p.SerializedName;
+				}
 				if (_params.SerializeNullValues == false && (o == null || o is DBNull))
 				{
 					//append = false;
 					continue;
 				}
-				string n;
-				if (p.SpecificName) {
-					if (o == null || p.TypedNames == null || p.TypedNames.TryGetValue (o.GetType (), out n) == false) {
-						n = p.Name;
-					}
-				}
-				else {
-					n = _params.NamingStrategy.Rename (p.Name);
-				}
-				if (p.Converter != null) {
-					o = p.Converter.SerializationConvert (n, o);
-				}
 				if (p.HasDefaultValue && Object.Equals (o, p.DefaultValue)) {
 					// ignore fields with default value
 					continue;
 				}
+				if (p.SpecificName == false) {
+					n = _params.NamingStrategy.Rename (p.SerializedName);
+				}
 				if (append)
 					_output.Append(',');
+
 				WritePair (n, o);
-				//if (_params.SerializeToLowerCaseNames)
-				//	WritePair(p.lcName, o);
-				//else
-				//	WritePair(p.Name, o);
+
 				if (o != null && _params.UseExtensions)
 				{
 					Type tt = o.GetType ();
 					if (tt == typeof(System.Object))
-						map.Add(p.Name, tt.ToString());
+						map.Add(p.SerializedName, tt.ToString());
 				}
 				append = true;
 			}
@@ -453,12 +452,22 @@ namespace fastJSON
 			{
 				_output.Append(",\"$map\":");
 				WriteStringDictionary(map);
+				append = true;
+			}
+			if (si != null) {
+				var ev = si.SerializeExtraValues (obj);
+				if (ev != null) {
+					foreach (var item in ev) {
+						if (append)
+							_output.Append (',');
+						WritePair (item.Key, item.Value);
+						append = true;
+					}
+				}
+				si.OnSerialized (obj);
 			}
 			_output.Append('}');
 			_current_depth--;
-			if (si != null) {
-				si.OnSerialized (obj);
-			}
 		}
 
 		private void WritePairFast(string name, string value)
@@ -527,11 +536,6 @@ namespace fastJSON
 				}
 				if (pendingSeparator) _output.Append(',');
 				WritePair (_params.NamingStrategy.Rename ((string)entry.Key), entry.Value);
-				//string k = (string)entry.Key;
-				//if (_params.SerializeToLowerCaseNames)
-				//	WritePair(k.ToLower(), entry.Value);
-				//else
-				//	WritePair(k, entry.Value);
 				pendingSeparator = true;
 			}
 			_output.Append('}');
@@ -581,11 +585,6 @@ namespace fastJSON
 				}
 				if (pendingSeparator) _output.Append(',');
 				WritePair (_params.NamingStrategy.Rename (entry.Key), entry.Value);
-				//string k = entry.Key;
-				//if (_params.SerializeToLowerCaseNames)
-				//	WritePair(k.ToLower(), entry.Value);
-				//else
-				//	WritePair(k, entry.Value);
 				pendingSeparator = true;
 			}
 			_output.Append('}');

@@ -5,6 +5,9 @@ using System.Text;
 
 namespace fastJSON.BonusPack
 {
+	/// <summary>
+	/// Turns <see cref="IEnumerable"/> collection into an <see cref="EnumerableDataReader"/>.
+	/// </summary>
 	public class EnumerableDataReader
 	{
 		/// <summary>
@@ -25,7 +28,7 @@ namespace fastJSON.BonusPack
 	/// <remarks>References:
 	/// 1) https://github.com/matthewschrager/Repository/blob/master/Repository.EntityFramework/EntityDataReader.cs;
 	/// 2) http://www.codeproject.com/Articles/876276/Bulk-Insert-Into-SQL-From-Csharp</remarks>
-	/// <typeparam name="T"></typeparam>
+	/// <typeparam name="T">The data type in the data source.</typeparam>
 	public class EnumerableDataReader<T> : IDataReader
 	{
 		static Dictionary<Type, byte> _scalarTypes = InitScalarTypes ();
@@ -85,7 +88,7 @@ namespace fastJSON.BonusPack
 			_memberNames = new string[_fieldCount];
 			_accessors = new Getters[_fieldCount];
 			for (int i = 0; i < _fieldCount; i++) {
-				_memberNames[i] = p[i].Name;
+				_memberNames[i] = p[i].SerializedName;
 				_accessors[i] = p[i];
 			}
 		}

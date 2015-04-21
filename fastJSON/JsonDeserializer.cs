@@ -299,97 +299,101 @@ namespace fastJSON
     				continue;
     			}
     			myPropInfo pi;
-    			if (props.TryGetValue(n, out pi) == false)
+    			if (props.TryGetValue(n, out pi) == false
+					|| pi.CanWrite == false)
     				continue;
-    			if (pi.CanWrite)
-    			{
-    				object v = d[n];
+    			object v = d[n];
     
-    				if (pi.Converter != null) {
-    					var tc = pi.Converter as ITypeConverter;
-    					var xv = v;
-    					if (tc != null && xv != null && tc.SerializedType != null) {
-    						if (v is Dictionary<string, object>) {
-    							xv = ParseDictionary ((Dictionary<string,object>)xv, globaltypes, tc.SerializedType, pi.Getter (o));
-    						}
-    						else if (v is List<object>) {
-    							xv = CreateGenericList ((List<object>)xv, tc.SerializedType, tc.ElementType, globaltypes);
-    						}
-    						else if (pi.PropertyType.Equals (xv.GetType ()) == false) {
-    							xv = ChangeType (xv, tc.SerializedType);
-    						}
-    					}
-    					var cv = pi.Converter.DeserializationConvert (n, xv);
-    					if (Object.ReferenceEquals (cv, xv) == false) {
-    						// use the converted type
-    						if (cv != null) {
-    							o = pi.Setter (o, cv);
-    						}
-    						else {
-    							if (pi.IsClass || pi.IsNullable) {
-    								o = pi.Setter (o, null);
-    							}
-    						}
-    						continue;
-    					}
+    			if (pi.Converter != null) {
+    				var tc = pi.Converter as ITypeConverter;
+    				var xv = v;
+    				if (tc != null && xv != null) {
+						var st = tc.SerializedType;
+						if (st != null && st != typeof (object)) {
+							if (v is Dictionary<string, object>) {
+								xv = ParseDictionary ((Dictionary<string, object>)xv, globaltypes, st, pi.Getter (o));
+							}
+							else if (v is List<object>) {
+								xv = CreateGenericList ((List<object>)xv, st, tc.ElementType, globaltypes);
+							}
+							else if (pi.PropertyType.Equals (xv.GetType ()) == false) {
+								xv = ChangeType (xv, st);
+							}
+						}
     				}
-    				if (v == null)
-    				{
-    					if (pi.IsClass || pi.IsNullable) {
-    						o = pi.Setter (o, null);
+    				var cv = pi.Converter.DeserializationConvert (n, xv);
+    				if (Object.ReferenceEquals (cv, xv) == false) {
+    					// use the converted value
+    					if (cv != null || pi.IsClass || pi.IsNullable) {
+							if (si != null && si.OnDeserializing (o, n, ref cv) == false) {
+								continue;
+							}
+    						o = pi.Setter (o, cv);
     					}
     					continue;
     				}
-    
-    				object oset = null;
-    
-    				switch (pi.Type) {
-    					case myPropInfoType.Int: oset = (int)((long)v); break;
-    					case myPropInfoType.Long: oset = (long)v; break;
-    					case myPropInfoType.String: oset = (string)v; break;
-    					case myPropInfoType.Bool: oset = (bool)v; break;
-    					case myPropInfoType.DateTime: oset = CreateDateTime ((string)v); break;
-    					case myPropInfoType.Enum: oset = CreateEnum (pi.PropertyType, v); break;
-    					case myPropInfoType.Guid: oset = CreateGuid ((string)v); break;
-    					case myPropInfoType.TimeSpan: oset = CreateTimeSpan ((string)v); break;
-    
-    					case myPropInfoType.Array:
-    						if (!pi.IsValueType)
-    							oset = CreateArray ((List<object>)v, pi.PropertyType, pi.ElementType, globaltypes);
-    						// what about 'else'?
-    						break;
-    					case myPropInfoType.ByteArray: oset = Convert.FromBase64String ((string)v); break;
-    #if !SILVERLIGHT
-    					case myPropInfoType.DataSet: oset = CreateDataset ((Dictionary<string, object>)v, globaltypes); break;
-    					case myPropInfoType.DataTable: oset = CreateDataTable ((Dictionary<string, object>)v, globaltypes); break;
-    					case myPropInfoType.Hashtable: // same case as Dictionary
-    #endif
-    					case myPropInfoType.Dictionary: oset = CreateDictionary ((List<object>)v, pi.PropertyType, pi.GenericTypes, globaltypes); break;
-    					case myPropInfoType.StringKeyDictionary: oset = CreateStringKeyDictionary ((Dictionary<string, object>)v, pi.PropertyType, pi.GenericTypes, globaltypes); break;
-    					case myPropInfoType.NameValue: oset = CreateNV ((Dictionary<string, object>)v); break;
-    					case myPropInfoType.StringDictionary: oset = CreateSD ((Dictionary<string, object>)v); break;
-    					case myPropInfoType.Custom: oset = Reflection.Instance.CreateCustom ((string)v, pi.PropertyType); break;
-    					default: {
-    							if (pi.IsGenericType && pi.IsValueType == false && v is List<object>)
-    								oset = CreateGenericList ((List<object>)v, pi.PropertyType, pi.ElementType, globaltypes);
-    
-    							else if ((pi.IsClass || pi.IsStruct) && v is Dictionary<string, object>)
-    								oset = ParseDictionary ((Dictionary<string, object>)v, globaltypes, pi.PropertyType, pi.Getter (o));
-    
-    							else if (v is List<object>)
-    								oset = CreateArray ((List<object>)v, pi.PropertyType, typeof (object), globaltypes);
-    
-    							else if (pi.IsValueType)
-    								oset = ChangeType (v, pi.ChangeType);
-    
-    							else
-    								oset = v;
-    						}
-    						break;
-    				}
-    
-    				o = pi.Setter (o, oset);
     			}
+    			if (v == null) {
+					if (si != null && si.OnDeserializing (o, n, ref v) == false) {
+						continue;
+					}
+					if (pi.IsClass || pi.IsNullable) {
+						o = pi.Setter (o, v);
+					}
+    				continue;
+    			}
+    
+    			object oset = null;
+    
+    			switch (pi.Type) {
+    				case JsonDataType.Int: oset = (int)((long)v); break;
+    				case JsonDataType.Long: oset = (long)v; break;
+    				case JsonDataType.String: oset = (string)v; break;
+    				case JsonDataType.Bool: oset = (bool)v; break;
+    				case JsonDataType.DateTime: oset = CreateDateTime ((string)v); break;
+    				case JsonDataType.Enum: oset = CreateEnum (pi.PropertyType, v); break;
+    				case JsonDataType.Guid: oset = CreateGuid ((string)v); break;
+    				case JsonDataType.TimeSpan: oset = CreateTimeSpan ((string)v); break;
+    
+    				case JsonDataType.Array:
+    					if (!pi.IsValueType)
+    						oset = CreateArray ((List<object>)v, pi.PropertyType, pi.ElementType, globaltypes);
+    					// what about 'else'?
+    					break;
+    				case JsonDataType.ByteArray: oset = Convert.FromBase64String ((string)v); break;
+#if !SILVERLIGHT
+    				case JsonDataType.DataSet: oset = CreateDataset ((Dictionary<string, object>)v, globaltypes); break;
+    				case JsonDataType.DataTable: oset = CreateDataTable ((Dictionary<string, object>)v, globaltypes); break;
+    				case JsonDataType.Hashtable: // same case as Dictionary
+#endif
+    				case JsonDataType.Dictionary: oset = CreateDictionary ((List<object>)v, pi.PropertyType, pi.GenericTypes, globaltypes); break;
+    				case JsonDataType.StringKeyDictionary: oset = CreateStringKeyDictionary ((Dictionary<string, object>)v, pi.PropertyType, pi.GenericTypes, globaltypes); break;
+    				case JsonDataType.NameValue: oset = CreateNV ((Dictionary<string, object>)v); break;
+    				case JsonDataType.StringDictionary: oset = CreateSD ((Dictionary<string, object>)v); break;
+    				case JsonDataType.Custom: oset = Reflection.Instance.CreateCustom ((string)v, pi.PropertyType); break;
+    				default: {
+    						if (pi.IsGenericType && pi.IsValueType == false && v is List<object>)
+    							oset = CreateGenericList ((List<object>)v, pi.PropertyType, pi.ElementType, globaltypes);
+    
+    						else if ((pi.IsClass || pi.IsStruct) && v is Dictionary<string, object>)
+    							oset = ParseDictionary ((Dictionary<string, object>)v, globaltypes, pi.PropertyType, pi.Getter (o));
+    
+    						else if (v is List<object>)
+    							oset = CreateArray ((List<object>)v, pi.PropertyType, typeof (object), globaltypes);
+    
+    						else if (pi.IsValueType)
+    							oset = ChangeType (v, pi.ChangeType);
+    
+    						else
+    							oset = v;
+    					}
+    					break;
+    			}
+
+				if (si != null && si.OnDeserializing (o, n, ref oset) == false) {
+					continue;
+				}
+				o = pi.Setter (o, oset);
     		}
     		if (si != null) {
     			si.OnDeserialized (o);

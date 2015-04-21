@@ -63,7 +63,7 @@ namespace fastJSON
     	/// Ignore attributes to check for (default : XmlIgnoreAttribute)
     	/// </summary>
 		[Obsolete ("This property is provided for backward compatibility.")]
-		public List<Type> IgnoreAttributes { get { return (Manager.ReflectionController as DefaultReflectionController).IgnoreAttributes; } }
+		public List<Type> IgnoreAttributes { get { return (Manager.ReflectionController as FastJsonReflectionController).IgnoreAttributes; } }
 
     	/// <summary>
     	/// If you have parametric and no default constructor for you classes (default = False)
@@ -107,7 +107,7 @@ namespace fastJSON
     	/// <summary>
     	/// The manager to control serialization.
     	/// </summary>
-    	internal SerializationManager Manager = SerializationManager.Instance;
+    	public SerializationManager Manager = SerializationManager.Instance;
     
     	NamingStrategy _strategy = NamingStrategy.Default;
     	internal NamingStrategy NamingStrategy { get { return _strategy; } }

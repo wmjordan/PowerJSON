@@ -110,7 +110,7 @@ namespace fastJSON
 	public class JsonInterceptorAttribute : Attribute
 	{
 		/// <summary>
-		/// The type of interceptor. The type should implement <see cref="IJsonInterceptor"/>. During serialization and deserialization, an instance of <see cref="IJsonInterceptor"/> will be used to process values of the object being processed.
+		/// The type of interceptor. The instance of the type should implement <see cref="IJsonInterceptor"/>. During serialization and deserialization, an instance of <see cref="IJsonInterceptor"/> will be created to process values of the object being serialized or deserialized.
 		/// </summary>
 		public Type InterceptorType {
 			get { return Interceptor == null ? null : Interceptor.GetType (); }
@@ -127,6 +127,9 @@ namespace fastJSON
 		}
 	}
 
+	/// <summary>
+	/// An interface to intercept varios aspects in JSON serialization and deserialization. It is recommended to inherit from <see cref="JsonInterceptor&lt;T&gt;"/> for easier implementation when possible.
+	/// </summary>
 	public interface IJsonInterceptor
 	{
 		/// <summary>
@@ -135,11 +138,28 @@ namespace fastJSON
 		/// <param name="obj">The object being serialized.</param>
 		/// <returns>Whether the object should be serialized.</returns>
 		bool OnSerializing (object obj);
+
+		/// <summary>
+		/// This method is called before the serialization is finished. Extra values can be returned and written to the serialized result.
+		/// </summary>
+		/// <param name="obj">The object being serialized.</param>
+		/// <returns>Extra values to be serialized.</returns>
+		IEnumerable<KeyValuePair<string, object>> SerializeExtraValues (object obj);
+
 		/// <summary>
 		/// This method is called after the object has been fully serialized.
 		/// </summary>
 		/// <param name="obj">The object being serialized.</param>
 		void OnSerialized (object obj);
+
+		/// <summary>
+		/// This method is called before serializing a field or a property. If the method returns false, the member will not be serialized.
+		/// </summary>
+		/// <param name="obj">The container object.</param>
+		/// <param name="memberName">The name of the member.</param>
+		/// <param name="memberValue">The value of the member.</param>
+		/// <returns>Whether the member should be serialized.</returns>
+		bool OnSerializing (object obj, ref string memberName, ref object memberValue);
 
 		/// <summary>
 		/// This method is called between the object has been created and the values are filled during deserialization. This method provides an opportunity to initialize an object before deserialization.
@@ -152,10 +172,19 @@ namespace fastJSON
 		/// </summary>
 		/// <param name="obj">The object created from deserialization.</param>
 		void OnDeserialized (object obj);
+
+		/// <summary>
+		/// This method is called before deserializing a field or a property. If the method returns false, the member will not be deserialized.
+		/// </summary>
+		/// <param name="obj">The container object.</param>
+		/// <param name="memberName">The name of the member.</param>
+		/// <param name="memberValue">The value of the member.</param>
+		/// <returns>Whether the member should be deserialized.</returns>
+		bool OnDeserializing (object obj, string memberName, ref object memberValue);
 	}
 
 	/// <summary>
-	/// This is a default implementation of <see cref="IJsonInterceptor"/>, which restricts the type of the object being serialized or deserialized.
+	/// This is a default implementation of <see cref="IJsonInterceptor"/>, which restricts the type of the object being serialized or deserialized. The default implementation does nothing and returns true for all OnSerializing or OnDeserializing methods.
 	/// </summary>
 	/// <typeparam name="T">The type of the object being serialized or deserialized.</typeparam>
 	public abstract class JsonInterceptor<T> : IJsonInterceptor
@@ -166,6 +195,13 @@ namespace fastJSON
 		/// <param name="obj">The object being serialized.</param>
 		/// <returns>Whether the object should be serialized.</returns>
 		public virtual bool OnSerializing (T obj) { return true; }
+
+		/// <summary>
+		/// This method is called before the serialization is finished. Extra values can be returned and written to the serialized result.
+		/// </summary>
+		/// <param name="obj">The object being serialized.</param>
+		/// <returns>Extra values to be serialized.</returns>
+		public virtual IEnumerable<KeyValuePair<string, object>> SerializeExtraValues (T obj) { return null; }
 
 		/// <summary>
 		/// This method is called after the object has been fully serialized.
@@ -185,8 +221,34 @@ namespace fastJSON
 		/// <param name="obj">The object created from deserialization.</param>
 		public virtual void OnDeserialized (T obj) { }
 
+		/// <summary>
+		/// This method is called before serializing a field or a property. If the method returns false, the member will not be serialized.
+		/// </summary>
+		/// <param name="obj">The container object.</param>
+		/// <param name="memberName">The name of the member.</param>
+		/// <param name="memberValue">The value of the member.</param>
+		/// <returns>Whether the member should be serialized.</returns>
+		public virtual bool OnSerializing (T obj, ref string memberName, ref object memberValue) {
+			return true;
+		}
+
+		/// <summary>
+		/// This method is called before deserializing a field or a property. If the method returns false, the member will not be deserialized.
+		/// </summary>
+		/// <param name="obj">The container object.</param>
+		/// <param name="memberName">The name of the member.</param>
+		/// <param name="memberValue">The value of the member.</param>
+		/// <returns>Whether the member should be deserialized.</returns>
+		public virtual bool OnDeserializing (T obj, string memberName, ref object memberValue) {
+			return true;
+		}
+
 		bool IJsonInterceptor.OnSerializing (object obj) {
 			return (obj is T) ? OnSerializing ((T)obj) : false;
+		}
+
+		IEnumerable<KeyValuePair<string, object>> IJsonInterceptor.SerializeExtraValues (object obj) {
+			return (obj is T) ? SerializeExtraValues ((T)obj) : null;
 		}
 
 		void IJsonInterceptor.OnSerialized (object obj) {
@@ -205,6 +267,20 @@ namespace fastJSON
 			if (obj is T) {
 				OnDeserialized ((T)obj);
 			}
+		}
+
+		bool IJsonInterceptor.OnSerializing (object obj, ref string memberName, ref object memberValue) {
+			if (obj is T) {
+				return OnSerializing ((T)obj, ref memberName, ref memberValue);
+			}
+			return false;
+		}
+
+		bool IJsonInterceptor.OnDeserializing (object obj, string memberName, ref object memberValue) {
+			if (obj is T) {
+				return OnDeserializing ((T)obj, memberName, ref memberValue);
+			}
+			return false;
 		}
 	}
 
