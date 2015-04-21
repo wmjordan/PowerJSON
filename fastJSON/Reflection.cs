@@ -1,22 +1,33 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Reflection.Emit;
-using System.Reflection;
-using System.Collections;
-#if !SILVERLIGHT
-using System.Data;
-#endif
-using System.Collections.Specialized;
 
 namespace fastJSON
 {
+	/// <summary>
+	/// Contains information about a member.
+	/// </summary>
 	public interface IMemberInfo
 	{
+		/// <summary>
+		/// The name of the field or property.
+		/// </summary>
 		string MemberName { get; }
+		/// <summary>
+		/// The type of the member.
+		/// </summary>
 		Type MemberType { get; }
+		/// <summary>
+		/// True if the member is a property, false for a field.
+		/// </summary>
 		bool IsProperty { get; }
+		/// <summary>
+		/// Indicates whether the member is read-only. Read-only properties or initialized-only fields returns true.
+		/// </summary>
 		bool IsReadOnly { get; }
+		/// <summary>
+		/// Indicates whether the member is static.
+		/// </summary>
 		bool IsStatic { get; }
 	}
 
@@ -93,7 +104,7 @@ namespace fastJSON
 
 	internal sealed class Reflection
 	{
-		// Sinlgeton pattern 4 from : http://csharpindepth.com/articles/general/singleton.aspx
+		// Singleton pattern 4 from : http://csharpindepth.com/articles/general/singleton.aspx
 		private static readonly Reflection instance = new Reflection();
 
 		// Explicit static constructor to tell C# compiler
@@ -122,7 +133,7 @@ namespace fastJSON
 		//private SafeDictionary<Enum, string> _enumCache = new SafeDictionary<Enum, string> ();
 		//private SafeDictionary<Type, Dictionary<string, Enum>> _enumValueCache = new SafeDictionary<Type, Dictionary<string, Enum>> ();
 
-		#region json custom types
+		#region JSON custom types
 		// JSON custom
 		internal SafeDictionary<Type, Serialize> _customSerializer = new SafeDictionary<Type, Serialize>();
 		internal SafeDictionary<Type, Deserialize> _customDeserializer = new SafeDictionary<Type, Deserialize>();

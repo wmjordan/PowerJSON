@@ -322,17 +322,16 @@ namespace fastJSON
 
 		void WriteDataTable(DataTable dt)
 		{
-			this._output.Append('{');
+			_output.Append('{');
 			if (_params.UseExtensions)
 			{
-				this.WritePair("$schema", _params.UseOptimizedDatasetSchema ? (object)this.GetSchema(dt) : this.GetXmlSchema(dt));
-				this._output.Append(',');
+				WritePair("$schema", _params.UseOptimizedDatasetSchema ? (object)GetSchema(dt) : GetXmlSchema(dt));
+				_output.Append(',');
 			}
 
 			WriteDataTableData(dt);
 
-			// end datatable
-			this._output.Append('}');
+			_output.Append('}');
 		}
 #endif
 

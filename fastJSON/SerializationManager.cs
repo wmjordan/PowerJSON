@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Data;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Text;
 
 namespace fastJSON
 {
@@ -15,7 +13,7 @@ namespace fastJSON
 	internal delegate object GenericGetter (object obj);
 
 	/// <summary>
-	/// The cached serialization infomation used by the reflection engine during serialization and deserialization.
+	/// The cached serialization information used by the reflection engine during serialization and deserialization.
 	/// </summary>
 	public sealed class SerializationManager
 	{
@@ -310,7 +308,7 @@ namespace fastJSON
 			return null;
 		}
 
-		#region Accessor methods
+		#region Accessors methods
 		private static Getters[] GetGetters (Type type, IReflectionController controller) {
 			PropertyInfo[] props = type.GetProperties (BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
 			FieldInfo[] fi = type.GetFields (BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static);
@@ -337,7 +335,7 @@ namespace fastJSON
 		private static void AddGetter (Dictionary<string, Getters> getters, MemberInfo memberInfo, GenericGetter getter, IReflectionController controller) {
 			var n = memberInfo.Name;
 			bool s; // static
-			bool ro; // readonly
+			bool ro; // read-only
 			Type t; // member type
 			bool tp; // property
 			if (memberInfo is FieldInfo) {

@@ -4,13 +4,11 @@ using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
 using System.IO;
-using System.Reflection;
-using System.Reflection.Emit;
 using System.Collections.Specialized;
 
 namespace fastJSON
 {
-    internal class JSONDeserializer
+	internal class JSONDeserializer
     {
     	public JSONDeserializer(JSONParameters param)
     	{
@@ -250,7 +248,7 @@ namespace fastJSON
     
     		bool found = d.TryGetValue("$type", out tn);
     #if !SILVERLIGHT
-    		if (found == false && type == typeof(System.Object))
+    		if (found == false && type == typeof(object))
     		{
     			return d;   // CreateDataset(d, globaltypes);
     		}

@@ -1,19 +1,13 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Collections.Specialized;
-using System.Data;
 using System.Reflection;
-using System.Reflection.Emit;
-using System.Text;
 
 namespace fastJSON
 {
-    /// <summary>
-    /// The general implementation of <see cref="IReflectionController"/>.
-    /// </summary>
-    public class FastJsonReflectionController : IReflectionController
+	/// <summary>
+	/// The general implementation of <see cref="IReflectionController"/>.
+	/// </summary>
+	public class FastJsonReflectionController : IReflectionController
     {
     	/// <summary>
     	/// Ignore attributes to check for (default : XmlIgnoreAttribute).
@@ -28,7 +22,7 @@ namespace fastJSON
     	}
     
     	/// <summary>
-    	/// Gets the overrided name for an enum value. The overrided name can be set via the <see cref="JsonEnumValueAttribute"/>.
+    	/// Gets the overridden name for an enum value. The overridden name can be set via the <see cref="JsonEnumValueAttribute"/>.
     	/// </summary>
     	/// <param name="member">The enum value member.</param>
     	/// <returns>The name of the enum value.</returns>
@@ -69,7 +63,7 @@ namespace fastJSON
     	/// If null is returned, the serialization of the member will be determined by the setting in <see cref="JSONParameters"/>.
     	/// </summary>
     	/// <param name="member">The member to be serialized.</param>
-		/// <param name="info">Reflection infomation for the member.</param>
+		/// <param name="info">Reflection information for the member.</param>
 		/// <returns>True is returned if the member is serializable, otherwise, false.</returns>
 		public virtual bool? IsMemberSerializable (MemberInfo member, IMemberInfo info) {
 			bool? s = null;
@@ -101,10 +95,10 @@ namespace fastJSON
     	}
     
     	/// <summary>
-    	/// This method returns possible names for corrsponding types of a field or a property. This enables polymorphic serialization and deserialization for abstract, interface, or object types, with pre-determined concrete types. If polymorphic serialization is not used, null or an empty dictionary could be returned. The names can be ser via <see cref="JsonFieldAttribute"/>.
+    	/// This method returns possible names for corresponding types of a field or a property. This enables polymorphic serialization and deserialization for abstract, interface, or object types, with predetermined concrete types. If polymorphic serialization is not used, null or an empty dictionary could be returned. The names can be set via <see cref="JsonFieldAttribute"/>.
     	/// </summary>
     	/// <param name="member">The <see cref="MemberInfo"/> of the field or property.</param>
-    	/// <returns>The dictionary contains types and their corrsponding names.</returns>
+    	/// <returns>The dictionary contains types and their corresponding names.</returns>
     	public virtual SerializedNames GetSerializedNames (MemberInfo member) {
     		SerializedNames tn = new SerializedNames ();
     		var jf = AttributeHelper.GetAttributes<JsonFieldAttribute> (member, true);
@@ -165,7 +159,10 @@ namespace fastJSON
 		public virtual string GetEnumValueName (MemberInfo member) { return null; }
 
 		/// <summary>
-		/// This method is called before the constructor of a type is built for deserialization. The generic parameters of a generic type, or the element type of an array type, may also be checked for serializablity. When this method returns true, the type can be deserialized regardless it is a non-public type. Publich types are always deserializable and not affected by the value returned from this method.
+		/// This method is called before the constructor of a type is built for deserialization to detect whether the type is deserializable.
+		/// When this method returns true, the type can be deserialized regardless it is a non-public type.
+		/// Public types are always deserializable and not affected by the value returned from this method.
+		/// If the type contains generic parameters (for generic types) or an element type (for array types), the parameters and element types will be checked first.
 		/// </summary>
 		/// <param name="type">The type to be deserialized.</param>
 		/// <returns>Whether the type can be deserialized even if it is a non-public type.</returns>
@@ -185,7 +182,7 @@ namespace fastJSON
 		/// If null is returned, the serialization of the member will be determined by the settings in <see cref="JSONParameters"/>.
 		/// </summary>
 		/// <param name="member">The member to be serialized.</param>
-		/// <param name="info">Reflection infomation for the member.</param>
+		/// <param name="info">Reflection information for the member.</param>
 		/// <returns>True is returned if the member is serializable, otherwise, false.</returns>
 		public virtual bool? IsMemberSerializable (MemberInfo member, IMemberInfo info) {
 			return null;
@@ -199,10 +196,10 @@ namespace fastJSON
 		public virtual bool IsMemberDeserializable (MemberInfo member) { return true; }
 
 		/// <summary>
-		/// This method returns possible names for corrsponding types of a field or a property. This enables polymorphic serialization and deserialization for abstract, interface, or object types, with pre-determined concrete types. If polymorphic serialization is not used, null or an empty dictionary could be returned.
+		/// This method returns possible names for corresponding types of a field or a property. This enables polymorphic serialization and deserialization for abstract, interface, or object types, with predetermined concrete types. If polymorphic serialization is not used, null or an empty dictionary could be returned.
 		/// </summary>
 		/// <param name="member">The <see cref="MemberInfo"/> of the field or property.</param>
-		/// <returns>The dictionary contains types and their corrsponding names.</returns>
+		/// <returns>The dictionary contains types and their corresponding names.</returns>
 		public virtual SerializedNames GetSerializedNames (MemberInfo member) { return null; }
 
 		/// <summary>
@@ -236,7 +233,10 @@ namespace fastJSON
 		string GetEnumValueName (MemberInfo member);
 
 		/// <summary>
-		/// This method is called before the constructor of a type is built for deserialization. The generic parameters of a generic type, or the element type of an array type, may also be checked for serializablity. When this method returns true, the type can be deserialized regardless it is a non-public type. Publich types are always deserializable and not affected by the value returned from this method.
+		/// This method is called before the constructor of a type is built for deserialization to detect whether the type is deserializable.
+		/// When this method returns true, the type can be deserialized regardless it is a non-public type.
+		/// Public types are always deserializable and not affected by the value returned from this method.
+		/// If the type contains generic parameters (for generic types) or an element type (for array types), the parameters and element types will be checked first.
 		/// </summary>
 		/// <param name="type">The type to be deserialized.</param>
 		/// <returns>Whether the type can be deserialized even if it is a non-public type.</returns>
@@ -256,7 +256,7 @@ namespace fastJSON
 		/// If null is returned, the serialization of the member will be determined by the settings in <see cref="JSONParameters"/>.
 		/// </summary>
 		/// <param name="member">The member to be serialized.</param>
-		/// <param name="info">Reflection infomation for the member.</param>
+		/// <param name="info">Reflection information for the member.</param>
 		/// <returns>True is returned if the member is serializable, otherwise, false.</returns>
 		bool? IsMemberSerializable (MemberInfo member, IMemberInfo info);
 
@@ -268,10 +268,10 @@ namespace fastJSON
 		bool IsMemberDeserializable (MemberInfo member);
 
 		/// <summary>
-		/// This method returns possible names for corrsponding types of a field or a property. This enables polymorphic serialization and deserialization for abstract, interface, or object types, with pre-determined concrete types. If polymorphic serialization is not used, null or an empty dictionary could be returned.
+		/// This method returns possible names for corresponding types of a field or a property. This enables polymorphic serialization and deserialization for abstract, interface, or object types, with predetermined concrete types. If polymorphic serialization is not used, null or an empty dictionary could be returned.
 		/// </summary>
 		/// <param name="member">The <see cref="MemberInfo"/> of the field or property.</param>
-		/// <returns>The dictionary contains types and their corrsponding names.</returns>
+		/// <returns>The dictionary contains types and their corresponding names.</returns>
 		SerializedNames GetSerializedNames (MemberInfo member);
 
 		/// <summary>

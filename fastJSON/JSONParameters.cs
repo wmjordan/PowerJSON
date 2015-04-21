@@ -22,19 +22,19 @@ namespace fastJSON
     	/// </summary>
     	public bool UseUTCDateTime = true;
     	/// <summary>
-    	/// Show the readonly properties of types in the output (default = False). <see cref="JsonIncludeAttribute"/> has higher precedence than this setting.
+    	/// Show the read-only properties of types in the output (default = False). <see cref="JsonIncludeAttribute"/> has higher precedence than this setting.
     	/// </summary>
     	public bool ShowReadOnlyProperties = false;
     	/// <summary>
-    	/// Show the readonly fields of types in the output (default = False). <see cref="JsonIncludeAttribute"/> has higher precedence than this setting.
+    	/// Show the read-only fields of types in the output (default = False). <see cref="JsonIncludeAttribute"/> has higher precedence than this setting.
     	/// </summary>
     	public bool ShowReadOnlyFields = false;
     	/// <summary>
-    	/// Use the $types extension to optimise the output json (default = True)
+    	/// Use the $types extension to optimize the output JSON (default = True)
     	/// </summary>
     	public bool UsingGlobalTypes = true;
     	/// <summary>
-    	/// Ignore case when processing json and deserializing 
+    	/// Ignore case when processing JSON and deserializing 
     	/// </summary>
     	[Obsolete("Not needed anymore and will always match")]
     	public bool IgnoreCaseOnDeserialize = false;
@@ -47,7 +47,7 @@ namespace fastJSON
     	/// </summary>
     	public bool UseExtensions = true;
     	/// <summary>
-    	/// Use escaped unicode i.e. \uXXXX format for non ASCII characters (default = True)
+    	/// Use escaped Unicode i.e. \uXXXX format for non ASCII characters (default = True)
     	/// </summary>
     	public bool UseEscapedUnicode = true;
     	/// <summary>
@@ -114,7 +114,7 @@ namespace fastJSON
     	
     	public void FixValues()
     	{
-    		if (UseExtensions == false) // disable conflicting params
+    		if (UseExtensions == false) // disable conflicting parameters
     		{
     			UsingGlobalTypes = false;
     			InlineCircularReferences = true;
