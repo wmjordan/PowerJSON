@@ -322,17 +322,16 @@ namespace fastJSON
 
 		void WriteDataTable(DataTable dt)
 		{
-			this._output.Append('{');
+			_output.Append('{');
 			if (_params.UseExtensions)
 			{
-				this.WritePair("$schema", _params.UseOptimizedDatasetSchema ? (object)this.GetSchema(dt) : this.GetXmlSchema(dt));
-				this._output.Append(',');
+				WritePair("$schema", _params.UseOptimizedDatasetSchema ? (object)GetSchema(dt) : GetXmlSchema(dt));
+				_output.Append(',');
 			}
 
 			WriteDataTableData(dt);
 
-			// end datatable
-			this._output.Append('}');
+			_output.Append('}');
 		}
 #endif
 
@@ -351,7 +350,7 @@ namespace fastJSON
 					return;
 				}
 			}
-			DefinitionCache def = _manager.GetDefinition (obj.GetType ());
+			ReflectionCache def = _manager.GetDefinition (obj.GetType ());
 			var si = def.Interceptor;
 			if (si != null && si.OnSerializing (obj) == false) {
 				return;
@@ -401,9 +400,12 @@ namespace fastJSON
 			for (int ii = 0; ii < c; ii++)
 			{
 				var p = g[ii];
-				if (p.IsStatic && _params.SerializeStaticMembers == false
-					|| p.IsReadOnly && (p.IsProperty && rp == false || p.IsProperty == false && _params.ShowReadOnlyFields == false)) {
-					if (p.AlwaysInclude == false) {
+				if (p.Serializable == TriState.False) {
+					continue;
+				}
+				if (p.Serializable == TriState.Default) {
+					if (p.IsStatic && _params.SerializeStaticMembers == false
+						|| p.IsReadOnly && (p.IsProperty && rp == false || p.IsProperty == false && _params.ShowReadOnlyFields == false)) {
 						continue;
 					}
 				}

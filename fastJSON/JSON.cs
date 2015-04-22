@@ -1,14 +1,5 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-#if !SILVERLIGHT
-using System.Data;
-#endif
-using System.Globalization;
-using System.IO;
-using System.Reflection;
-using System.Reflection.Emit;
-using System.Collections.Specialized;
 
 namespace fastJSON
 {
@@ -36,7 +27,7 @@ namespace fastJSON
 		/// </summary>
 		public static JSONParameters Parameters = new JSONParameters();
 		/// <summary>
-		/// Create a formatted json string (beautified) from an object
+		/// Create a formatted JSON string (beautified) from an object
 		/// </summary>
 		/// <param name="obj"></param>
 		/// <param name="param"></param>
@@ -48,7 +39,7 @@ namespace fastJSON
 			return Beautify(s);
 		}
 		/// <summary>
-		/// Create a json representation for an object with the default <see cref="Parameters"/>.
+		/// Create a JSON representation for an object with the default <see cref="Parameters"/>.
 		/// </summary>
 		/// <param name="obj"></param>
 		/// <returns></returns>
@@ -57,7 +48,7 @@ namespace fastJSON
 			return ToJSON(obj, JSON.Parameters);
 		}
 		/// <summary>
-		/// Create a json representation for an object with parameter override on this call
+		/// Create a JSON representation for an object with parameter override on this call
 		/// </summary>
 		/// <param name="obj"></param>
 		/// <param name="param"></param>
@@ -80,7 +71,7 @@ namespace fastJSON
 			return new JSONSerializer(param).ConvertToJSON(obj);
 		}
 		/// <summary>
-		/// Parse a json string and generate a Dictionary&lt;string,object&gt; or List&lt;object&gt; structure
+		/// Parse a JSON string and generate a Dictionary&lt;string,object&gt; or List&lt;object&gt; structure
 		/// </summary>
 		/// <param name="json"></param>
 		/// <returns></returns>
@@ -100,7 +91,7 @@ namespace fastJSON
 		}
 #endif
 		/// <summary>
-		/// Create a typed generic object from the json with the default <see cref="Parameters"/>.
+		/// Create a typed generic object from the JSON with the default <see cref="Parameters"/>.
 		/// </summary>
 		/// <typeparam name="T"></typeparam>
 		/// <param name="json"></param>
@@ -110,7 +101,7 @@ namespace fastJSON
 			return new JSONDeserializer(Parameters).ToObject<T>(json);
 		}
 		/// <summary>
-		/// Create a typed generic object from the json with parameter override on this call
+		/// Create a typed generic object from the JSON with parameter override on this call
 		/// </summary>
 		/// <typeparam name="T"></typeparam>
 		/// <param name="json"></param>
@@ -121,7 +112,7 @@ namespace fastJSON
 			return new JSONDeserializer(param).ToObject<T>(json);
 		}
 		/// <summary>
-		/// Create an object from the json with the default <see cref="Parameters"/>.
+		/// Create an object from the JSON with the default <see cref="Parameters"/>.
 		/// </summary>
 		/// <param name="json"></param>
 		/// <returns></returns>
@@ -130,7 +121,7 @@ namespace fastJSON
 			return new JSONDeserializer(Parameters).ToObject(json, null);
 		}
 		/// <summary>
-		/// Create an object from the json with parameter override on this call
+		/// Create an object from the JSON with parameter override on this call
 		/// </summary>
 		/// <param name="json"></param>
 		/// <param name="param"></param>
@@ -140,7 +131,7 @@ namespace fastJSON
 			return new JSONDeserializer(param).ToObject(json, null);
 		}
 		/// <summary>
-		/// Create an object of type from the json with the default <see cref="Parameters"/>.
+		/// Create an object of type from the JSON with the default <see cref="Parameters"/>.
 		/// </summary>
 		/// <param name="json"></param>
 		/// <param name="type"></param>
@@ -150,7 +141,7 @@ namespace fastJSON
 			return new JSONDeserializer(Parameters).ToObject(json, type);
 		}
 		/// <summary>
-		/// Fill a given object with the json represenation with the default <see cref="Parameters"/>.
+		/// Fill a given object with the JSON representation with the default <see cref="Parameters"/>.
 		/// </summary>
 		/// <param name="input"></param>
 		/// <param name="json"></param>

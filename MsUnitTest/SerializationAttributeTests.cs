@@ -653,7 +653,23 @@ namespace UnitTests
 				StringAssert.Contains (s, @"""httpstatus"":");
 				StringAssert.Contains (s, @"""exceptionTime"":");
 				StringAssert.Contains (s, @"""machine"":""" + Environment.MachineName + "\"");
+
+				p.Manager.RegisterReflectionOverride<System.Net.WebException> (new ReflectionOverride () {
+					MemberOverrides = { new MemberOverride ("Status", "code") }
+				});
+				s = JSON.ToJSON (ex, p);
+				Console.WriteLine (s);
+				StringAssert.Contains (s, @"""code"":");
+
+				p.Manager.RegisterReflectionOverride<System.Net.WebException> (new ReflectionOverride () {
+					MemberOverrides = { new MemberOverride ("TargetSite") { Serializable = TriState.False } }
+				}, true);
+				s = JSON.ToJSON (ex, p);
+				Console.WriteLine (s);
+				StringAssert.Contains (s, @"""status"":");
 			}
+
+
 		} 
 		#endregion
 	}

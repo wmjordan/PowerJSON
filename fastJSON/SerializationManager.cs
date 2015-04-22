@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Data;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Text;
 
 namespace fastJSON
 {
@@ -15,13 +13,13 @@ namespace fastJSON
 	internal delegate object GenericGetter (object obj);
 
 	/// <summary>
-	/// The cached serialization infomation used by the reflection engine during serialization and deserialization.
+	/// The cached serialization information used by the reflection engine during serialization and deserialization.
 	/// </summary>
 	public sealed class SerializationManager
 	{
 		private static readonly char[] __enumSeperatorCharArray = { ',' };
 
-		private readonly SafeDictionary<Type, DefinitionCache> _memberDefinitions = new SafeDictionary<Type, DefinitionCache> ();
+		private readonly SafeDictionary<Type, ReflectionCache> _reflections = new SafeDictionary<Type, ReflectionCache> ();
 		private readonly IReflectionController _controller;
 		internal readonly SafeDictionary<Enum, string> EnumValueCache = new SafeDictionary<Enum, string> ();
 
@@ -43,21 +41,71 @@ namespace fastJSON
 			_controller = controller;
 		}
 
-		internal DefinitionCache GetDefinition (Type type) {
-			DefinitionCache c;
-			if (_memberDefinitions.TryGetValue (type, out c)) {
+		internal ReflectionCache GetDefinition (Type type) {
+			ReflectionCache c;
+			if (_reflections.TryGetValue (type, out c)) {
 				return c;
 			}
-			bool skip = false;
-			c = Register (type);
-			if (c.AlwaysDeserializable == false) {
-				if (type.IsGenericType || type.IsArray) {
-					skip = ShouldSkipVisibilityCheck (type);
-				}
+			return _reflections[type] = new ReflectionCache (type, this);
+		}
+
+		public void RegisterReflectionOverride<T> (ReflectionOverride overrideInfo) {
+			RegisterReflectionOverride (typeof (T), overrideInfo, false);
+		}
+		public void RegisterReflectionOverride<T> (ReflectionOverride overrideInfo, bool purgePrevious) {
+			RegisterReflectionOverride (typeof (T), overrideInfo, purgePrevious);
+		}
+		public void RegisterReflectionOverride (Type type, ReflectionOverride overrideInfo, bool purgePrevious) {
+			var c = purgePrevious ? new ReflectionCache (type, this) : GetDefinition (type);
+			if (overrideInfo.OverrideInterceptor) {
+				c.Interceptor = overrideInfo.Interceptor;
 			}
-			c.Constructor = CreateConstructorMethod (type, skip | c.AlwaysDeserializable);
-			_memberDefinitions[type] = c;
-			return c;
+			MemberOverride mo;
+			foreach (var g in c.Getters) {
+				mo = null;
+				foreach (var item in overrideInfo.MemberOverrides) {
+					if (item.MemberName == g.MemberName) {
+						mo = item;
+						break;
+					}
+				}
+				if (mo == null) {
+					continue;
+				}
+				if (mo.Serializable != TriState.Default) {
+					g.Serializable = mo.Serializable;
+				}
+				var sn = mo.SerializedName;
+				if (mo.OverrideSerializedName) {
+					if (sn == g.MemberName) {
+						g.SpecificName = g.TypedNames != null && g.TypedNames.Count > 0;
+					}
+					else {
+						g.SpecificName = true;
+					}
+				}
+				if (mo.OverrideConverter) {
+					g.Converter = mo.Converter;
+				}
+				var p = c.Properties;
+				myPropInfo mp;
+				foreach (var item in p) {
+					mp = item.Value;
+					if (mp.Name == mo.MemberName) {
+						if (mo.OverrideConverter) {
+							mp.Converter = mo.Converter;
+						}
+						if (p.Comparer.Equals (g.SerializedName, item.Key) == false) {
+							p.Add (mo.SerializedName, mp);
+							break;
+						}
+					}
+				}
+				g.SerializedName = sn;
+			}
+			if (purgePrevious) {
+				_reflections[type] = c;
+			}
 		}
 
 		/// <summary>
@@ -75,8 +123,7 @@ namespace fastJSON
 		/// <param name="type">The type to be processed by the interceptor.</param>
 		/// <param name="interceptor">The interceptor to intercept the serialization and deserialization.</param>
 		public void RegisterTypeInterceptor (Type type, IJsonInterceptor interceptor) {
-			var c = GetDefinition (type);
-			c.Interceptor = interceptor;
+			RegisterReflectionOverride (type, new ReflectionOverride () { Interceptor = interceptor }, false);
 		}
 
 		/// <summary>
@@ -96,26 +143,9 @@ namespace fastJSON
 		/// <param name="memberName">The name of the field or property.</param>
 		/// <param name="serializedName">The serialized name of the member.</param>
 		public void RegisterMemberName (Type type, string memberName, string serializedName) {
-			var c = GetDefinition (type);
-			string n = null;
-			foreach (var item in c.Getters) {
-				if (item.MemberName == memberName) {
-					item.SpecificName = serializedName != memberName
-						|| item.TypedNames != null && item.TypedNames.Count > 0;
-					if (n == serializedName) {
-						return;
-					}
-					n = item.SerializedName;
-					item.SerializedName = serializedName;
-					break;
-				}
-			}
-			myPropInfo p;
-			if (c.Properties.TryGetValue (n, out p)) {
-				p.Name = serializedName;
-			}
-			c.Properties.Remove (n);
-			c.Properties.Add (serializedName, p);
+			RegisterReflectionOverride (type, new ReflectionOverride () {
+				MemberOverrides = { new MemberOverride (memberName, serializedName) }
+			}, false);
 		}
 
 		/// <summary>
@@ -140,68 +170,6 @@ namespace fastJSON
 			}
 		}
 
-		private bool ShouldSkipVisibilityCheck (Type type) {
-			DefinitionCache c;
-			if (type.IsGenericType) {
-				var pl = Reflection.Instance.GetGenericArguments (type);
-				foreach (var t in pl) {
-					if (_memberDefinitions.TryGetValue (t, out c) == false) {
-						c = Register (t);
-					}
-					if (c.AlwaysDeserializable) {
-						return true;
-					}
-					if (t.IsGenericType || t.IsArray) {
-						if (ShouldSkipVisibilityCheck (t)) {
-							return true;
-						}
-					}
-				}
-			}
-			if (type.IsArray) {
-				var t = type.GetElementType ();
-				if (_memberDefinitions.TryGetValue (t, out c) == false) {
-					c = Register (t);
-				}
-				if (c.AlwaysDeserializable) {
-					return true;
-				}
-			}
-			return false;
-		}
-
-		private DefinitionCache Register<T> () { return Register (typeof (T)); }
-		private DefinitionCache Register (Type type) {
-			return new DefinitionCache (type, (IReflectionController)_controller);
-		}
-
-		private static CreateObject CreateConstructorMethod (Type objtype, bool skipVisibility) {
-			CreateObject c;
-			var n = objtype.Name + ".ctor";
-			if (objtype.IsClass) {
-				DynamicMethod dynMethod = skipVisibility ? new DynamicMethod (n, objtype, null, objtype, true) : new DynamicMethod (n, objtype, Type.EmptyTypes);
-				ILGenerator ilGen = dynMethod.GetILGenerator ();
-				var ct = objtype.GetConstructor (Type.EmptyTypes);
-				if (ct == null) {
-					return null;
-				}
-				ilGen.Emit (OpCodes.Newobj, ct);
-				ilGen.Emit (OpCodes.Ret);
-				c = (CreateObject)dynMethod.CreateDelegate (typeof (CreateObject));
-			}
-			else {// structs
-				DynamicMethod dynMethod = skipVisibility ? new DynamicMethod (n, typeof (object), null, objtype, true) : new DynamicMethod (n, typeof (object), null, objtype);
-				ILGenerator ilGen = dynMethod.GetILGenerator ();
-				var lv = ilGen.DeclareLocal (objtype);
-				ilGen.Emit (OpCodes.Ldloca_S, lv);
-				ilGen.Emit (OpCodes.Initobj, objtype);
-				ilGen.Emit (OpCodes.Ldloc_0);
-				ilGen.Emit (OpCodes.Box, objtype);
-				ilGen.Emit (OpCodes.Ret);
-				c = (CreateObject)dynMethod.CreateDelegate (typeof (CreateObject));
-			}
-			return c;
-		}
 
 		internal string GetEnumName (Enum value) {
 			string t;
@@ -263,22 +231,100 @@ namespace fastJSON
 		}
 	}
 
-	class DefinitionCache
+	/// <summary>
+	/// Contains reflection overriding information used in reflection phase. The dictionary key is the member name.
+	/// </summary>
+	public class ReflectionOverride
+	{
+		internal bool OverrideInterceptor;
+		IJsonInterceptor _Interceptor;
+		/// <summary>
+		/// Gets or sets the <see cref="IJsonInterceptor"/> for the member.
+		/// </summary>
+		public IJsonInterceptor Interceptor {
+			get { return _Interceptor; }
+			set {
+				_Interceptor = value; OverrideInterceptor = true;
+			}
+		}
+
+		List<MemberOverride> _MemberOverrides;
+		/// <summary>
+		/// Specifies the override of members to serialize.
+		/// </summary>
+		public List<MemberOverride> MemberOverrides {
+			get {
+				if (_MemberOverrides == null) {
+					_MemberOverrides = new List<MemberOverride> ();
+				}
+				return _MemberOverrides;
+			}
+			set { _MemberOverrides = value; }
+		}
+	}
+
+	/// <summary>
+	/// Contains reflection override settings for a member.
+	/// </summary>
+	public class MemberOverride
+	{
+		/// <summary>
+		/// Gets the name of the overriden member.
+		/// </summary>
+		public string MemberName { get; private set; }
+
+		internal bool OverrideSerializedName;
+		string _SerializedName;
+		/// <summary>
+		/// Gets or sets the serialized name for the member.
+		/// </summary>
+		public string SerializedName {
+			get { return _SerializedName; }
+			set { _SerializedName = value; OverrideSerializedName = true; }
+		}
+
+		internal bool OverrideConverter;
+		IJsonConverter _Converter;
+		/// <summary>
+		/// Gets or sets the <see cref="IJsonConverter"/> for the member.
+		/// </summary>
+		public IJsonConverter Converter {
+			get { return _Converter; }
+			set { _Converter = value; OverrideConverter = true; }
+		}
+
+		public TriState Serializable { get; set; }
+
+		public MemberOverride (string memberName) {
+			MemberName = memberName;
+		}
+		public MemberOverride (string memberName, TriState Serializable) : this(memberName) {
+			Serializable = Serializable;
+		}
+		public MemberOverride (string memberName, IJsonConverter converter) : this (memberName) {
+			Converter = converter;
+		}
+		public MemberOverride (string memberName, string serializedName) : this (memberName) {
+			SerializedName = serializedName;
+		}
+	}
+	class ReflectionCache
 	{
 
-		public readonly string TypeName;
-		public readonly string AssemblyName;
+		internal readonly string TypeName;
+		internal readonly string AssemblyName;
 
-		public readonly bool AlwaysDeserializable;
+		internal readonly bool AlwaysDeserializable;
 		internal CreateObject Constructor;
-		public IJsonInterceptor Interceptor;
-		public readonly Getters[] Getters;
-		public readonly Dictionary<string, myPropInfo> Properties;
+		internal IJsonInterceptor Interceptor;
+		internal readonly Getters[] Getters;
+		internal readonly Dictionary<string, myPropInfo> Properties;
 
-		public readonly bool IsFlaggedEnum;
-		public readonly Dictionary<string, Enum> EnumNames;
+		internal readonly bool IsFlaggedEnum;
+		internal readonly Dictionary<string, Enum> EnumNames;
 
-		public DefinitionCache (Type type, IReflectionController controller) {
+		internal ReflectionCache (Type type, SerializationManager manager) {
+			var controller = manager.ReflectionController;
 			TypeName = type.FullName;
 			AssemblyName = type.AssemblyQualifiedName;
 			if (type.IsEnum) {
@@ -291,6 +337,13 @@ namespace fastJSON
 				AlwaysDeserializable = controller.IsAlwaysDeserializable (type);
 				Interceptor = controller.GetInterceptor (type);
 			}
+			bool skip = false;
+			if (AlwaysDeserializable == false) {
+				if (type.IsGenericType || type.IsArray) {
+					skip = ShouldSkipVisibilityCheck (type, manager);
+				}
+			}
+			Constructor = CreateConstructorMethod (type, skip | AlwaysDeserializable);
 			if (typeof (IEnumerable).IsAssignableFrom (type)) {
 				return;
 			}
@@ -310,7 +363,61 @@ namespace fastJSON
 			return null;
 		}
 
-		#region Accessor methods
+		#region Accessors methods
+		private bool ShouldSkipVisibilityCheck (Type type, SerializationManager manager) {
+			ReflectionCache c;
+			if (type.IsGenericType) {
+				var pl = Reflection.Instance.GetGenericArguments (type);
+				foreach (var t in pl) {
+					c = manager.GetDefinition (t);
+					if (c.AlwaysDeserializable) {
+						return true;
+					}
+
+					if (!t.IsGenericType && !t.IsArray)
+						continue;
+					if (ShouldSkipVisibilityCheck (t, manager)) {
+						return true;
+					}
+				}
+			}
+			if (type.IsArray) {
+				var t = type.GetElementType ();
+				c = manager.GetDefinition (t);
+				if (c.AlwaysDeserializable) {
+					return true;
+				}
+			}
+			return false;
+		}
+		private static CreateObject CreateConstructorMethod (Type objtype, bool skipVisibility) {
+			CreateObject c;
+			var n = objtype.Name + ".ctor";
+			if (objtype.IsClass) {
+				DynamicMethod dynMethod = skipVisibility ? new DynamicMethod (n, objtype, null, objtype, true) : new DynamicMethod (n, objtype, Type.EmptyTypes);
+				ILGenerator ilGen = dynMethod.GetILGenerator ();
+				var ct = objtype.GetConstructor (Type.EmptyTypes);
+				if (ct == null) {
+					return null;
+				}
+				ilGen.Emit (OpCodes.Newobj, ct);
+				ilGen.Emit (OpCodes.Ret);
+				c = (CreateObject)dynMethod.CreateDelegate (typeof (CreateObject));
+			}
+			else {// structs
+				DynamicMethod dynMethod = skipVisibility ? new DynamicMethod (n, typeof (object), null, objtype, true) : new DynamicMethod (n, typeof (object), null, objtype);
+				ILGenerator ilGen = dynMethod.GetILGenerator ();
+				var lv = ilGen.DeclareLocal (objtype);
+				ilGen.Emit (OpCodes.Ldloca_S, lv);
+				ilGen.Emit (OpCodes.Initobj, objtype);
+				ilGen.Emit (OpCodes.Ldloc_0);
+				ilGen.Emit (OpCodes.Box, objtype);
+				ilGen.Emit (OpCodes.Ret);
+				c = (CreateObject)dynMethod.CreateDelegate (typeof (CreateObject));
+			}
+			return c;
+		}
+
 		private static Getters[] GetGetters (Type type, IReflectionController controller) {
 			PropertyInfo[] props = type.GetProperties (BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
 			FieldInfo[] fi = type.GetFields (BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static);
@@ -337,7 +444,7 @@ namespace fastJSON
 		private static void AddGetter (Dictionary<string, Getters> getters, MemberInfo memberInfo, GenericGetter getter, IReflectionController controller) {
 			var n = memberInfo.Name;
 			bool s; // static
-			bool ro; // readonly
+			bool ro; // read-only
 			Type t; // member type
 			bool tp; // property
 			if (memberInfo is FieldInfo) {
@@ -364,14 +471,8 @@ namespace fastJSON
 				MemberType = t
 			};
 			if (controller != null) {
-				bool? ms = controller.IsMemberSerializable (memberInfo, g);
-				if (ms.HasValue && ms.Value == false) {
-					return;
-				}
+				g.Serializable = controller.IsMemberSerializable (memberInfo, g);
 				object dv;
-				if (ms.HasValue) {
-					g.AlwaysInclude = ms.Value;
-				}
 				g.Converter = controller.GetMemberConverter (memberInfo);
 				g.HasDefaultValue = controller.GetDefaultValue (memberInfo, out dv);
 				if (g.HasDefaultValue) {
@@ -598,7 +699,7 @@ namespace fastJSON
 					foreach (var item in tn) {
 						var st = item.Key;
 						var sn = item.Value;
-						var dt = CreateMyProp (st, sn, Reflection.Instance.IsTypeRegistered (st));
+						var dt = CreateMyProp (st, member.Name, Reflection.Instance.IsTypeRegistered (st));
 						dt.Getter = d.Getter;
 						dt.Setter = d.Setter;
 						dt.Converter = d.Converter;

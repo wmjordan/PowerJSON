@@ -19,7 +19,7 @@ namespace fastJSON
 	public class JsonIncludeAttribute : Attribute
 	{
 		/// <summary>
-		/// Gets or sets whether the annotated field or property should be included in serialization disregard whether it is readonly or not. The default value is true.
+		/// Gets or sets whether the annotated field or property should be included in serialization disregard whether it is read-only or not. The default value is true.
 		/// </summary>
 		public bool Include { get; set; }
 		/// <summary>
@@ -128,7 +128,7 @@ namespace fastJSON
 	}
 
 	/// <summary>
-	/// An interface to intercept varios aspects in JSON serialization and deserialization. It is recommended to inherit from <see cref="JsonInterceptor&lt;T&gt;"/> for easier implementation when possible.
+	/// An interface to intercept various aspects in JSON serialization and deserialization. It is recommended to inherit from <see cref="JsonInterceptor&lt;T&gt;"/> for easier implementation when possible.
 	/// </summary>
 	public interface IJsonInterceptor
 	{
@@ -375,7 +375,7 @@ namespace fastJSON
 		}
 
 		/// <summary>
-		/// Reverts the serialized value back to the type of the orginal type. If the serialized value is not the type of <typeparamref name="S"/>, the <paramref name="fieldValue"/> will be returned.
+		/// Reverts the serialized value back to the type of the original type. If the serialized value is not the type of <typeparamref name="S"/>, the <paramref name="fieldValue"/> will be returned.
 		/// </summary>
 		/// <param name="fieldName">The name of the annotated member.</param>
 		/// <param name="fieldValue">The serialized value.</param>
@@ -396,7 +396,7 @@ namespace fastJSON
 		public abstract S Convert (string fieldName, O fieldValue);
 
 		/// <summary>
-		/// Reverts the serialized value to the orginal value.
+		/// Reverts the serialized value to the original value.
 		/// </summary>
 		/// <param name="fieldName">The name of the annotated member.</param>
 		/// <param name="fieldValue">The serialized value.</param>

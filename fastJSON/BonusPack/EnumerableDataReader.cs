@@ -87,9 +87,20 @@ namespace fastJSON.BonusPack
 			_fieldCount = p.Length;
 			_memberNames = new string[_fieldCount];
 			_accessors = new Getters[_fieldCount];
+			int c = 0;
 			for (int i = 0; i < _fieldCount; i++) {
-				_memberNames[i] = p[i].SerializedName;
-				_accessors[i] = p[i];
+				var g = p[i];
+				if (g.Serializable == TriState.False) {
+					continue;
+				}
+				_memberNames[c] = p[i].SerializedName;
+				_accessors[c] = p[i];
+				++c;
+			}
+			if (c < _fieldCount) {
+				_fieldCount = c;
+				Array.Resize (ref _memberNames, c);
+				Array.Resize (ref _accessors, c);
 			}
 		}
 
