@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<topic id="b9c04495-737d-4a62-b123-1b75798ac1e6" revisionNumber="1">
+	<developerConceptualDocument xmlns="http://ddue.schemas.microsoft.com/authoring/2003/5" xmlns:xlink="http://www.w3.org/1999/xlink">
+		<introduction>
+			<para>This is an alternative fork for "<externalLink><linkText>fastJSON</linkText><linkUri>http://fastjson.codeplex.com</linkUri></externalLink>" extensively let you control many aspects in <newTerm>JSON</newTerm> serialization and deserialization, such as, serializing interface instances (polymorphic serialization) and private types, including or excluding members, performing data conversions, etc.</para>
+			<para>The author of <newTerm>fastJSON</newTerm> is <phrase>Mehdi Gholam</phrase>, and the author of this fork is <phrase>wmjordan</phrase>.</para>
+		</introduction>
+
+		<section>
+			<title>Getting Started</title>
+			<content>
+				<para>Object serialization and deserialization is offered by the central class <codeEntityReference>T:fastJSON.JSON</codeEntityReference>. To serialize an object, simply call its <codeEntityReference>M:fastJSON.JSON.ToJSON(System.Object)</codeEntityReference> static method. To deserialize an object, calling <codeEntityReference>M:fastJSON.JSON.ToObject``1(System.String)</codeEntityReference> will do the job.</para>
+				<para>When you get on with the serialization in your practical project. You will need to control the result of JSON serialization or consume external JSON strings. Learning the class <codeEntityReference>T:fastJSON.JSONParameters</codeEntityReference> and the following method <codeEntityReference>M:fastJSON.JSON.ToJSON(System.Object,fastJSON.JSONParameters)</codeEntityReference> and <codeEntityReference>M:fastJSON.JSON.ToObject``1(System.String,fastJSON.JSONParameters)</codeEntityReference> in <codeEntityReference>T:fastJSON.JSON</codeEntityReference> will help you to gain better control.</para>
+				<para>If the settings offered by <codeEntityReference>T:fastJSON.JSONParameters</codeEntityReference> can not fulfill your needs, you still need further control with your project. Classes and extensive <codeEntityReference qualifyHint="true">T:System.Attribute</codeEntityReference>s offered by this fork will help you out.</para>
+				<para>The extensive serialization support provided by this fork has three levels. The easiest level is marking the code with custom attributes. The middle level is custom attributes with interceptor or convertor types. The ultimate level is reflection and serialization management.</para>
+
+			</content>
+			<sections address="S1">
+				<section address="S11">
+					<title>Custom attributes</title>
+					<content>
+						<para>The easiest level is to apply the following attributes onto types and members at the source code level.</para>
+						<list class="bullet">
+							<listItem>
+								<para><codeEntityReference>T:fastJSON.JsonSerializableAttribute</codeEntityReference> - Marks a non-public <codeInline>class</codeInline> or <codeInline>struct</codeInline> is serializable.</para>
+							</listItem>
+
+							<listItem>
+								<para><codeEntityReference>T:fastJSON.JsonIncludeAttribute</codeEntityReference> - Specifically denotes whether a <codeInline>field</codeInline> or a <codeInline>property</codeInline> is serializable.</para>
+							</listItem>
+
+							<listItem>
+								<para><codeEntityReference>T:fastJSON.JsonFieldAttribute</codeEntityReference> - Controls how a <codeInline>field</codeInline> or a <codeInline>property</codeInline> is serialized or deserialized. Serialized name (AKA, JSON alias, or renaming) and polymorphic types can be assigned by this attribute.</para>
+							</listItem>
+
+							<listItem>
+								<para><codeEntityReference>T:fastJSON.JsonEnumValueAttribute</codeEntityReference> - Renames serialized <codeInline>enum</codeInline> values (also decodes them in deserialization).</para>
+							</listItem>
+						</list>
+						<para>Some system built-in attributes are also supported.</para>
+						<list class="bullet">
+							<listItem>
+								<para><codeEntityReference qualifyHint="true">T:System.ComponentModel.ReadOnlyAttribute</codeEntityReference> - Marks a <codeInline>field</codeInline> or a <codeInline>property</codeInline> is read-only, thus excluding it from deserialization.</para>
+							</listItem>
+							<listItem>
+								<para><codeEntityReference qualifyHint="true">T:System.ComponentModel.DefaultValueAttribute</codeEntityReference> - Hides a <codeInline>field</codeInline> or a <codeInline>property</codeInline> when its value equals the value in the attribute.</para>
+							</listItem>
+						</list>
+					</content>
+				</section>
+				<section address="S12">
+					<title>Custom Attributes and Supporting Types</title>
+					<content>
+						<para>The medium level is to apply the custom attributes and implementing supporting types to control serialization and deserialization.</para>
+						<list class="bullet">
+							<listItem>
+								<para><codeEntityReference>T:fastJSON.JsonInterceptorAttribute</codeEntityReference> - Controls how a <codeInline>class</codeInline> or a <codeInline>struct</codeInline> is serialized or deserialized. Various methods are provided to control each phase in serialization and deserialization, such as object data conversion, field exclusion, appendices of extra key-value pairs in the serialized JSON, etc. The attribute takes a type implements <codeEntityReference>T:fastJSON.IJsonInterceptor</codeEntityReference> interface, and a template implementation of the interface is offered by <codeEntityReference>T:fastJSON.JsonInterceptor`1</codeEntityReference>.</para>
+							</listItem>
+
+							<listItem>
+								<para><codeEntityReference>T:fastJSON.JsonConverterAttribute</codeEntityReference> - Converts and reverts data and type of the <codeInline>field</codeInline> or a <codeInline>property</codeInline>. The attribute takes a type implements <codeEntityReference>T:fastJSON.IJsonConverter</codeEntityReference> interface, and a template implementation of the interface is offered by <codeEntityReference>T:fastJSON.JsonConverter`2</codeEntityReference>.</para>
+							</listItem>
+						</list>
+					</content>
+				</section>
+				<section address="S13">
+					<title>Reflection and Serialization Management</title>
+					<content>
+						<para>The ultimate level of serialization control is offered by <codeEntityReference>T:fastJSON.SerializationManager</codeEntityReference>, <codeEntityReference>T:fastJSON.IReflectionController</codeEntityReference> and <codeEntityReference>T:fastJSON.ReflectionOverride</codeEntityReference>. No custom attributes are needed. Thus you don't have to modify your existing data models.</para>
+						<para>The provision of the above types suites several scenarios, listed below.</para>
+						<list class="bullet">
+							<listItem>
+								<para>You don't have the source code, thus you can't mark your data model with the custom attributes above.</para>
+							</listItem>
+							<listItem>
+								<para>You have already have another set of data annotations and you want to reuse them.</para>
+							</listItem>
+							<listItem>
+								<para>You don't want your data model be invaded by custom attributes introduced by <newTerm>fastJSON</newTerm>.</para>
+							</listItem>
+						</list>
+					</content>
+				</section>
+			</sections>
+		</section>
+
+		<relatedTopics>
+			<link xlink:href="07899cb8-f4d9-4e46-bbb6-6ba8518de804" />
+			<externalLink>
+				<linkText>Read more about this fork in CodeProject</linkText>
+				<linkUri>http://www.codeproject.com/Articles/888604/A-More-Powerful-fastJSON</linkUri>
+			</externalLink>
+		</relatedTopics>
+	</developerConceptualDocument>
+</topic>

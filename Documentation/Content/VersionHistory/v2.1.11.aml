@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<topic id="02f9ad9b-e09d-430d-9f73-59e79a5f4d44" revisionNumber="1">
+	<developerConceptualDocument xmlns="http://ddue.schemas.microsoft.com/authoring/2003/5" xmlns:xlink="http://www.w3.org/1999/xlink">
+		<introduction>
+			<para>Version 2.1.11 was released on March 6th, 2015, by <phrase>Mehdi Gholam</phrase>.</para>
+		</introduction>
+
+		<section>
+			<title>About this Release</title>
+			<content>
+
+				<list class="bullet">
+					<listItem>
+						<para>This is the last version on which this fork is based. The history of fastJSON can be read on the <externalLink>
+							<linkText>page on CodeProject</linkText>
+							<linkUri>http://www.codeproject.com/Articles/159450/fastJSON</linkUri>
+						</externalLink>.</para>
+					</listItem>
+
+				</list>
+
+			</content>
+		</section>
+
+		<relatedTopics>
+			<link xlink:href="07899cb8-f4d9-4e46-bbb6-6ba8518de804" />
+		</relatedTopics>
+
+	</developerConceptualDocument>
+</topic>

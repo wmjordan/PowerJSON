@@ -9,10 +9,11 @@ About this fork
 
 This fork has empowered fastJSON to serialize and deserialize objects with additional attribute types.
 The attributes are listed below:
-	* DataFieldAttribute: 1) controls the name of the serialized field or property. 2) allows serializing interface or abstract types with the Type and Name conbination in the attribute.
-	* IncludeAttribute: 1) explicitly controls whether a field or property is serialized or not. 2) allows serializing readonly property even when the ShowReadOnlyProperties setting is turned off.
-	* DataConverterAttribute: allows transforming data before serialization and deserialization.
-	* EnumValueAttribute: controls the serialized literal name of an Enum value.
+	* JsonInterceptorAttribute: 1) controls the procedure of serialization and deserialization. 2) allows conditional serialization and deserialization. 3) allows writing out extra key-value pairs in the serialized object.
+	* JsonFieldAttribute: 1) controls the name of the serialized field or property. 2) allows serializing interface or abstract types with the Type and Name conbination in the attribute.
+	* JsonIncludeAttribute: 1) explicitly controls whether a field or property is serialized or not. 2) allows serializing readonly property even when the ShowReadOnlyProperties setting is turned off.
+	* JsonConverterAttribute: allows transforming data before serialization and deserialization.
+	* JsonEnumValueAttribute: controls the serialized literal name of an Enum value.
 	* JsonSerializableAttribute: enables serializing and deserializing private or internal types.
 
 Some .NET built-in attributes are also supported.
@@ -25,6 +26,7 @@ This fork introduced the following settings in JSONParameters:
 	* NamingConvention: control the naming convention of serialized fields and properties. It has added support for camel-case, uppercase names.
 	* SerializeStaticMembers: control whether static fields or properties should be serialized. (2015-4-2)
 	* ShowReadOnlyFields: control whether readonly fields should be serialized. (2015-4-7)
+	* Manager: the serialization and deserialization manager which enables invasiveless serialization control. (2015-4-23)
 
 This fork also fixed some issues in the original fastJSON project:
 	* The serialized Enum value could be incorrect when the underlying type is Int64 or UInt64.
@@ -34,3 +36,4 @@ This fork also fixed some issues in the original fastJSON project:
 	* Readonly static fields were serialized regardless ShowReadOnlyProperties was turned off. (2015-4-7)
 	* ShowReadOnlyProperties was not in effect for the same type after change. (2015-4-7)
 	* Deserialization on Dictionary<N, List<V>> type could fail. (2015-4-9)
+	* "Release" compiled edition does not supports dynamic types.

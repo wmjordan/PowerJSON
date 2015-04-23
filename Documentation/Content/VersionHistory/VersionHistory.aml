@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<topic id="07899cb8-f4d9-4e46-bbb6-6ba8518de804" revisionNumber="1">
+	<developerConceptualDocument xmlns="http://ddue.schemas.microsoft.com/authoring/2003/5" xmlns:xlink="http://www.w3.org/1999/xlink">
+		<introduction>
+			<para>The topics in this section describe the various changes made to the fastJSON over the
+life of the project.</para>
+		</introduction>
+
+		<section>
+			<title>Version History</title>
+			<content>
+				<para>Select a version below to see a description of its changes.</para>
+
+				<list class="bullet">
+					<listItem>
+						<para><link xlink:href="02f9ad9b-e09d-430d-9f73-59e79a5f4d44" /></para>
+					</listItem>
+
+					<listItem>
+						<para>This fork.</para>
+					</listItem>
+
+				</list>
+
+			</content>
+		</section>
+
+		<relatedTopics>
+			<link xlink:href="b9c04495-737d-4a62-b123-1b75798ac1e6" />
+		</relatedTopics>
+
+	</developerConceptualDocument>
+</topic>

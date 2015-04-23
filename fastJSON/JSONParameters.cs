@@ -3,6 +3,9 @@ using System.Collections.Generic;
 
 namespace fastJSON
 {
+	/// <summary>
+	/// Gives the basic control over JSON serialization and deserialization.
+	/// </summary>
     public sealed class JSONParameters
     {
     	/// <summary>
@@ -112,9 +115,13 @@ namespace fastJSON
     	NamingStrategy _strategy = NamingStrategy.Default;
     	internal NamingStrategy NamingStrategy { get { return _strategy; } }
     	
+		/// <summary>
+		/// Fixes conflicting parameters.
+		/// </summary>
+		/// <remarks>This method is automatically called before serialization.</remarks>
     	public void FixValues()
     	{
-    		if (UseExtensions == false) // disable conflicting parameters
+    		if (UseExtensions == false)
     		{
     			UsingGlobalTypes = false;
     			InlineCircularReferences = true;
@@ -132,11 +139,11 @@ namespace fastJSON
 	public enum NamingConvention
 	{
 		/// <summary>
-		/// The letter case of the serialized field names will not be changed.
+		/// The letter case of the serialized field names will be the same as the field or member name.
 		/// </summary>
 		Default,
 		/// <summary>
-		/// The all letters in the serialized field names will be changed to lowercase.
+		/// All letters in the serialized field names will be changed to lowercase.
 		/// </summary>
 		LowerCase,
 		/// <summary>
@@ -144,7 +151,7 @@ namespace fastJSON
 		/// </summary>
 		CamelCase,
 		/// <summary>
-		/// The all letters in the serialized field names will be changed to uppercase.
+		/// All letters in the serialized field names will be changed to uppercase.
 		/// </summary>
 		UpperCase
 	}

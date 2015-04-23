@@ -49,14 +49,33 @@ namespace fastJSON
 			return _reflections[type] = new ReflectionCache (type, this);
 		}
 
+		/// <summary>
+		/// Register <see cref="ReflectionOverride"/> for the <typeparamref name="T"/> type.
+		/// </summary>
+		/// <typeparam name="T">The type to be overridden.</typeparam>
+		/// <param name="overrideInfo">The override info of the type.</param>
 		public void RegisterReflectionOverride<T> (ReflectionOverride overrideInfo) {
 			RegisterReflectionOverride (typeof (T), overrideInfo, false);
 		}
-		public void RegisterReflectionOverride<T> (ReflectionOverride overrideInfo, bool purgePrevious) {
-			RegisterReflectionOverride (typeof (T), overrideInfo, purgePrevious);
+
+		/// <summary>
+		/// Register <see cref="ReflectionOverride"/> for the <typeparamref name="T"/> type.
+		/// </summary>
+		/// <typeparam name="T">The type to be overridden.</typeparam>
+		/// <param name="overrideInfo">The override info of the type.</param>
+		/// <param name="purgeExisting">Whether the override info is merged into the existing one, or have the reflection engine redo the reflection of the type and apply the override info.</param>
+		public void RegisterReflectionOverride<T> (ReflectionOverride overrideInfo, bool purgeExisting) {
+			RegisterReflectionOverride (typeof (T), overrideInfo, purgeExisting);
 		}
-		public void RegisterReflectionOverride (Type type, ReflectionOverride overrideInfo, bool purgePrevious) {
-			var c = purgePrevious ? new ReflectionCache (type, this) : GetDefinition (type);
+
+		/// <summary>
+		/// Register <see cref="ReflectionOverride"/> for the specific type.
+		/// </summary>
+		/// <param name="type">The type to be overridden.</param>
+		/// <param name="overrideInfo">The override info of the type.</param>
+		/// <param name="purgeExisting">Whether the override info is merged into the existing one, or have the reflection engine redo the reflection of the type and apply the override info.</param>
+		public void RegisterReflectionOverride (Type type, ReflectionOverride overrideInfo, bool purgeExisting) {
+			var c = purgeExisting ? new ReflectionCache (type, this) : GetDefinition (type);
 			if (overrideInfo.OverrideInterceptor) {
 				c.Interceptor = overrideInfo.Interceptor;
 			}
@@ -103,7 +122,7 @@ namespace fastJSON
 				}
 				g.SerializedName = sn;
 			}
-			if (purgePrevious) {
+			if (purgeExisting) {
 				_reflections[type] = c;
 			}
 		}
@@ -269,7 +288,7 @@ namespace fastJSON
 	public class MemberOverride
 	{
 		/// <summary>
-		/// Gets the name of the overriden member.
+		/// Gets the name of the overridden member.
 		/// </summary>
 		public string MemberName { get; private set; }
 
@@ -288,22 +307,53 @@ namespace fastJSON
 		/// <summary>
 		/// Gets or sets the <see cref="IJsonConverter"/> for the member.
 		/// </summary>
+		/// <remarks>If the member has a converter before the override, and the value of this converter is null, existing converter will be removed after the override.</remarks>
 		public IJsonConverter Converter {
 			get { return _Converter; }
 			set { _Converter = value; OverrideConverter = true; }
 		}
 
+		/// <summary>
+		/// Denotes whether the member is always serialized (<see cref="TriState.True"/>), never serialized (<see cref="TriState.False"/>) or compliant to the existing behavior (<see cref="TriState.Default"/>).
+		/// </summary>
 		public TriState Serializable { get; set; }
 
+		/// <summary>
+		/// Creates an instance of <see cref="MemberOverride"/>. The override info can be set via the properties.
+		/// </summary>
+		/// <param name="memberName">The name of the member.</param>
+		/// <remarks>The member name is case sensitive during serialization, and case-insensitive during deserialization.</remarks>
 		public MemberOverride (string memberName) {
 			MemberName = memberName;
 		}
+		/// <summary>
+		/// Creates an instance of <see cref="MemberOverride"/>, setting the <see cref="Serializable"/> property. The other override info can be set via the properties.
+		/// </summary>
+		/// <param name="memberName">The name of the member.</param>
+		/// <param name="serializable">How the member is serialized.</param>
+		/// <remarks>The member name is case sensitive during serialization, and case-insensitive during deserialization.</remarks>
 		public MemberOverride (string memberName, TriState serializable) : this(memberName) {
 			Serializable = serializable;
 		}
+		/// <summary>
+		/// Creates an instance of <see cref="MemberOverride"/>, setting the <see cref="Converter"/> property. The other override info can be set via the properties.
+		/// </summary>
+		/// <param name="memberName">The name of the member.</param>
+		/// <param name="converter">The converter.</param>
+		/// <remarks>
+		/// <para>The member name is case sensitive during serialization, and case-insensitive during deserialization.</para>
+		/// </remarks>
 		public MemberOverride (string memberName, IJsonConverter converter) : this (memberName) {
 			Converter = converter;
 		}
+		/// <summary>
+		/// Creates an instance of <see cref="MemberOverride"/>, setting the <see cref="SerializedName"/> property. The other override info can be set via the properties.
+		/// </summary>
+		/// <param name="memberName">The name of the member.</param>
+		/// <param name="serializedName">The serialized name of the member.</param>
+		/// <remarks>
+		/// <para>The member name is case sensitive during serialization, and case-insensitive during deserialization.</para>
+		/// </remarks>
 		public MemberOverride (string memberName, string serializedName) : this (memberName) {
 			SerializedName = serializedName;
 		}

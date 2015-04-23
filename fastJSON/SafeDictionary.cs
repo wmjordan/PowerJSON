@@ -3,6 +3,11 @@ using System.Collections.Generic;
 
 namespace fastJSON
 {
+	/// <summary>
+	/// A thread-safe <see cref="IDictionary{TKey, TValue}"/>.
+	/// </summary>
+	/// <typeparam name="TKey">The type of the dictionary key.</typeparam>
+	/// <typeparam name="TValue">The type of the dictionary value.</typeparam>
     public sealed class SafeDictionary<TKey, TValue>
     {
         private readonly object _Padlock = new object();

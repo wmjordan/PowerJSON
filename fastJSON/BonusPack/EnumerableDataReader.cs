@@ -6,7 +6,7 @@ using System.Text;
 namespace fastJSON.BonusPack
 {
 	/// <summary>
-	/// Turns <see cref="IEnumerable"/> collection into an <see cref="EnumerableDataReader"/>.
+	/// Turns <see cref="IEnumerable{T}"/> collection into an <see cref="EnumerableDataReader"/>.
 	/// </summary>
 	public class EnumerableDataReader
 	{
@@ -90,7 +90,7 @@ namespace fastJSON.BonusPack
 			int c = 0;
 			for (int i = 0; i < _fieldCount; i++) {
 				var g = p[i];
-				if (g.Serializable == TriState.False) {
+				if (showReadOnlyValues == false && g.Serializable == TriState.False) {
 					continue;
 				}
 				_memberNames[c] = p[i].SerializedName;
@@ -119,9 +119,8 @@ namespace fastJSON.BonusPack
 				row["ColumnName"] = this.GetName (i);
 				row["ColumnOrdinal"] = i;
 				Type type = this.GetFieldType (i);
-				if (type.IsGenericType
-				&& type.GetGenericTypeDefinition () == typeof (System.Nullable<int>).GetGenericTypeDefinition ()) {
-					type = type.GetGenericArguments ()[0];
+				if (Reflection.Instance.IsNullable (type)) {
+					type = Reflection.Instance.GetGenericArguments (type)[0];
 				}
 				row["DataType"] = this.GetFieldType (i);
 				row["DataTypeName"] = this.GetDataTypeName (i);

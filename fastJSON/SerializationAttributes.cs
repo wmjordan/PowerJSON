@@ -68,6 +68,9 @@ namespace fastJSON
 		}
 	}
 
+	/// <summary>
+	/// This attribute is not supported yet. Do not use it at this moment.
+	/// </summary>
 	public class JsonFieldOrderAttribute : Attribute
 	{
 		/// <summary>
@@ -106,7 +109,7 @@ namespace fastJSON
 	/// <summary>
 	/// Controls the object being serialized or deserialized.
 	/// </summary>
-	[AttributeUsage (AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Enum)]
+	[AttributeUsage (AttributeTargets.Class | AttributeTargets.Struct)]
 	public class JsonInterceptorAttribute : Attribute
 	{
 		/// <summary>
@@ -119,6 +122,11 @@ namespace fastJSON
 
 		internal IJsonInterceptor Interceptor { get; private set; }
 
+		/// <summary>
+		/// Marks a class or a struct to be processed by an <see cref="IJsonInterceptor"/>.
+		/// </summary>
+		/// <param name="interceptorType">The type of <see cref="IJsonInterceptor"/></param>
+		/// <exception cref="JsonSerializationException">The exception will be thrown if the type does not implements <see cref="IJsonInterceptor"/>.</exception>
 		public JsonInterceptorAttribute (Type interceptorType) {
 			if (interceptorType.IsInterface || typeof (IJsonInterceptor).IsAssignableFrom (interceptorType) == false) {
 				throw new JsonSerializationException (String.Concat ("The type ", interceptorType.FullName, " defined in ", typeof (JsonInterceptorAttribute).FullName, " does not implement interface ", typeof (IJsonInterceptor).FullName));
@@ -300,6 +308,11 @@ namespace fastJSON
 
 		internal IJsonConverter Converter { get; private set; }
 
+		/// <summary>
+		/// Marks the value of a field or a property to be converted by an <see cref="IJsonConverter"/>.
+		/// </summary>
+		/// <param name="converter">The type of the <see cref="IJsonConverter"/>.</param>
+		/// <exception cref="JsonSerializationException">Exception can be thrown if the type does not implements <see cref="IJsonConverter"/>.</exception>
 		public JsonConverterAttribute (Type converter) {
 			if (converter.IsInterface || typeof(IJsonConverter).IsAssignableFrom (converter) == false) {
 				throw new JsonSerializationException (String.Concat ("The type ", converter.FullName, " defined in ", typeof (JsonConverterAttribute).FullName, " does not implement interface ", typeof (IJsonConverter).FullName));

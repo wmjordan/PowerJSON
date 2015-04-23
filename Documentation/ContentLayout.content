@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Topics>
+  <Topic id="b9c04495-737d-4a62-b123-1b75798ac1e6" visible="True" isDefault="true" title="Welcome to the fastJSON Power Fork">
+    <HelpKeywords>
+      <HelpKeyword index="K" term="Welcome" />
+    </HelpKeywords>
+  </Topic>
+  <Topic id="07899cb8-f4d9-4e46-bbb6-6ba8518de804" visible="True" isExpanded="true" title="Version History">
+    <HelpKeywords>
+      <HelpKeyword index="K" term="version, history" />
+    </HelpKeywords>
+    <Topic id="02f9ad9b-e09d-430d-9f73-59e79a5f4d44" visible="True" isSelected="true" title="The original version of fastJSON">
+      <HelpKeywords>
+        <HelpKeyword index="K" term="version, original, fastJSON" />
+      </HelpKeywords>
+    </Topic>
+  </Topic>
+</Topics>
