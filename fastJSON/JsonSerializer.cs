@@ -105,7 +105,7 @@ namespace fastJSON
 				WriteDataset ((DataSet)obj);
 
 			else if (obj is DataTable)
-				this.WriteDataTable ((DataTable)obj);
+				WriteDataTable ((DataTable)obj);
 #endif
 			else if (obj is byte[])
 				WriteBytes ((byte[])obj);
@@ -430,7 +430,7 @@ namespace fastJSON
 					//append = false;
 					continue;
 				}
-				if (p.HasDefaultValue && Object.Equals (o, p.DefaultValue)) {
+				if (p.HasDefaultValue && Equals (o, p.DefaultValue)) {
 					// ignore fields with default value
 					continue;
 				}
@@ -445,7 +445,7 @@ namespace fastJSON
 				if (o != null && _params.UseExtensions)
 				{
 					Type tt = o.GetType ();
-					if (tt == typeof(System.Object))
+					if (tt == typeof(object))
 						map.Add(p.SerializedName, tt.ToString());
 				}
 				append = true;

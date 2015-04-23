@@ -244,7 +244,7 @@ namespace fastJSON
 		}
 
 		bool IJsonInterceptor.OnSerializing (object obj) {
-			return (obj is T) ? OnSerializing ((T)obj) : false;
+			return (obj is T) && OnSerializing ((T)obj);
 		}
 
 		IEnumerable<KeyValuePair<string, object>> IJsonInterceptor.SerializeExtraValues (object obj) {

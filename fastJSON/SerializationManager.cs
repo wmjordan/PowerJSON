@@ -298,8 +298,8 @@ namespace fastJSON
 		public MemberOverride (string memberName) {
 			MemberName = memberName;
 		}
-		public MemberOverride (string memberName, TriState Serializable) : this(memberName) {
-			Serializable = Serializable;
+		public MemberOverride (string memberName, TriState serializable) : this(memberName) {
+			Serializable = serializable;
 		}
 		public MemberOverride (string memberName, IJsonConverter converter) : this (memberName) {
 			Converter = converter;
@@ -727,10 +727,7 @@ namespace fastJSON
 			else if (type == typeof (NameValueCollection)) d_type = JsonDataType.NameValue;
 			else if (type.IsArray) {
 				d.ElementType = type.GetElementType ();
-				if (type == typeof (byte[]))
-					d_type = JsonDataType.ByteArray;
-				else
-					d_type = JsonDataType.Array;
+				d_type = type == typeof(byte[]) ? JsonDataType.ByteArray : JsonDataType.Array;
 			}
 			else if (type.Name.Contains ("Dictionary")) {
 				d.GenericTypes = Reflection.Instance.GetGenericArguments (type);// t.GetGenericArguments();
@@ -747,8 +744,7 @@ namespace fastJSON
 			else if (customType)
 				d_type = JsonDataType.Custom;
 
-			if (type.IsValueType && !type.IsPrimitive && !type.IsEnum && type != typeof (decimal))
-				d.IsStruct = true;
+			d.IsStruct |= (type.IsValueType && !type.IsPrimitive && !type.IsEnum && type != typeof(decimal));
 
 			d.IsClass = type.IsClass;
 			d.IsValueType = type.IsValueType;
