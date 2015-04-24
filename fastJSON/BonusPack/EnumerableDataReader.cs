@@ -31,7 +31,7 @@ namespace fastJSON.BonusPack
 	/// <typeparam name="T">The data type in the data source.</typeparam>
 	public class EnumerableDataReader<T> : IDataReader
 	{
-		static Dictionary<Type, byte> _scalarTypes = InitScalarTypes ();
+		readonly static Dictionary<Type, byte> _scalarTypes = InitScalarTypes ();
 
 		private static Dictionary<Type, byte> InitScalarTypes () {
 			return new Dictionary<Type, byte> () {
@@ -72,9 +72,9 @@ namespace fastJSON.BonusPack
 		}
 
 		IEnumerator<T> _enumerator;
-		int _fieldCount;
-		string[] _memberNames;
-		Getters[] _accessors;
+		readonly int _fieldCount;
+		readonly string[] _memberNames;
+		readonly Getters[] _accessors;
 
 		public EnumerableDataReader (IEnumerable<T> collection) : this (collection, false) { }
 		public EnumerableDataReader (IEnumerable<T> collection, bool showReadOnlyValues) {

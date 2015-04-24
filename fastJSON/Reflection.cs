@@ -119,11 +119,11 @@ namespace fastJSON
 
 		//internal delegate object GenericSetter(object target, object value);
 		//internal delegate object GenericGetter(object obj);
-		private delegate object CreateObject ();
+		//private delegate object CreateObject ();
 
 		private SafeDictionary<Type, string> _tyname = new SafeDictionary<Type, string>();
 		private SafeDictionary<string, Type> _typecache = new SafeDictionary<string, Type>();
-		private SafeDictionary<Type, CreateObject> _constrcache = new SafeDictionary<Type, CreateObject> ();
+		//private SafeDictionary<Type, CreateObject> _constrcache = new SafeDictionary<Type, CreateObject> ();
 		//private SafeDictionary<Type, IJsonInterceptor> _interceptorCache = new SafeDictionary<Type, IJsonInterceptor> ();
 		//private SafeDictionary<Type, Getters[]> _getterscache = new SafeDictionary<Type, Getters[]>();
 		//private SafeDictionary<string, Dictionary<string, myPropInfo>> _propertycache = new SafeDictionary<string, Dictionary<string, myPropInfo>>();
@@ -224,57 +224,57 @@ namespace fastJSON
 			}
 		}
 
-		internal object FastCreateInstance (Type objtype) {
-			try {
-				CreateObject c = null;
-				if (_constrcache.TryGetValue (objtype, out c)) {
-					return c ();
-				}
-				else {
-					var s = ShouldSkipTypeVisibilityCheck (objtype);
-					var n = objtype.Name + ".ctor";
-					if (objtype.IsClass) {
-						DynamicMethod dynMethod = s ? new DynamicMethod (n, objtype, null, objtype, true) : new DynamicMethod (n, objtype, Type.EmptyTypes);
-						ILGenerator ilGen = dynMethod.GetILGenerator ();
-						ilGen.Emit (OpCodes.Newobj, objtype.GetConstructor (Type.EmptyTypes));
-						ilGen.Emit (OpCodes.Ret);
-						c = (CreateObject)dynMethod.CreateDelegate (typeof (CreateObject));
-						_constrcache.Add (objtype, c);
-					}
-					else // structs
-					{
-						DynamicMethod dynMethod = s ? new DynamicMethod (n, typeof (object), null, objtype, s) : new DynamicMethod (n, typeof (object), null, objtype);
-						ILGenerator ilGen = dynMethod.GetILGenerator ();
-						var lv = ilGen.DeclareLocal (objtype);
-						ilGen.Emit (OpCodes.Ldloca_S, lv);
-						ilGen.Emit (OpCodes.Initobj, objtype);
-						ilGen.Emit (OpCodes.Ldloc_0);
-						ilGen.Emit (OpCodes.Box, objtype);
-						ilGen.Emit (OpCodes.Ret);
-						c = (CreateObject)dynMethod.CreateDelegate (typeof (CreateObject));
-						_constrcache.Add (objtype, c);
-					}
-					return c ();
-				}
-			}
-			catch (Exception exc) {
-				throw new JsonSerializationException (string.Format ("Failed to fast create instance for type '{0}' from assembly '{1}'",
-					objtype.FullName, objtype.AssemblyQualifiedName), exc);
-			}
-		}
+		//internal object FastCreateInstance (Type objtype) {
+		//	try {
+		//		CreateObject c = null;
+		//		if (_constrcache.TryGetValue (objtype, out c)) {
+		//			return c ();
+		//		}
+		//		else {
+		//			var s = ShouldSkipTypeVisibilityCheck (objtype);
+		//			var n = objtype.Name + ".ctor";
+		//			if (objtype.IsClass) {
+		//				DynamicMethod dynMethod = s ? new DynamicMethod (n, objtype, null, objtype, true) : new DynamicMethod (n, objtype, Type.EmptyTypes);
+		//				ILGenerator ilGen = dynMethod.GetILGenerator ();
+		//				ilGen.Emit (OpCodes.Newobj, objtype.GetConstructor (Type.EmptyTypes));
+		//				ilGen.Emit (OpCodes.Ret);
+		//				c = (CreateObject)dynMethod.CreateDelegate (typeof (CreateObject));
+		//				_constrcache.Add (objtype, c);
+		//			}
+		//			else // structs
+		//			{
+		//				DynamicMethod dynMethod = s ? new DynamicMethod (n, typeof (object), null, objtype, s) : new DynamicMethod (n, typeof (object), null, objtype);
+		//				ILGenerator ilGen = dynMethod.GetILGenerator ();
+		//				var lv = ilGen.DeclareLocal (objtype);
+		//				ilGen.Emit (OpCodes.Ldloca_S, lv);
+		//				ilGen.Emit (OpCodes.Initobj, objtype);
+		//				ilGen.Emit (OpCodes.Ldloc_0);
+		//				ilGen.Emit (OpCodes.Box, objtype);
+		//				ilGen.Emit (OpCodes.Ret);
+		//				c = (CreateObject)dynMethod.CreateDelegate (typeof (CreateObject));
+		//				_constrcache.Add (objtype, c);
+		//			}
+		//			return c ();
+		//		}
+		//	}
+		//	catch (Exception exc) {
+		//		throw new JsonSerializationException (string.Format ("Failed to fast create instance for type '{0}' from assembly '{1}'",
+		//			objtype.FullName, objtype.AssemblyQualifiedName), exc);
+		//	}
+		//}
 
-		private static bool ShouldSkipTypeVisibilityCheck (Type objtype) {
-			var s = AttributeHelper.GetAttribute<JsonSerializableAttribute> (objtype, false) != null;
-			if (s == false && objtype.IsGenericType) {
-				foreach (var item in objtype.GetGenericArguments ()) {
-					s = ShouldSkipTypeVisibilityCheck (item);
-					if (s) {
-						return true;
-					}
-				}
-			}
-			return s;
-		}
+		//private static bool ShouldSkipTypeVisibilityCheck (Type objtype) {
+		//	var s = AttributeHelper.GetAttribute<JsonSerializableAttribute> (objtype, false) != null;
+		//	if (s == false && objtype.IsGenericType) {
+		//		foreach (var item in objtype.GetGenericArguments ()) {
+		//			s = ShouldSkipTypeVisibilityCheck (item);
+		//			if (s) {
+		//				return true;
+		//			}
+		//		}
+		//	}
+		//	return s;
+		//}
 
 		public bool IsNullable (Type t) {
 			if (!t.IsGenericType) return false;

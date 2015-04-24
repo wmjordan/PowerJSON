@@ -99,6 +99,7 @@
     <Compile Include="JSON.cs" />
     <Compile Include="JsonParser.cs" />
     <Compile Include="Reflection.cs" />
+    <Compile Include="ReflectionCache.cs" />
     <Compile Include="ReflectionController.cs" />
     <Compile Include="SafeDictionary.cs" />
     <Compile Include="SerializationAttributes.cs" />

@@ -10,17 +10,17 @@ namespace fastJSON
 {
 	internal class JSONDeserializer
     {
+    	readonly JSONParameters _params;
+    	readonly SerializationManager _manager;
+    	readonly Dictionary<object, int> _circobj = new Dictionary<object, int>();
+    	readonly Dictionary<int, object> _cirrev = new Dictionary<int, object>();
+    	bool _usingglobals = false;
+
     	public JSONDeserializer(JSONParameters param)
     	{
     		_params = param;
     		_manager = param.Manager;
     	}
-    
-    	private JSONParameters _params;
-    	private SerializationManager _manager;
-    	private bool _usingglobals = false;
-    	private Dictionary<object, int> _circobj = new Dictionary<object, int>();
-    	private Dictionary<int, object> _cirrev = new Dictionary<int, object>();
     
     	public T ToObject<T>(string json)
     	{

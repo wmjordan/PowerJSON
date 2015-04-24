@@ -13,15 +13,15 @@ namespace fastJSON
 {
 	internal sealed class JSONSerializer
 	{
-		private StringBuilder _output = new StringBuilder();
-		private StringBuilder _before = new StringBuilder();
-		private int _MAX_DEPTH = 20;
+		StringBuilder _output = new StringBuilder();
+		StringBuilder _before = new StringBuilder();
+		readonly int _MAX_DEPTH = 20;
 		int _current_depth = 0;
-		private Dictionary<string, int> _globalTypes = new Dictionary<string, int>();
-		private Dictionary<object, int> _cirobj = new Dictionary<object, int>();
-		private JSONParameters _params;
-		private bool _useEscapedUnicode = false;
-		private SerializationManager _manager;
+		readonly Dictionary<string, int> _globalTypes = new Dictionary<string, int>();
+		readonly Dictionary<object, int> _cirobj = new Dictionary<object, int>();
+		readonly JSONParameters _params;
+		readonly bool _useEscapedUnicode = false;
+		readonly SerializationManager _manager;
 
 		internal JSONSerializer(JSONParameters param)
 		{
