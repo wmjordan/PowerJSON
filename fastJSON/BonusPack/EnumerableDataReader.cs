@@ -6,9 +6,9 @@ using System.Text;
 namespace fastJSON.BonusPack
 {
 	/// <summary>
-	/// Turns <see cref="IEnumerable{T}"/> collection into an <see cref="EnumerableDataReader"/>.
+	/// Turns an <see cref="IEnumerable{T}"/> collection into an <see cref="EnumerableDataReader"/>.
 	/// </summary>
-	public class EnumerableDataReader
+	public static class EnumerableDataReader
 	{
 		/// <summary>
 		/// Creates an <see cref="EnumerableDataReader&lt;T&gt;"/> instance from a given <see cref="IEnumerable&lt;T&gt;"/> instance.
@@ -33,7 +33,7 @@ namespace fastJSON.BonusPack
 	{
 		readonly static Dictionary<Type, byte> _scalarTypes = InitScalarTypes ();
 
-		private static Dictionary<Type, byte> InitScalarTypes () {
+		static Dictionary<Type, byte> InitScalarTypes () {
 			return new Dictionary<Type, byte> () {
 				{ typeof(string), 0 },
 
@@ -116,14 +116,14 @@ namespace fastJSON.BonusPack
 			DataTable t = new DataTable ();
 			for (int i = 0; i < _fieldCount; i++) {
 				DataRow row = t.NewRow ();
-				row["ColumnName"] = this.GetName (i);
+				row["ColumnName"] = GetName (i);
 				row["ColumnOrdinal"] = i;
-				Type type = this.GetFieldType (i);
+				Type type = GetFieldType (i);
 				if (Reflection.Instance.IsNullable (type)) {
 					type = Reflection.Instance.GetGenericArguments (type)[0];
 				}
-				row["DataType"] = this.GetFieldType (i);
-				row["DataTypeName"] = this.GetDataTypeName (i);
+				row["DataType"] = GetFieldType (i);
+				row["DataTypeName"] = GetDataTypeName (i);
 				row["ColumnSize"] = -1;
 				t.Rows.Add (row);
 			}

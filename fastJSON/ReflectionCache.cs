@@ -10,7 +10,6 @@ namespace fastJSON
 {
     class ReflectionCache
     {
-    
     	internal readonly string TypeName;
     	internal readonly string AssemblyName;
     
@@ -64,7 +63,7 @@ namespace fastJSON
     	}
     
     	#region Accessors methods
-    	private bool ShouldSkipVisibilityCheck (Type type, SerializationManager manager) {
+    	bool ShouldSkipVisibilityCheck (Type type, SerializationManager manager) {
     		ReflectionCache c;
     		if (type.IsGenericType) {
     			var pl = Reflection.Instance.GetGenericArguments (type);
@@ -90,7 +89,7 @@ namespace fastJSON
     		}
     		return false;
     	}
-    	private static CreateObject CreateConstructorMethod (Type objtype, bool skipVisibility) {
+    	static CreateObject CreateConstructorMethod (Type objtype, bool skipVisibility) {
     		CreateObject c;
     		var n = objtype.Name + ".ctor";
     		if (objtype.IsClass) {
@@ -118,7 +117,7 @@ namespace fastJSON
     		return c;
     	}
     
-    	private static Getters[] GetGetters (Type type, IReflectionController controller) {
+    	static Getters[] GetGetters (Type type, IReflectionController controller) {
     		PropertyInfo[] props = type.GetProperties (BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
     		FieldInfo[] fi = type.GetFields (BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static);
     		Dictionary<string, Getters> getters = new Dictionary<string, Getters> (props.Length + fi.Length);
@@ -140,60 +139,61 @@ namespace fastJSON
     		getters.Values.CopyTo (r, 0);
     		return r;
     	}
-    
-    	private static void AddGetter (Dictionary<string, Getters> getters, MemberInfo memberInfo, GenericGetter getter, IReflectionController controller) {
-    		var n = memberInfo.Name;
-    		bool s; // static
-    		bool ro; // read-only
-    		Type t; // member type
-    		bool tp; // property
-    		if (memberInfo is FieldInfo) {
-    			var f = ((FieldInfo)memberInfo);
-    			s = f.IsStatic;
-    			ro = f.IsInitOnly;
-    			t = f.FieldType;
-    			tp = false;
-    		}
-    		else { // PropertyInfo
-    			var p = ((PropertyInfo)memberInfo);
-    			s = (p.GetGetMethod () ?? p.GetSetMethod ()).IsStatic;
-    			ro = p.GetSetMethod () == null; // p.CanWrite can return true if the setter is non-public
-    			t = p.PropertyType;
-    			tp = true;
-    		}
-    		var g = new Getters {
-    			MemberName = memberInfo.Name,
-    			Getter = getter,
-    			SerializedName = n,
-    			IsStatic = s,
-    			IsProperty = tp,
-    			IsReadOnly = ro,
-    			MemberType = t
-    		};
-    		if (controller != null) {
-    			g.Serializable = controller.IsMemberSerializable (memberInfo, g);
-    			object dv;
-    			g.Converter = controller.GetMemberConverter (memberInfo);
-    			g.HasDefaultValue = controller.GetDefaultValue (memberInfo, out dv);
-    			if (g.HasDefaultValue) {
-    				g.DefaultValue = dv;
-    			}
-    			var tn = controller.GetSerializedNames (memberInfo);
-    			if (tn != null) {
-    				if (String.IsNullOrEmpty (tn.DefaultName) == false && tn.DefaultName != g.SerializedName) {
-    					g.SpecificName = true;
-    				}
-    				g.SerializedName = tn.DefaultName ?? g.SerializedName;
-    				if (tn.Count > 0) {
-    					g.TypedNames = new Dictionary<Type, string> (tn);
-    					g.SpecificName = true;
-    				}
-    			}
-    		}
-    		getters.Add (n, g);
-    	}
-    
-    	private static GenericGetter CreateGetField (Type type, FieldInfo fieldInfo) {
+
+		static void AddGetter (Dictionary<string, Getters> getters, MemberInfo memberInfo, GenericGetter getter, IReflectionController controller) {
+			var n = memberInfo.Name;
+			bool s;	// static
+			bool ro; // read-only
+			Type t;	// member type
+			bool tp; // property
+			if (memberInfo is FieldInfo) {
+				var f = ((FieldInfo)memberInfo);
+				s = f.IsStatic;
+				ro = f.IsInitOnly;
+				t = f.FieldType;
+				tp = false;
+			}
+			else { // PropertyInfo
+				var p = ((PropertyInfo)memberInfo);
+				s = (p.GetGetMethod () ?? p.GetSetMethod ()).IsStatic;
+				ro = p.GetSetMethod () == null;	// p.CanWrite can return true if the setter is non-public
+				t = p.PropertyType;
+				tp = true;
+			}
+			var g = new Getters
+			{
+				MemberName = memberInfo.Name,
+				Getter = getter,
+				SerializedName = n,
+				IsStatic = s,
+				IsProperty = tp,
+				IsReadOnly = ro,
+				MemberType = t
+			};
+			if (controller != null) {
+				g.Serializable = controller.IsMemberSerializable (memberInfo, g);
+				object dv;
+				g.Converter = controller.GetMemberConverter (memberInfo);
+				g.HasDefaultValue = controller.GetDefaultValue (memberInfo, out dv);
+				if (g.HasDefaultValue) {
+					g.DefaultValue = dv;
+				}
+				var tn = controller.GetSerializedNames (memberInfo);
+				if (tn != null) {
+					if (String.IsNullOrEmpty (tn.DefaultName) == false && tn.DefaultName != g.SerializedName) {
+						g.SpecificName = true;
+					}
+					g.SerializedName = tn.DefaultName ?? g.SerializedName;
+					if (tn.Count > 0) {
+						g.TypedNames = new Dictionary<Type, string> (tn);
+						g.SpecificName = true;
+					}
+				}
+			}
+			getters.Add (n, g);
+		}
+
+		static GenericGetter CreateGetField (Type type, FieldInfo fieldInfo) {
     		DynamicMethod dynamicGet = new DynamicMethod (fieldInfo.Name, typeof (object), new Type[] { typeof (object) }, type, true);
     
     		ILGenerator il = dynamicGet.GetILGenerator ();
@@ -221,7 +221,7 @@ namespace fastJSON
     		return (GenericGetter)dynamicGet.CreateDelegate (typeof (GenericGetter));
     	}
     
-    	private static GenericGetter CreateGetProperty (Type type, PropertyInfo propertyInfo) {
+    	static GenericGetter CreateGetProperty (Type type, PropertyInfo propertyInfo) {
     		MethodInfo getMethod = propertyInfo.GetGetMethod ();
     		if (getMethod == null)
     			return null;
@@ -259,7 +259,7 @@ namespace fastJSON
     		return (GenericGetter)getter.CreateDelegate (typeof (GenericGetter));
     	}
     
-    	private static GenericSetter CreateSetField (Type type, FieldInfo fieldInfo) {
+    	static GenericSetter CreateSetField (Type type, FieldInfo fieldInfo) {
     		Type[] arguments = new Type[2];
     		arguments[0] = arguments[1] = typeof (object);
     
@@ -296,7 +296,7 @@ namespace fastJSON
     		return (GenericSetter)dynamicSet.CreateDelegate (typeof (GenericSetter));
     	}
     
-    	private static GenericSetter CreateSetMethod (Type type, PropertyInfo propertyInfo) {
+    	static GenericSetter CreateSetMethod (Type type, PropertyInfo propertyInfo) {
     		MethodInfo setMethod = propertyInfo.GetSetMethod ();
     		if (setMethod == null)
     			return null;
@@ -350,7 +350,7 @@ namespace fastJSON
     		return (GenericSetter)setter.CreateDelegate (typeof (GenericSetter));
     	}
     
-    	private static Dictionary<string, myPropInfo> GetProperties (Type type, IReflectionController controller) {
+    	static Dictionary<string, myPropInfo> GetProperties (Type type, IReflectionController controller) {
     		bool custType = Reflection.Instance.IsTypeRegistered (type);
     		Dictionary<string, myPropInfo> sd = new Dictionary<string, myPropInfo> (StringComparer.OrdinalIgnoreCase);
     		PropertyInfo[] pr = type.GetProperties (BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
@@ -358,7 +358,7 @@ namespace fastJSON
     			if (p.GetIndexParameters ().Length > 0) {// Property is an indexer
     				continue;
     			}
-    			myPropInfo d = CreateMyProp (p.PropertyType, p.Name, custType);
+    			myPropInfo d = new myPropInfo (p.PropertyType, p.Name, custType);
     			d.Setter = CreateSetMethod (type, p);
     			if (d.Setter != null)
     				d.CanWrite = true;
@@ -370,7 +370,7 @@ namespace fastJSON
     			if (f.IsLiteral || f.IsInitOnly) {
     				continue;
     			}
-    			myPropInfo d = CreateMyProp (f.FieldType, f.Name, custType);
+    			myPropInfo d = new myPropInfo (f.FieldType, f.Name, custType);
     			//if (f.IsInitOnly == false) {
     			d.Setter = CreateSetField (type, f);
     			if (d.Setter != null)
@@ -383,93 +383,39 @@ namespace fastJSON
     		return sd;
     	}
     
-    	private static void AddMyPropInfo (Dictionary<string, myPropInfo> sd, myPropInfo d, MemberInfo member, IReflectionController controller) {
-    		if (controller != null) {
-    			if (controller.IsMemberDeserializable (member) == false) {
-    				d.Setter = null;
-    				d.CanWrite = false;
-    				return;
-    			}
-    			d.Converter = controller.GetMemberConverter (member);
-    			var tn = controller.GetSerializedNames (member);
-    			if (tn != null) {
-    				if (String.IsNullOrEmpty (tn.DefaultName) == false) {
-    					d.Name = tn.DefaultName;
-    				}
-    				foreach (var item in tn) {
-    					var st = item.Key;
-    					var sn = item.Value;
-    					var dt = CreateMyProp (st, member.Name, Reflection.Instance.IsTypeRegistered (st));
-    					dt.Getter = d.Getter;
-    					dt.Setter = d.Setter;
-    					dt.Converter = d.Converter;
-    					dt.CanWrite = d.CanWrite;
-    					sd.Add (sn, dt);
-    				}
-    			}
+    	static void AddMyPropInfo (Dictionary<string, myPropInfo> sd, myPropInfo d, MemberInfo member, IReflectionController controller) {
+			if (controller == null) {
+				sd.Add (d.MemberName, d);
+				return;
+			}
+    		if (controller.IsMemberDeserializable (member) == false) {
+    			d.Setter = null;
+    			d.CanWrite = false;
+    			return;
     		}
-    		sd.Add (d.Name, d);
+    		d.Converter = controller.GetMemberConverter (member);
+    		var tn = controller.GetSerializedNames (member);
+			if (tn == null) {
+				sd.Add (d.MemberName, d);
+				return;
+			}
+			// polymorphic deserialization
+    		foreach (var item in tn) {
+    			var st = item.Key;
+    			var sn = item.Value;
+    			var dt = new myPropInfo (st, member.Name, Reflection.Instance.IsTypeRegistered (st));
+    			dt.Getter = d.Getter;
+    			dt.Setter = d.Setter;
+    			dt.Converter = d.Converter;
+    			dt.CanWrite = d.CanWrite;
+    			sd.Add (sn, dt);
+    		}
+    		sd.Add (String.IsNullOrEmpty (tn.DefaultName) ? d.MemberName : tn.DefaultName, d);
     	}
     
-    	private static myPropInfo CreateMyProp (Type type, string name, bool customType) {
-    		myPropInfo d = new myPropInfo ();
-    		JsonDataType d_type = JsonDataType.Unknown;
-    
-    		if (type == typeof (int) || type == typeof (int?)) d_type = JsonDataType.Int;
-    		else if (type == typeof (long) || type == typeof (long?)) d_type = JsonDataType.Long;
-    		else if (type == typeof (string)) d_type = JsonDataType.String;
-    		else if (type == typeof (bool) || type == typeof (bool?)) d_type = JsonDataType.Bool;
-    		else if (type == typeof (DateTime) || type == typeof (DateTime?)) d_type = JsonDataType.DateTime;
-    		else if (type.IsEnum) d_type = JsonDataType.Enum;
-    		else if (type == typeof (Guid) || type == typeof (Guid?)) d_type = JsonDataType.Guid;
-    		else if (type == typeof (TimeSpan) || type == typeof (TimeSpan?)) d_type = JsonDataType.TimeSpan;
-    		else if (type == typeof (StringDictionary)) d_type = JsonDataType.StringDictionary;
-    		else if (type == typeof (NameValueCollection)) d_type = JsonDataType.NameValue;
-    		else if (type.IsArray) {
-    			d.ElementType = type.GetElementType ();
-    			d_type = type == typeof(byte[]) ? JsonDataType.ByteArray : JsonDataType.Array;
-    		}
-    		else if (type.Name.Contains ("Dictionary")) {
-    			d.GenericTypes = Reflection.Instance.GetGenericArguments (type);// t.GetGenericArguments();
-    			if (d.GenericTypes.Length > 0 && d.GenericTypes[0] == typeof (string))
-    				d_type = JsonDataType.StringKeyDictionary;
-    			else
-    				d_type = JsonDataType.Dictionary;
-    		}
-    #if !SILVERLIGHT
-    		else if (type == typeof (Hashtable)) d_type = JsonDataType.Hashtable;
-    		else if (type == typeof (DataSet)) d_type = JsonDataType.DataSet;
-    		else if (type == typeof (DataTable)) d_type = JsonDataType.DataTable;
-    #endif
-    		else if (customType)
-    			d_type = JsonDataType.Custom;
-    
-    		d.IsStruct |= (type.IsValueType && !type.IsPrimitive && !type.IsEnum && type != typeof(decimal));
-    
-    		d.IsClass = type.IsClass;
-    		d.IsValueType = type.IsValueType;
-    		if (type.IsGenericType) {
-    			d.IsGenericType = true;
-    			d.ElementType = Reflection.Instance.GetGenericArguments (type)[0];
-    		}
-    
-    		d.PropertyType = type;
-    		d.Name = name;
-    		d.ChangeType = GetChangeType (type);
-    		d.Type = d_type;
-    		d.IsNullable = Reflection.Instance.IsNullable (type);
-    		return d;
-    	}
-    
-    	private static Type GetChangeType (Type conversionType) {
-    		if (conversionType.IsGenericType && Reflection.Instance.GetGenericTypeDefinition (conversionType).Equals (typeof (Nullable<>)))
-    			return Reflection.Instance.GetGenericArguments (conversionType)[0];// conversionType.GetGenericArguments()[0];
-    
-    		return conversionType;
-    	} 
     	#endregion
     
-    	private static Dictionary<string, Enum> GetEnumValues (Type type, IReflectionController controller) {
+    	static Dictionary<string, Enum> GetEnumValues (Type type, IReflectionController controller) {
     		var ns = Enum.GetNames (type);
     		var vs = Enum.GetValues (type);
     		var vm = new Dictionary<string, Enum> (ns.Length);

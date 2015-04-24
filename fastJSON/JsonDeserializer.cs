@@ -314,13 +314,13 @@ namespace fastJSON
 							else if (v is List<object>) {
 								xv = CreateGenericList ((List<object>)xv, st, tc.ElementType, globaltypes);
 							}
-							else if (pi.PropertyType.Equals (xv.GetType ()) == false) {
+							else if (pi.MemberType.Equals (xv.GetType ()) == false) {
 								xv = ChangeType (xv, st);
 							}
 						}
     				}
     				var cv = pi.Converter.DeserializationConvert (n, xv);
-    				if (Object.ReferenceEquals (cv, xv) == false) {
+    				if (ReferenceEquals (cv, xv) == false) {
     					// use the converted value
     					if (cv != null || pi.IsClass || pi.IsNullable) {
 							if (si != null && si.OnDeserializing (o, n, ref cv) == false) {
@@ -343,19 +343,19 @@ namespace fastJSON
     
     			object oset = null;
     
-    			switch (pi.Type) {
+    			switch (pi.JsonDataType) {
     				case JsonDataType.Int: oset = (int)((long)v); break;
     				case JsonDataType.Long: oset = (long)v; break;
     				case JsonDataType.String: oset = (string)v; break;
     				case JsonDataType.Bool: oset = (bool)v; break;
     				case JsonDataType.DateTime: oset = CreateDateTime ((string)v); break;
-    				case JsonDataType.Enum: oset = CreateEnum (pi.PropertyType, v); break;
+    				case JsonDataType.Enum: oset = CreateEnum (pi.MemberType, v); break;
     				case JsonDataType.Guid: oset = CreateGuid ((string)v); break;
     				case JsonDataType.TimeSpan: oset = CreateTimeSpan ((string)v); break;
     
     				case JsonDataType.Array:
     					if (!pi.IsValueType)
-    						oset = CreateArray ((List<object>)v, pi.PropertyType, pi.ElementType, globaltypes);
+    						oset = CreateArray ((List<object>)v, pi.MemberType, pi.ElementType, globaltypes);
     					// what about 'else'?
     					break;
     				case JsonDataType.ByteArray: oset = Convert.FromBase64String ((string)v); break;
@@ -364,20 +364,20 @@ namespace fastJSON
     				case JsonDataType.DataTable: oset = CreateDataTable ((Dictionary<string, object>)v, globaltypes); break;
     				case JsonDataType.Hashtable: // same case as Dictionary
 #endif
-    				case JsonDataType.Dictionary: oset = CreateDictionary ((List<object>)v, pi.PropertyType, pi.GenericTypes, globaltypes); break;
-    				case JsonDataType.StringKeyDictionary: oset = CreateStringKeyDictionary ((Dictionary<string, object>)v, pi.PropertyType, pi.GenericTypes, globaltypes); break;
+    				case JsonDataType.Dictionary: oset = CreateDictionary ((List<object>)v, pi.MemberType, pi.GenericTypes, globaltypes); break;
+    				case JsonDataType.StringKeyDictionary: oset = CreateStringKeyDictionary ((Dictionary<string, object>)v, pi.MemberType, pi.GenericTypes, globaltypes); break;
     				case JsonDataType.NameValue: oset = CreateNV ((Dictionary<string, object>)v); break;
     				case JsonDataType.StringDictionary: oset = CreateSD ((Dictionary<string, object>)v); break;
-    				case JsonDataType.Custom: oset = Reflection.Instance.CreateCustom ((string)v, pi.PropertyType); break;
+    				case JsonDataType.Custom: oset = Reflection.Instance.CreateCustom ((string)v, pi.MemberType); break;
     				default: {
     						if (pi.IsGenericType && pi.IsValueType == false && v is List<object>)
-    							oset = CreateGenericList ((List<object>)v, pi.PropertyType, pi.ElementType, globaltypes);
+    							oset = CreateGenericList ((List<object>)v, pi.MemberType, pi.ElementType, globaltypes);
     
     						else if ((pi.IsClass || pi.IsStruct) && v is Dictionary<string, object>)
-    							oset = ParseDictionary ((Dictionary<string, object>)v, globaltypes, pi.PropertyType, pi.Getter (o));
+    							oset = ParseDictionary ((Dictionary<string, object>)v, globaltypes, pi.MemberType, pi.Getter (o));
     
     						else if (v is List<object>)
-    							oset = CreateArray ((List<object>)v, pi.PropertyType, typeof (object), globaltypes);
+    							oset = CreateArray ((List<object>)v, pi.MemberType, typeof (object), globaltypes);
     
     						else if (pi.IsValueType)
     							oset = ChangeType (v, pi.ChangeType);
@@ -465,7 +465,7 @@ namespace fastJSON
     			else
     			{
     				num *= 10;
-    				num += (int)(cc - '0');
+    				num += (cc - '0');
     			}
     		}
     		if (neg) num = -num;

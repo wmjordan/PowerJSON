@@ -266,7 +266,7 @@ namespace fastJSON
 					neg = false;
 				else {
 					num *= 10;
-					num += (int)(cc - '0');
+					num += (cc - '0');
 				}
 			}
 			if (neg) num = -num;

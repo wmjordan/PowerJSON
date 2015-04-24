@@ -92,7 +92,7 @@ namespace fastJSON
     	/// </summary>
     	[Obsolete ("Please use NamingConvention instead")]
     	public bool SerializeToLowerCaseNames {
-    		get { return _strategy.Convention == fastJSON.NamingConvention.LowerCase; }
+    		get { return _strategy.Convention == NamingConvention.LowerCase; }
     		set { _strategy = value ? NamingStrategy.LowerCase : NamingStrategy.Default; }
     	}
     

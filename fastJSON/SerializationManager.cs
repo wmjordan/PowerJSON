@@ -1,26 +1,21 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Data;
-using System.Reflection;
-using System.Reflection.Emit;
 
 namespace fastJSON
 {
-	internal delegate object CreateObject ();
-	internal delegate object GenericSetter (object target, object value);
-	internal delegate object GenericGetter (object obj);
+	delegate object CreateObject ();
+	delegate object GenericSetter (object target, object value);
+	delegate object GenericGetter (object obj);
 
 	/// <summary>
 	/// The cached serialization information used by the reflection engine during serialization and deserialization.
 	/// </summary>
 	public sealed class SerializationManager
 	{
-		private static readonly char[] __enumSeperatorCharArray = { ',' };
+		static readonly char[] __enumSeperatorCharArray = { ',' };
 
-		private readonly SafeDictionary<Type, ReflectionCache> _reflections = new SafeDictionary<Type, ReflectionCache> ();
-		private readonly IReflectionController _controller;
+		readonly SafeDictionary<Type, ReflectionCache> _reflections = new SafeDictionary<Type, ReflectionCache> ();
+		readonly IReflectionController _controller;
 		internal readonly SafeDictionary<Enum, string> EnumValueCache = new SafeDictionary<Enum, string> ();
 
 		/// <summary>
@@ -80,6 +75,7 @@ namespace fastJSON
 				c.Interceptor = overrideInfo.Interceptor;
 			}
 			MemberOverride mo;
+			var s = c.Properties;
 			foreach (var g in c.Getters) {
 				mo = null;
 				foreach (var item in overrideInfo.MemberOverrides) {
@@ -91,8 +87,14 @@ namespace fastJSON
 				if (mo == null) {
 					continue;
 				}
+
 				if (mo.Serializable != TriState.Default) {
 					g.Serializable = mo.Serializable;
+				}
+
+				var ot = mo.OverrideTypedNames || mo.TypedNames.Count > 0;
+				if (ot) {
+					g.TypedNames = mo.TypedNames;
 				}
 				var sn = mo.SerializedName;
 				if (mo.OverrideSerializedName) {
@@ -103,20 +105,47 @@ namespace fastJSON
 						g.SpecificName = true;
 					}
 				}
+
 				if (mo.OverrideConverter) {
 					g.Converter = mo.Converter;
 				}
-				var p = c.Properties;
-				myPropInfo mp;
-				foreach (var item in p) {
+
+				myPropInfo mp = null;
+				if (ot) {
+					// remove previous polymorphic deserialization info
+					var rt = new List<string> ();
+					foreach (var item in s) {
+						if (item.Value.MemberName == mo.MemberName) {
+							if (item.Value.MemberType != g.MemberType) {
+								rt.Add (item.Key);
+							}
+							else {
+								mp = item.Value;
+							}
+						}
+					}
+					if (mp == null) {
+						throw new MissingMemberException (g.MemberType.FullName, mo.MemberName);
+					}
+					foreach (var item in rt) {
+						s.Remove (item);
+					}
+					// add new polymorphic deserialization info
+					if (mo.TypedNames.Count > 0) {
+						foreach (var item in mo.TypedNames) {
+							var p = new myPropInfo (item.Key, g.MemberName, Reflection.Instance.IsTypeRegistered (item.Key));
+							p.Getter = mp.Getter;
+							p.Setter = mp.Setter;
+							p.CanWrite = mp.CanWrite;
+							s.Add (item.Value, p);
+						}
+					}
+				}
+				foreach (var item in s) {
 					mp = item.Value;
-					if (mp.Name == mo.MemberName) {
+					if (mp.MemberName == mo.MemberName) {
 						if (mo.OverrideConverter) {
 							mp.Converter = mo.Converter;
-						}
-						if (p.Comparer.Equals (g.SerializedName, item.Key) == false) {
-							p.Add (mo.SerializedName, mp);
-							break;
 						}
 					}
 				}
@@ -269,7 +298,7 @@ namespace fastJSON
 
 		List<MemberOverride> _MemberOverrides;
 		/// <summary>
-		/// Specifies the override of members to serialize.
+		/// Specifies the override for members.
 		/// </summary>
 		public List<MemberOverride> MemberOverrides {
 			get {
@@ -311,6 +340,24 @@ namespace fastJSON
 		public IJsonConverter Converter {
 			get { return _Converter; }
 			set { _Converter = value; OverrideConverter = true; }
+		}
+
+		internal bool OverrideTypedNames;
+		Dictionary<Type, string> _TypedNames;
+		/// <summary>
+		/// Gets or sets the polymorphic serialization for the member.
+		/// </summary>
+		public Dictionary<Type, string> TypedNames {
+			get {
+				if (_TypedNames == null) {
+					_TypedNames = new Dictionary<Type, string> ();
+				}
+				return _TypedNames;
+			}
+			set {
+				_TypedNames = value;
+				OverrideTypedNames = true;
+			}
 		}
 
 		/// <summary>

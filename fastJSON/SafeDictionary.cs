@@ -10,28 +10,48 @@ namespace fastJSON
 	/// <typeparam name="TValue">The type of the dictionary value.</typeparam>
     public sealed class SafeDictionary<TKey, TValue>
     {
-        private readonly object _Padlock = new object();
-        private readonly Dictionary<TKey, TValue> _Dictionary;
+        readonly object _Padlock = new object();
+        readonly Dictionary<TKey, TValue> _Dictionary;
 
-        public SafeDictionary(int capacity)
+		/// <summary>
+		/// Initializes a new instance of the <see cref="SafeDictionary{TKey, TValue}"/> class that is empty, has the specified initial capacity, and uses the default equality comparer for the key type.
+		/// </summary>
+		/// <param name="capacity"></param>
+		public SafeDictionary (int capacity)
         {
             _Dictionary = new Dictionary<TKey, TValue>(capacity);
         }
-
-        public SafeDictionary()
+		/// <summary>
+		/// Initializes a new instance of the <see cref="SafeDictionary{TKey, TValue}"/> class that is empty, has the default initial capacity, and uses the default equality comparer for the key type.
+		/// </summary>
+		public SafeDictionary ()
         {
             _Dictionary = new Dictionary<TKey, TValue>();
         }
 
-        public bool TryGetValue(TKey key, out TValue value)
+		/// <summary>
+		/// Gets the value associated with the specified key.
+		/// </summary>
+		/// <param name="key">The key of the value to get.</param>
+		/// <param name="value">When this method returns, contains the value associated with the specified key, if the key is found; otherwise, the default value for the type of the <paramref name="value"/> parameter. This parameter is passed uninitialized. </param>
+		/// <returns> true if the dictionary contains an element with the specified key; otherwise, false.</returns>
+		public bool TryGetValue(TKey key, out TValue value)
         {
             lock (_Padlock)
                 return _Dictionary.TryGetValue(key, out value);
         }
 
-        public int Count { get { lock (_Padlock) return _Dictionary.Count; } }
+		/// <summary>
+		/// Gets the number of key/value pairs contained in the dictionary.
+		/// </summary>
+		public int Count { get { lock (_Padlock) return _Dictionary.Count; } }
 
-        public TValue this[TKey key]
+		/// <summary>
+		/// Gets or sets the value associated with the specified key.
+		/// </summary>
+		/// <param name="key">The key of the value to get or set.</param>
+		/// <returns>The value associated with the specified key. If the specified key is not found, a get operation throws a <see cref="KeyNotFoundException"/>, and a set operation creates a new element with the specified key.</returns>
+		public TValue this[TKey key]
         {
             get
             {
@@ -45,7 +65,12 @@ namespace fastJSON
             }
         }
 
-        public void Add(TKey key, TValue value)
+		/// <summary>
+		/// Adds the specified key and value to the dictionary.
+		/// </summary>
+		/// <param name="key">The key of the element to add.</param>
+		/// <param name="value">The value of the element to add. The value can be null for reference types.</param>
+		public void Add(TKey key, TValue value)
         {
             lock (_Padlock)
             {

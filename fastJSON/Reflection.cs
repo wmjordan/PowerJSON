@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Reflection.Emit;
+using System.Collections.Specialized;
+using System.Data;
 
 namespace fastJSON
 {
@@ -31,7 +33,7 @@ namespace fastJSON
 		bool IsStatic { get; }
 	}
 
-	internal sealed class Getters : IMemberInfo
+	sealed class Getters : IMemberInfo
 	{
 		internal string MemberName;
 		internal Type MemberType;
@@ -55,7 +57,7 @@ namespace fastJSON
 		bool IMemberInfo.IsStatic { get { return IsStatic; } }
 	}
 
-	internal enum JsonDataType // myPropInfoType
+	enum JsonDataType // myPropInfoType
 	{
 		Int,
 		Long,
@@ -81,38 +83,94 @@ namespace fastJSON
 		Unknown,
 	}
 
-	internal sealed class myPropInfo
+	sealed class myPropInfo
 	{
-		internal Type PropertyType; // pt
-		internal Type ElementType; // bt
-		internal Type ChangeType;
+		internal readonly string MemberName;
+		internal readonly Type MemberType; // pt
+		internal readonly JsonDataType JsonDataType;
+		internal readonly Type ElementType; // bt
+		internal readonly Type ChangeType;
+		internal readonly Type[] GenericTypes;
+
+		internal readonly bool IsClass;
+		internal readonly bool IsValueType;
+		internal readonly bool IsGenericType;
+		internal readonly bool IsStruct;
+		internal readonly bool IsNullable;
+
 		internal GenericSetter Setter;
 		internal GenericGetter Getter;
-		internal Type[] GenericTypes;
-		internal string Name;
-		internal JsonDataType Type;
 		internal bool CanWrite;
-
-		internal bool IsClass;
-		internal bool IsValueType;
-		internal bool IsGenericType;
-		internal bool IsStruct;
-		internal bool IsNullable;
-
 		internal IJsonConverter Converter;
+
+		myPropInfo (Type type, string name) {
+			MemberName = name;
+			MemberType = type;
+		}
+		public myPropInfo (Type type, string name, bool customType) : this(type, name) {
+			JsonDataType dt = JsonDataType.Unknown;
+
+			if (type == typeof(int) || type == typeof(int?)) dt = JsonDataType.Int;
+			else if (type == typeof(long) || type == typeof(long?)) dt = JsonDataType.Long;
+			else if (type == typeof(string)) dt = JsonDataType.String;
+			else if (type == typeof(bool) || type == typeof(bool?)) dt = JsonDataType.Bool;
+			else if (type == typeof(DateTime) || type == typeof(DateTime?)) dt = JsonDataType.DateTime;
+			else if (type.IsEnum) dt = JsonDataType.Enum;
+			else if (type == typeof(Guid) || type == typeof(Guid?)) dt = JsonDataType.Guid;
+			else if (type == typeof(TimeSpan) || type == typeof(TimeSpan?)) dt = JsonDataType.TimeSpan;
+			else if (type == typeof(StringDictionary)) dt = JsonDataType.StringDictionary;
+			else if (type == typeof(NameValueCollection)) dt = JsonDataType.NameValue;
+			else if (type.IsArray) {
+				ElementType = type.GetElementType ();
+				dt = type == typeof(byte[]) ? JsonDataType.ByteArray : JsonDataType.Array;
+			}
+#if !SILVERLIGHT
+			else if (type == typeof(Hashtable)) dt = JsonDataType.Hashtable;
+			else if (type == typeof(DataSet)) dt = JsonDataType.DataSet;
+			else if (type == typeof(DataTable)) dt = JsonDataType.DataTable;
+#endif
+			else if (typeof(IDictionary).IsAssignableFrom (type)) {
+				GenericTypes = Reflection.Instance.GetGenericArguments (type);// t.GetGenericArguments();
+				if (GenericTypes.Length > 0 && GenericTypes[0] == typeof(string))
+					dt = JsonDataType.StringKeyDictionary;
+				else
+					dt = JsonDataType.Dictionary;
+			}
+			else if (customType)
+				dt = JsonDataType.Custom;
+
+			IsStruct |= (type.IsValueType && !type.IsPrimitive && !type.IsEnum && type != typeof(decimal));
+
+			IsClass = type.IsClass;
+			IsValueType = type.IsValueType;
+			if (type.IsGenericType) {
+				IsGenericType = true;
+				ElementType = Reflection.Instance.GetGenericArguments (type)[0];
+			}
+
+			ChangeType = GetChangeType (type);
+			JsonDataType = dt;
+			IsNullable = Reflection.Instance.IsNullable (type);
+		}
+		static Type GetChangeType (Type conversionType) {
+			if (conversionType.IsGenericType && Reflection.Instance.GetGenericTypeDefinition (conversionType).Equals (typeof(Nullable<>)))
+				return Reflection.Instance.GetGenericArguments (conversionType)[0];// conversionType.GetGenericArguments()[0];
+
+			return conversionType;
+		}
 	}
 
-	internal sealed class Reflection
+	sealed class Reflection
 	{
 		// Singleton pattern 4 from : http://csharpindepth.com/articles/general/singleton.aspx
-		private static readonly Reflection instance = new Reflection();
+		static readonly Reflection instance = new Reflection();
 
 		// Explicit static constructor to tell C# compiler
 		// not to mark type as beforefieldinit
 		static Reflection()
 		{
 		}
-		private Reflection()
+		Reflection()
 		{
 		}
 		public static Reflection Instance { get { return instance; } }
@@ -121,14 +179,14 @@ namespace fastJSON
 		//internal delegate object GenericGetter(object obj);
 		//private delegate object CreateObject ();
 
-		private SafeDictionary<Type, string> _tyname = new SafeDictionary<Type, string>();
-		private SafeDictionary<string, Type> _typecache = new SafeDictionary<string, Type>();
+		SafeDictionary<Type, string> _tyname = new SafeDictionary<Type, string>();
+		SafeDictionary<string, Type> _typecache = new SafeDictionary<string, Type>();
 		//private SafeDictionary<Type, CreateObject> _constrcache = new SafeDictionary<Type, CreateObject> ();
 		//private SafeDictionary<Type, IJsonInterceptor> _interceptorCache = new SafeDictionary<Type, IJsonInterceptor> ();
 		//private SafeDictionary<Type, Getters[]> _getterscache = new SafeDictionary<Type, Getters[]>();
 		//private SafeDictionary<string, Dictionary<string, myPropInfo>> _propertycache = new SafeDictionary<string, Dictionary<string, myPropInfo>>();
-		private SafeDictionary<Type, Type[]> _genericTypes = new SafeDictionary<Type, Type[]>();
-		private SafeDictionary<Type, Type> _genericTypeDef = new SafeDictionary<Type, Type>();
+		SafeDictionary<Type, Type[]> _genericTypes = new SafeDictionary<Type, Type[]>();
+		SafeDictionary<Type, Type> _genericTypeDef = new SafeDictionary<Type, Type>();
 		//private SafeDictionary<Type, byte> _enumTypes = new SafeDictionary<Type, byte> ();
 		//private SafeDictionary<Enum, string> _enumCache = new SafeDictionary<Enum, string> ();
 		//private SafeDictionary<Type, Dictionary<string, Enum>> _enumValueCache = new SafeDictionary<Type, Dictionary<string, Enum>> ();
@@ -223,58 +281,6 @@ namespace fastJSON
 				return t;
 			}
 		}
-
-		//internal object FastCreateInstance (Type objtype) {
-		//	try {
-		//		CreateObject c = null;
-		//		if (_constrcache.TryGetValue (objtype, out c)) {
-		//			return c ();
-		//		}
-		//		else {
-		//			var s = ShouldSkipTypeVisibilityCheck (objtype);
-		//			var n = objtype.Name + ".ctor";
-		//			if (objtype.IsClass) {
-		//				DynamicMethod dynMethod = s ? new DynamicMethod (n, objtype, null, objtype, true) : new DynamicMethod (n, objtype, Type.EmptyTypes);
-		//				ILGenerator ilGen = dynMethod.GetILGenerator ();
-		//				ilGen.Emit (OpCodes.Newobj, objtype.GetConstructor (Type.EmptyTypes));
-		//				ilGen.Emit (OpCodes.Ret);
-		//				c = (CreateObject)dynMethod.CreateDelegate (typeof (CreateObject));
-		//				_constrcache.Add (objtype, c);
-		//			}
-		//			else // structs
-		//			{
-		//				DynamicMethod dynMethod = s ? new DynamicMethod (n, typeof (object), null, objtype, s) : new DynamicMethod (n, typeof (object), null, objtype);
-		//				ILGenerator ilGen = dynMethod.GetILGenerator ();
-		//				var lv = ilGen.DeclareLocal (objtype);
-		//				ilGen.Emit (OpCodes.Ldloca_S, lv);
-		//				ilGen.Emit (OpCodes.Initobj, objtype);
-		//				ilGen.Emit (OpCodes.Ldloc_0);
-		//				ilGen.Emit (OpCodes.Box, objtype);
-		//				ilGen.Emit (OpCodes.Ret);
-		//				c = (CreateObject)dynMethod.CreateDelegate (typeof (CreateObject));
-		//				_constrcache.Add (objtype, c);
-		//			}
-		//			return c ();
-		//		}
-		//	}
-		//	catch (Exception exc) {
-		//		throw new JsonSerializationException (string.Format ("Failed to fast create instance for type '{0}' from assembly '{1}'",
-		//			objtype.FullName, objtype.AssemblyQualifiedName), exc);
-		//	}
-		//}
-
-		//private static bool ShouldSkipTypeVisibilityCheck (Type objtype) {
-		//	var s = AttributeHelper.GetAttribute<JsonSerializableAttribute> (objtype, false) != null;
-		//	if (s == false && objtype.IsGenericType) {
-		//		foreach (var item in objtype.GetGenericArguments ()) {
-		//			s = ShouldSkipTypeVisibilityCheck (item);
-		//			if (s) {
-		//				return true;
-		//			}
-		//		}
-		//	}
-		//	return s;
-		//}
 
 		public bool IsNullable (Type t) {
 			if (!t.IsGenericType) return false;
