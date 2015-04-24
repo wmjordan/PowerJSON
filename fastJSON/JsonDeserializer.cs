@@ -16,10 +16,10 @@ namespace fastJSON
     	readonly Dictionary<int, object> _cirrev = new Dictionary<int, object>();
     	bool _usingglobals = false;
 
-    	public JSONDeserializer(JSONParameters param)
+    	public JSONDeserializer(JSONParameters param, SerializationManager manager)
     	{
     		_params = param;
-    		_manager = param.Manager;
+    		_manager = manager;
     	}
     
     	public T ToObject<T>(string json)

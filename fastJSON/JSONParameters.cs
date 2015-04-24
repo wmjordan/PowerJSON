@@ -65,8 +65,8 @@ namespace fastJSON
     	/// <summary>
     	/// Ignore attributes to check for (default : XmlIgnoreAttribute)
     	/// </summary>
-		[Obsolete ("This property is provided for backward compatibility.")]
-		public List<Type> IgnoreAttributes { get { return (Manager.ReflectionController as FastJsonReflectionController).IgnoreAttributes; } }
+		[Obsolete ("This property is provided for backward compatibility. It returns the FastJsonReflectionController.IgnoreAttributes from the controller instance in SerializationManager.Instance. The default SerialziationManager is used by JSON.ToJSON and JSON.ToObject methods without SerializationManager parameters.")]
+		public List<Type> IgnoreAttributes { get { return (SerializationManager.Instance.ReflectionController as FastJsonReflectionController).IgnoreAttributes; } }
 
     	/// <summary>
     	/// If you have parametric and no default constructor for you classes (default = False)
@@ -107,10 +107,6 @@ namespace fastJSON
     	/// Serialize static fields or properties into the output (default = true).
     	/// </summary>
     	public bool SerializeStaticMembers = true;
-    	/// <summary>
-    	/// The manager to control serialization.
-    	/// </summary>
-    	public SerializationManager Manager = SerializationManager.Instance;
     
     	NamingStrategy _strategy = NamingStrategy.Default;
     	internal NamingStrategy NamingStrategy { get { return _strategy; } }

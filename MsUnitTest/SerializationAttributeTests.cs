@@ -638,8 +638,9 @@ namespace UnitTests
 				ShowReadOnlyProperties = true,
 				NamingConvention = NamingConvention.CamelCase
 			};
-			p.Manager.RegisterTypeInterceptor<System.Net.WebException> (new WebExceptionJsonInterceptor ());
-			p.Manager.RegisterMemberName<System.Net.WebException> ("Status", "httpstatus");
+			SerializationManager manager = SerializationManager.Instance;
+			manager.RegisterTypeInterceptor<System.Net.WebException> (new WebExceptionJsonInterceptor ());
+			manager.RegisterMemberName<System.Net.WebException> ("Status", "httpstatus");
 			try {
 				var c = System.Net.WebRequest.Create ("http://inexistent-domain.com");
 				using (var r = c.GetResponse ()) {
@@ -654,23 +655,72 @@ namespace UnitTests
 				StringAssert.Contains (s, @"""exceptionTime"":");
 				StringAssert.Contains (s, @"""machine"":""" + Environment.MachineName + "\"");
 
-				p.Manager.RegisterReflectionOverride<System.Net.WebException> (new ReflectionOverride () {
+				manager.RegisterReflectionOverride<System.Net.WebException> (new ReflectionOverride () {
 					MemberOverrides = { new MemberOverride ("Status", "code") }
 				});
 				s = JSON.ToJSON (ex, p);
 				Console.WriteLine (s);
 				StringAssert.Contains (s, @"""code"":");
 
-				p.Manager.RegisterReflectionOverride<System.Net.WebException> (new ReflectionOverride () {
+				manager.RegisterReflectionOverride<System.Net.WebException> (new ReflectionOverride () {
 					MemberOverrides = { new MemberOverride ("TargetSite") { Serializable = TriState.False } }
 				}, true);
 				s = JSON.ToJSON (ex, p);
 				Console.WriteLine (s);
 				StringAssert.Contains (s, @"""status"":");
 			}
+		}
 
+		#endregion
 
-		} 
+		#region SerializationOverride
+		public class PolymorphicTest
+		{
+			public string ID { get; set; }
+			public IName A { get; set; }
+			public int[] Array { get; set; }
+		}
+		[TestMethod]
+		public void SerializationOverrideTest () {
+			var m = SerializationManager.Instance;
+			m.RegisterReflectionOverride<PolymorphicTest> (new ReflectionOverride ()
+			{
+				MemberOverrides = {
+					new MemberOverride ("A") {
+						TypedNames = {
+							{ typeof(NamedClassA), "a" },
+							{ typeof(NamedClassB), "b" }
+						}
+					},
+					new MemberOverride ("ID", "myID"),
+					new MemberOverride ("Array", new Int32ArrayConverter ()),
+					new MemberOverride ("inexistent", "shouldBeIgnored")
+				}
+			});
+			var d = new PolymorphicTest ()
+			{
+				ID = "123",
+				A = new NamedClassA () { Name = "a", Value = true },
+				Array = new int[] { 1, 2, 3 }
+			};
+            var s = JSON.ToJSON (d, _JP);
+            Console.WriteLine (s);
+			var o = JSON.ToObject<PolymorphicTest> (s, _JP);
+			Assert.AreEqual (d.A.Name, o.A.Name);
+			Assert.AreEqual (true, ((NamedClassA)o.A).Value);
+			Assert.AreEqual (d.ID, o.ID);
+			CollectionAssert.AreEqual (d.Array, o.Array);
+			s = JSON.ToJSON (new PolymorphicTest ()
+			{
+				ID = null,
+				A = new NamedClassB () { Name = "b", Value = 1 }
+			}, _JP);
+			o = JSON.ToObject<PolymorphicTest> (s, _JP);
+			Assert.AreEqual ("b", o.A.Name);
+			Assert.AreEqual (1, ((NamedClassB)o.A).Value);
+			Assert.AreEqual (null, o.ID);
+            Console.WriteLine (s);
+		}
 		#endregion
 	}
 }

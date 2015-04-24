@@ -92,12 +92,12 @@ namespace fastJSON
 					g.Serializable = mo.Serializable;
 				}
 
-				var ot = mo.OverrideTypedNames || mo.TypedNames.Count > 0;
+				var ot = mo.OverrideTypedNames;
 				if (ot) {
 					g.TypedNames = mo.TypedNames;
 				}
 				var sn = mo.SerializedName;
-				if (mo.OverrideSerializedName) {
+				if (mo.OverrideSerializedName || mo.OverrideTypedNames) {
 					if (sn == g.MemberName) {
 						g.SpecificName = g.TypedNames != null && g.TypedNames.Count > 0;
 					}
@@ -137,9 +137,20 @@ namespace fastJSON
 							p.Getter = mp.Getter;
 							p.Setter = mp.Setter;
 							p.CanWrite = mp.CanWrite;
-							s.Add (item.Value, p);
+							myPropInfo tp;
+							if (s.TryGetValue (item.Value, out tp) && tp.MemberType == g.MemberType) {
+								s[item.Value] = p;
+							}
+							else {
+								s.Add (item.Value, p);
+							}
 						}
 					}
+				}
+				else if (mo.OverrideSerializedName && g.SerializedName != mo.SerializedName) {
+					mp = s[g.SerializedName];
+					s.Remove (g.SerializedName);
+					s.Add (sn, mp);
 				}
 				foreach (var item in s) {
 					mp = item.Value;
@@ -149,7 +160,9 @@ namespace fastJSON
 						}
 					}
 				}
-				g.SerializedName = sn;
+				if (mo.OverrideSerializedName) {
+					g.SerializedName = sn;
+				}
 			}
 			if (purgeExisting) {
 				_reflections[type] = c;
@@ -342,7 +355,9 @@ namespace fastJSON
 			set { _Converter = value; OverrideConverter = true; }
 		}
 
-		internal bool OverrideTypedNames;
+		internal bool OverrideTypedNames {
+			get { return _TypedNames != null && _TypedNames.Count > 0; }
+		}
 		Dictionary<Type, string> _TypedNames;
 		/// <summary>
 		/// Gets or sets the polymorphic serialization for the member.
@@ -356,7 +371,6 @@ namespace fastJSON
 			}
 			set {
 				_TypedNames = value;
-				OverrideTypedNames = true;
 			}
 		}
 

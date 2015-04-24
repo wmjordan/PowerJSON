@@ -23,12 +23,12 @@ namespace fastJSON
 		readonly bool _useEscapedUnicode = false;
 		readonly SerializationManager _manager;
 
-		internal JSONSerializer(JSONParameters param)
+		internal JSONSerializer(JSONParameters param, SerializationManager manager)
 		{
 			_params = param;
 			_useEscapedUnicode = _params.UseEscapedUnicode;
 			_MAX_DEPTH = _params.SerializerMaxDepth;
-			_manager = param.Manager;
+			_manager = manager;
 		}
 
 		internal string ConvertToJSON(object obj)
