@@ -6,128 +6,133 @@ namespace fastJSON
 	/// <summary>
 	/// Gives the basic control over JSON serialization and deserialization.
 	/// </summary>
-    public sealed class JSONParameters
-    {
-    	/// <summary>
-    	/// Use the optimized fast Dataset Schema format (default = True)
-    	/// </summary>
-    	public bool UseOptimizedDatasetSchema = true;
-    	/// <summary>
-    	/// Use the fast GUID format (default = True)
-    	/// </summary>
-    	public bool UseFastGuid = true;
-    	/// <summary>
-    	/// Serialize null values to the output (default = True)
-    	/// </summary>
-    	public bool SerializeNullValues = true;
-    	/// <summary>
-    	/// Use the UTC date format (default = True)
-    	/// </summary>
-    	public bool UseUTCDateTime = true;
-    	/// <summary>
-    	/// Show the read-only properties of types in the output (default = False). <see cref="JsonIncludeAttribute"/> has higher precedence than this setting.
-    	/// </summary>
-    	public bool ShowReadOnlyProperties = false;
-    	/// <summary>
-    	/// Show the read-only fields of types in the output (default = False). <see cref="JsonIncludeAttribute"/> has higher precedence than this setting.
-    	/// </summary>
-    	public bool ShowReadOnlyFields = false;
-    	/// <summary>
-    	/// Use the $types extension to optimize the output JSON (default = True)
-    	/// </summary>
-    	public bool UsingGlobalTypes = true;
-    	/// <summary>
-    	/// Ignore case when processing JSON and deserializing 
-    	/// </summary>
-    	[Obsolete("Not needed anymore and will always match")]
-    	public bool IgnoreCaseOnDeserialize = false;
-    	/// <summary>
-    	/// Anonymous types have read only properties 
-    	/// </summary>
-    	public bool EnableAnonymousTypes = false;
-    	/// <summary>
-    	/// Enable fastJSON extensions $types, $type, $map (default = True)
-    	/// </summary>
-    	public bool UseExtensions = true;
-    	/// <summary>
-    	/// Use escaped Unicode i.e. \uXXXX format for non ASCII characters (default = True)
-    	/// </summary>
-    	public bool UseEscapedUnicode = true;
-    	/// <summary>
-    	/// Output string key dictionaries as "k"/"v" format (default = False) 
-    	/// </summary>
-    	public bool KVStyleStringDictionary = false;
-    	/// <summary>
-    	/// Output Enum values instead of names (default = False)
-    	/// </summary>
-    	public bool UseValuesOfEnums = false;
+	public sealed class JSONParameters
+	{
+		/// <summary>
+		/// Uses the optimized fast Dataset Schema format (default = True)
+		/// </summary>
+		public bool UseOptimizedDatasetSchema = true;
+		/// <summary>
+		/// Uses the fast GUID format (default = True)
+		/// </summary>
+		public bool UseFastGuid = true;
+		/// <summary>
+		/// Serializes null values to the output (default = True)
+		/// </summary>
+		public bool SerializeNullValues = true;
+		/// <summary>
+		/// Serializes static fields or properties into the output (default = true).
+		/// </summary>
+		public bool SerializeStaticMembers = true;
+		/// <summary>
+		/// Serializes arrays, collections, lists or dictionaries with no element (default = true).
+		/// </summary>
+		/// <remarks>If the collection is the root object, it is not affected by this setting. Byte arrays are not affected by this setting either.</remarks>
+		public bool SerializeEmptyCollections = true;
+		/// <summary>
+		/// Use the UTC date format (default = True)
+		/// </summary>
+		public bool UseUTCDateTime = true;
+		/// <summary>
+		/// Shows the read-only properties of types in the output (default = False). <see cref="JsonIncludeAttribute"/> has higher precedence than this setting.
+		/// </summary>
+		public bool ShowReadOnlyProperties = false;
+		/// <summary>
+		/// Shows the read-only fields of types in the output (default = False). <see cref="JsonIncludeAttribute"/> has higher precedence than this setting.
+		/// </summary>
+		public bool ShowReadOnlyFields = false;
+		/// <summary>
+		/// Uses the $types extension to optimize the output JSON (default = True)
+		/// </summary>
+		public bool UsingGlobalTypes = true;
+		/// <summary>
+		/// Ignores case when processing JSON and deserializing 
+		/// </summary>
+		[Obsolete("Not needed anymore and will always match")]
+		public bool IgnoreCaseOnDeserialize = false;
+		/// <summary>
+		/// Anonymous types have read only properties 
+		/// </summary>
+		public bool EnableAnonymousTypes = false;
+		/// <summary>
+		/// Enables fastJSON extensions $types, $type, $map (default = True)
+		/// </summary>
+		public bool UseExtensions = true;
+		/// <summary>
+		/// Use escaped Unicode i.e. \uXXXX format for non ASCII characters (default = True)
+		/// </summary>
+		public bool UseEscapedUnicode = true;
+		/// <summary>
+		/// Outputs string key dictionaries as "k"/"v" format (default = False) 
+		/// </summary>
+		public bool KVStyleStringDictionary = false;
+		/// <summary>
+		/// Outputs Enum values instead of names (default = False).
+		/// </summary>
+		public bool UseValuesOfEnums = false;
 
-    	/// <summary>
-    	/// Ignore attributes to check for (default : XmlIgnoreAttribute)
-    	/// </summary>
+		/// <summary>
+		/// Ignores attributes to check for (default : XmlIgnoreAttribute)
+		/// </summary>
 		[Obsolete ("This property is provided for backward compatibility. It returns the FastJsonReflectionController.IgnoreAttributes from the controller instance in SerializationManager.Instance. The default SerialziationManager is used by JSON.ToJSON and JSON.ToObject methods without SerializationManager parameters.")]
 		public List<Type> IgnoreAttributes { get { return (SerializationManager.Instance.ReflectionController as FastJsonReflectionController).IgnoreAttributes; } }
 
-    	/// <summary>
-    	/// If you have parametric and no default constructor for you classes (default = False)
-    	/// 
-    	/// IMPORTANT NOTE : If True then all initial values within the class will be ignored and will be not set.
-    	/// In this case, you can use <see cref="JsonInterceptorAttribute"/> to assign an <see cref="IJsonInterceptor"/> to initialize the object.
-    	/// </summary>
-    	public bool ParametricConstructorOverride = false;
-    	/// <summary>
-    	/// Serialize DateTime milliseconds i.e. yyyy-MM-dd HH:mm:ss.nnn (default = false)
-    	/// </summary>
-    	public bool DateTimeMilliseconds = false;
-    	/// <summary>
-    	/// Maximum depth for circular references in inline mode (default = 20)
-    	/// </summary>
-    	public byte SerializerMaxDepth = 20;
-    	/// <summary>
-    	/// Inline circular or already seen objects instead of replacement with $i (default = False) 
-    	/// </summary>
-    	public bool InlineCircularReferences = false;
-    	/// <summary>
-    	/// Save property/field names as lowercase (default = false)
-    	/// </summary>
-    	[Obsolete ("Please use NamingConvention instead")]
-    	public bool SerializeToLowerCaseNames {
-    		get { return _strategy.Convention == NamingConvention.LowerCase; }
-    		set { _strategy = value ? NamingStrategy.LowerCase : NamingStrategy.Default; }
-    	}
-    
-    	/// <summary>
-    	/// Control the case of serialized field names.
-    	/// </summary>
-    	public NamingConvention NamingConvention {
-    		get { return _strategy.Convention; }
-    		set { _strategy = NamingStrategy.GetStrategy (value); }
-    	}
-    	/// <summary>
-    	/// Serialize static fields or properties into the output (default = true).
-    	/// </summary>
-    	public bool SerializeStaticMembers = true;
-    
-    	NamingStrategy _strategy = NamingStrategy.Default;
-    	internal NamingStrategy NamingStrategy { get { return _strategy; } }
-    	
+		/// <summary>
+		/// If you have parametric and no default constructor for you classes (default = False)
+		/// 
+		/// IMPORTANT NOTE : If True then all initial values within the class will be ignored and will be not set.
+		/// In this case, you can use <see cref="JsonInterceptorAttribute"/> to assign an <see cref="IJsonInterceptor"/> to initialize the object.
+		/// </summary>
+		public bool ParametricConstructorOverride = false;
+		/// <summary>
+		/// Serializes DateTime milliseconds i.e. yyyy-MM-dd HH:mm:ss.nnn (default = false)
+		/// </summary>
+		public bool DateTimeMilliseconds = false;
+		/// <summary>
+		/// Maximum depth for circular references in inline mode (default = 20)
+		/// </summary>
+		public byte SerializerMaxDepth = 20;
+		/// <summary>
+		/// Inlines circular or already seen objects instead of replacement with $i (default = False) 
+		/// </summary>
+		public bool InlineCircularReferences = false;
+		/// <summary>
+		/// Saves property/field names as lowercase (default = false)
+		/// </summary>
+		[Obsolete ("Please use NamingConvention instead")]
+		public bool SerializeToLowerCaseNames {
+			get { return _strategy.Convention == NamingConvention.LowerCase; }
+			set { _strategy = value ? NamingStrategy.LowerCase : NamingStrategy.Default; }
+		}
+	
+		/// <summary>
+		/// Controls the case of serialized field names.
+		/// </summary>
+		public NamingConvention NamingConvention {
+			get { return _strategy.Convention; }
+			set { _strategy = NamingStrategy.GetStrategy (value); }
+		}
+	
+		NamingStrategy _strategy = NamingStrategy.Default;
+		internal NamingStrategy NamingStrategy { get { return _strategy; } }
+		
 		/// <summary>
 		/// Fixes conflicting parameters.
 		/// </summary>
 		/// <remarks>This method is automatically called before serialization.</remarks>
-    	public void FixValues()
-    	{
-    		if (UseExtensions == false)
-    		{
-    			UsingGlobalTypes = false;
-    			InlineCircularReferences = true;
-    		}
-    		if (EnableAnonymousTypes) {
-    			ShowReadOnlyProperties = true;
-    			ShowReadOnlyFields = true;
-    		}
-    	}
-    }
+		public void FixValues()
+		{
+			if (UseExtensions == false)
+			{
+				UsingGlobalTypes = false;
+				InlineCircularReferences = true;
+			}
+			if (EnableAnonymousTypes) {
+				ShowReadOnlyProperties = true;
+				ShowReadOnlyFields = true;
+			}
+		}
+	}
 
 	/// <summary>
 	/// Control the letter case of serialized field names.

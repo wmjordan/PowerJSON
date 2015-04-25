@@ -7,8 +7,9 @@ using System.Data;
 namespace fastJSON
 {
 	/// <summary>
-	/// Contains information about a member.
+	/// Contains information about a member, used in reflection phase before serialization.
 	/// </summary>
+	/// <preliminary/>
 	public interface IMemberInfo
 	{
 		/// <summary>
@@ -41,6 +42,7 @@ namespace fastJSON
 		internal bool IsStatic;
 		internal bool IsProperty;
 		internal bool IsReadOnly;
+		internal bool IsCollection;
 
 		internal bool SpecificName;
 		internal string SerializedName;

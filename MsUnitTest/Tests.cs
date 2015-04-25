@@ -677,6 +677,15 @@ namespace UnitTests
             Assert.AreEqual("aaaaaaa", o.Name);
         }
 
+		public class ZeroCollectionClass
+		{
+			public int[] Array;
+			public List<int> List;
+			public Array Array2;
+			public string[] Array3;
+			public Dictionary<int,int> Dict;
+			public byte[] Bytes;
+		}
         [TestMethod]
         public void ZeroArray()
         {
@@ -684,7 +693,30 @@ namespace UnitTests
             var o = JSON.ToObject(s);
             var a = o as object[];
             Assert.AreEqual(0, a.Length);
-        }
+
+			var p = new JSONParameters () {
+				SerializeEmptyCollections = false
+			};
+			s = JSON.ToJSON (new object[] { }, p);
+			Assert.AreEqual ("[]", s);
+			s = JSON.ToJSON (new List<int> (), p);
+			Assert.AreEqual ("[]", s);
+			var arr = new ZeroCollectionClass () {
+				Array = new int[0],
+				List = new List<int> (),
+				Array2 = new int[0],
+				Array3 = new string[] { "a" },
+				Dict = new Dictionary<int,int> (),
+				Bytes = new byte[0]
+			};
+			s = JSON.ToJSON (arr, p);
+			Console.WriteLine (s);
+			Assert.IsFalse (s.Contains ("\"Array\":"));
+			Assert.IsFalse (s.Contains ("\"List\":"));
+			Assert.IsFalse (s.Contains ("\"Array2\":"));
+			Assert.IsTrue (s.Contains ("\"Array3\":"));
+			Assert.IsFalse (s.Contains ("\"Dict\":"));
+		}
 
         [TestMethod]
         public void BigNumber()

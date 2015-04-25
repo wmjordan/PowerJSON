@@ -10,6 +10,7 @@ namespace fastJSON
 	/// <summary>
 	/// The cached serialization information used by the reflection engine during serialization and deserialization.
 	/// </summary>
+	/// <preliminary />
 	public sealed class SerializationManager
 	{
 		static readonly char[] __enumSeperatorCharArray = { ',' };
@@ -45,7 +46,7 @@ namespace fastJSON
 		}
 
 		/// <summary>
-		/// Register <see cref="ReflectionOverride"/> for the <typeparamref name="T"/> type.
+		/// Register <see cref="ReflectionOverride"/> for the <typeparamref name="T"/> type. If the type is already registered automatically or manually, the <paramref name="overrideInfo"/> will write onto the reflected info.
 		/// </summary>
 		/// <typeparam name="T">The type to be overridden.</typeparam>
 		/// <param name="overrideInfo">The override info of the type.</param>
@@ -58,7 +59,7 @@ namespace fastJSON
 		/// </summary>
 		/// <typeparam name="T">The type to be overridden.</typeparam>
 		/// <param name="overrideInfo">The override info of the type.</param>
-		/// <param name="purgeExisting">Whether the override info is merged into the existing one, or have the reflection engine redo the reflection of the type and apply the override info.</param>
+		/// <param name="purgeExisting">If this value is true, the reflection engine will reflect the type again and apply the <paramref name="overrideInfo"/>, otherwise, <paramref name="overrideInfo"/> is merged into the existing reflection cache.</param>
 		public void RegisterReflectionOverride<T> (ReflectionOverride overrideInfo, bool purgeExisting) {
 			RegisterReflectionOverride (typeof (T), overrideInfo, purgeExisting);
 		}
@@ -68,7 +69,7 @@ namespace fastJSON
 		/// </summary>
 		/// <param name="type">The type to be overridden.</param>
 		/// <param name="overrideInfo">The override info of the type.</param>
-		/// <param name="purgeExisting">Whether the override info is merged into the existing one, or have the reflection engine redo the reflection of the type and apply the override info.</param>
+		/// <param name="purgeExisting">If this value is true, the reflection engine will reflect the type again and apply the <paramref name="overrideInfo"/>, otherwise, <paramref name="overrideInfo"/> is merged into the existing reflection cache.</param>
 		public void RegisterReflectionOverride (Type type, ReflectionOverride overrideInfo, bool purgeExisting) {
 			var c = purgeExisting ? new ReflectionCache (type, this) : GetDefinition (type);
 			if (overrideInfo.OverrideInterceptor) {
@@ -119,9 +120,7 @@ namespace fastJSON
 							if (item.Value.MemberType != g.MemberType) {
 								rt.Add (item.Key);
 							}
-							else {
-								mp = item.Value;
-							}
+							mp = item.Value;
 						}
 					}
 					if (mp == null) {
@@ -133,16 +132,21 @@ namespace fastJSON
 					// add new polymorphic deserialization info
 					if (mo.TypedNames.Count > 0) {
 						foreach (var item in mo.TypedNames) {
-							var p = new myPropInfo (item.Key, g.MemberName, Reflection.Instance.IsTypeRegistered (item.Key));
+							var t = item.Key;
+							if (g.MemberType.IsAssignableFrom (t) == false) {
+								throw new InvalidCastException ("The override type (" + t.FullName + ") does not derive from the member type (" + g.MemberType.FullName + ")");
+							}
+							var n = item.Value;
+							var p = new myPropInfo (t, g.MemberName, Reflection.Instance.IsTypeRegistered (t));
 							p.Getter = mp.Getter;
 							p.Setter = mp.Setter;
 							p.CanWrite = mp.CanWrite;
 							myPropInfo tp;
-							if (s.TryGetValue (item.Value, out tp) && tp.MemberType == g.MemberType) {
-								s[item.Value] = p;
+							if (s.TryGetValue (n, out tp) && tp.MemberType == g.MemberType) {
+								s[n] = p;
 							}
 							else {
-								s.Add (item.Value, p);
+								s.Add (n, p);
 							}
 						}
 					}
@@ -174,6 +178,7 @@ namespace fastJSON
 		/// </summary>
 		/// <typeparam name="T">The type to be processed by the interceptor.</typeparam>
 		/// <param name="interceptor">The interceptor to intercept the serialization and deserialization.</param>
+		/// <remarks>If the type has already gotten an <see cref="IJsonInterceptor"/>, the new <paramref name="interceptor"/> will replace it. If the new interceptor is null, existing interceptor will be removed from the type.</remarks>
 		public void RegisterTypeInterceptor<T> (IJsonInterceptor interceptor) {
 			RegisterTypeInterceptor (typeof (T), interceptor);
 		}
@@ -183,6 +188,7 @@ namespace fastJSON
 		/// </summary>
 		/// <param name="type">The type to be processed by the interceptor.</param>
 		/// <param name="interceptor">The interceptor to intercept the serialization and deserialization.</param>
+		/// <remarks>If the type has already gotten an <see cref="IJsonInterceptor"/>, the new <paramref name="interceptor"/> will replace it. If the new interceptor is null, existing interceptor will be removed from the type.</remarks>
 		public void RegisterTypeInterceptor (Type type, IJsonInterceptor interceptor) {
 			RegisterReflectionOverride (type, new ReflectionOverride () { Interceptor = interceptor }, false);
 		}
@@ -193,6 +199,7 @@ namespace fastJSON
 		/// <typeparam name="T">The type containing the member.</typeparam>
 		/// <param name="memberName">The name of the field or property.</param>
 		/// <param name="serializedName">The serialized name of the member.</param>
+		/// <remarks>If <paramref name="serializedName"/> is null or <see cref="String.Empty"/>, the field or property name will be used.</remarks>
 		public void RegisterMemberName<T> (string memberName, string serializedName) {
 			RegisterMemberName (typeof (T), memberName, serializedName);
 		}
@@ -203,6 +210,7 @@ namespace fastJSON
 		/// <param name="type">The type containing the member.</param>
 		/// <param name="memberName">The name of the field or property.</param>
 		/// <param name="serializedName">The serialized name of the member.</param>
+		/// <remarks>If <paramref name="serializedName"/> is null or <see cref="String.Empty"/>, the field or property name will be used.</remarks>
 		public void RegisterMemberName (Type type, string memberName, string serializedName) {
 			RegisterReflectionOverride (type, new ReflectionOverride () {
 				MemberOverrides = { new MemberOverride (memberName, serializedName) }
@@ -215,6 +223,7 @@ namespace fastJSON
 		/// <param name="type">The type containing the member.</param>
 		/// <param name="memberName">The member to be assigned.</param>
 		/// <param name="converter">The converter to process the member value.</param>
+		/// <remarks>If the member has already gotten an <see cref="IJsonConverter"/>, the new <paramref name="converter"/> will replace it. If the new converter is null, existing converter will be removed from the type.</remarks>
 		public void RegisterMemberInterceptor (Type type, string memberName, IJsonConverter converter) {
 			var c = GetDefinition (type);
 			string n = null;
@@ -293,8 +302,9 @@ namespace fastJSON
 	}
 
 	/// <summary>
-	/// Contains reflection overriding information used in reflection phase. The dictionary key is the member name.
+	/// Contains reflection overriding information, used in type reflection phase before serialization or deserialization.
 	/// </summary>
+	/// <preliminary />
 	public class ReflectionOverride
 	{
 		internal bool OverrideInterceptor;
@@ -327,6 +337,7 @@ namespace fastJSON
 	/// <summary>
 	/// Contains reflection override settings for a member.
 	/// </summary>
+	/// <preliminary />
 	public class MemberOverride
 	{
 		/// <summary>
@@ -360,7 +371,7 @@ namespace fastJSON
 		}
 		Dictionary<Type, string> _TypedNames;
 		/// <summary>
-		/// Gets or sets the polymorphic serialization for the member.
+		/// Gets or sets the polymorphic serialization for the member. The item key is the type and the item value is the serialized name corrsponding to the type. The type should derive from the type of the member.
 		/// </summary>
 		public Dictionary<Type, string> TypedNames {
 			get {

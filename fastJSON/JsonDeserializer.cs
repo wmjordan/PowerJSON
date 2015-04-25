@@ -297,8 +297,7 @@ namespace fastJSON
     				continue;
     			}
     			myPropInfo pi;
-    			if (props.TryGetValue(n, out pi) == false
-					|| pi.CanWrite == false)
+    			if (props.TryGetValue(n, out pi) == false || pi.CanWrite == false)
     				continue;
     			object v = d[n];
     

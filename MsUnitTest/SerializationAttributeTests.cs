@@ -721,6 +721,20 @@ namespace UnitTests
 			Assert.AreEqual (null, o.ID);
             Console.WriteLine (s);
 		}
+		[TestMethod]
+		[ExpectedException (typeof(InvalidCastException))]
+		public void InvalidPolymorphicOverride () {
+			var m = SerializationManager.Instance;
+			m.RegisterReflectionOverride<PolymorphicTest> (new ReflectionOverride () {
+				MemberOverrides = {
+					new MemberOverride ("A") {
+						TypedNames = {
+							{ typeof (PrivateClass), "invalid" }
+						}
+					}
+				}
+			});
+		}
 		#endregion
 	}
 }

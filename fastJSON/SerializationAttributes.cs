@@ -136,8 +136,10 @@ namespace fastJSON
 	}
 
 	/// <summary>
-	/// An interface to intercept various aspects in JSON serialization and deserialization. It is recommended to inherit from <see cref="JsonInterceptor&lt;T&gt;"/> for easier implementation when possible.
+	/// <para>An interface to intercept various aspects in JSON serialization and deserialization.</para>
+	/// <para>It is recommended to inherit from <see cref="JsonInterceptor&lt;T&gt;"/> for easier implementation when possible.</para>
 	/// </summary>
+	/// <preliminary />
 	public interface IJsonInterceptor
 	{
 		/// <summary>
@@ -195,6 +197,7 @@ namespace fastJSON
 	/// This is a default implementation of <see cref="IJsonInterceptor"/>, which restricts the type of the object being serialized or deserialized. The default implementation does nothing and returns true for all OnSerializing or OnDeserializing methods.
 	/// </summary>
 	/// <typeparam name="T">The type of the object being serialized or deserialized.</typeparam>
+	/// <preliminary />
 	public abstract class JsonInterceptor<T> : IJsonInterceptor
 	{
 		/// <summary>
@@ -299,7 +302,8 @@ namespace fastJSON
 	public class JsonConverterAttribute : Attribute
 	{
 		/// <summary>
-		/// The type of converter to convert string to object. The type should implement <see cref="IJsonConverter"/>. During serialization and deserialization, an instance of <see cref="IJsonConverter"/> will be used to convert values to target type.
+		/// <para>The type of converter to convert string to object. The type should implement <see cref="IJsonConverter"/>.</para>
+		/// <para>During serialization and deserialization, an instance of <see cref="IJsonConverter"/> will be used to convert values between their orginal type and target type.</para>
 		/// </summary>
 		public Type ConverterType {
 			get { return Converter == null ? null : Converter.GetType (); }
@@ -324,6 +328,7 @@ namespace fastJSON
 	/// <summary>
 	/// Converts the member value being serialized or deserialized.
 	/// </summary>
+	/// <preliminary />
 	public interface IJsonConverter
 	{
 		/// <summary>
@@ -334,8 +339,8 @@ namespace fastJSON
 		/// <returns>The converted value.</returns>
 		object SerializationConvert (string fieldName, object fieldValue);
 		/// <summary>
-		/// Converts fieldValue to a new value during deserialization. The type of the <paramref name="fieldValue"/> and the returned value can be different types, which enables adapting various data types from deserialization.
-		/// At this moment the type of the fieldValue could be one of the following six primitive types returned from the JSON Parser: <see cref="Boolean"/>, <see cref="Int64"/>, <see cref="Double"/>, <see cref="String"/>, <see cref="List&lt;Object&gt;"/> and <see cref="Dictionary&lt;String, Object&gt;"/>.
+		/// <para>Converts fieldValue to a new value during deserialization. The type of the <paramref name="fieldValue"/> and the returned value can be different types, which enables adapting various data types from deserialization.</para>
+		/// <para>At this moment the type of the fieldValue could be one of the following six primitive types returned from the JSON Parser: <see cref="Boolean"/>, <see cref="Int64"/>, <see cref="Double"/>, <see cref="String"/>, <see cref="List&lt;Object&gt;"/> and <see cref="Dictionary&lt;String, Object&gt;"/>.</para>
 		/// </summary>
 		/// <param name="fieldName">The name of the field or property.</param>
 		/// <param name="fieldValue">The value of the field of property.</param>
@@ -354,12 +359,16 @@ namespace fastJSON
 	/// </summary>
 	/// <typeparam name="O">The original type of the data being serialized.</typeparam>
 	/// <typeparam name="S">The serialized type of the data.</typeparam>
+	/// <preliminary />
 	public abstract class JsonConverter<O, S> : IJsonConverter, ITypeConverter
 	{
 		Type _SerializedType, _ElementType;
 		Type ITypeConverter.SerializedType { get { return _SerializedType; } }
 		Type ITypeConverter.ElementType { get { return _ElementType; } }
 
+		/// <summary>
+		/// Creates an instance of <see cref="JsonConverter"/>.
+		/// </summary>
 		protected JsonConverter () {
 			var s = typeof (S);
 			if (s == typeof (bool) || s == typeof (string) || s == typeof (double) || s == typeof (long)
@@ -375,7 +384,7 @@ namespace fastJSON
 		}
 
 		/// <summary>
-		/// Convert the original value before serialization. If the serialized value is not the type of <typeparamref name="O"/>, the <paramref name="fieldValue"/> will be returned.
+		/// Converts the original value before serialization. If the serialized value is not the type of <typeparamref name="O"/>, the <paramref name="fieldValue"/> will be returned.
 		/// </summary>
 		/// <param name="fieldName">The name of the annotated member.</param>
 		/// <param name="fieldValue">The value being serialized.</param>

@@ -434,6 +434,9 @@ namespace fastJSON
 					// ignore fields with default value
 					continue;
 				}
+				if (p.IsCollection && _params.SerializeEmptyCollections == false && o is ICollection && (o as ICollection).Count == 0) {
+					continue;
+				}
 				if (p.SpecificName == false) {
 					n = _params.NamingStrategy.Rename (p.SerializedName);
 				}
@@ -492,6 +495,12 @@ namespace fastJSON
 
 		private void WriteArray(IEnumerable array)
 		{
+			//if (_params.SerializeEmptyCollections == false) {
+			//	var c = array as ICollection;
+			//	if (c.Count == 0) {
+			//		return;
+			//	}
+			//}
 			_output.Append('[');
 
 			var list = array as IList;

@@ -168,6 +168,7 @@ namespace fastJSON
 				IsStatic = s,
 				IsProperty = tp,
 				IsReadOnly = ro,
+				IsCollection = typeof (ICollection).IsAssignableFrom (t) && t != typeof (byte[]),
 				MemberType = t
 			};
 			if (controller != null) {
@@ -389,7 +390,6 @@ namespace fastJSON
 				return;
 			}
     		if (controller.IsMemberDeserializable (member) == false) {
-    			d.Setter = null;
     			d.CanWrite = false;
     			return;
     		}
