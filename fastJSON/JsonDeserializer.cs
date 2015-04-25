@@ -533,8 +533,14 @@ namespace fastJSON
     		for (int i = 0; i < c; i++)
     		{
     			object ob = data[i];
+				if (ob == null) {
+					continue;
+				}
     			if (ob is IDictionary)
     				col.SetValue(ParseDictionary((Dictionary<string, object>)ob, globalTypes, bt, null), i);
+				else if (ob is ICollection) {
+					col.SetValue (CreateArray ((List<object>)ob, bt, bt.GetElementType (), globalTypes), i);
+				}
     			else
     				col.SetValue(ChangeType(ob, bt), i);
     		}

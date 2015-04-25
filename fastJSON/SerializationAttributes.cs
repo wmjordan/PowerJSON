@@ -19,7 +19,7 @@ namespace fastJSON
 	public class JsonIncludeAttribute : Attribute
 	{
 		/// <summary>
-		/// Gets or sets whether the annotated field or property should be included in serialization disregard whether it is read-only or not. The default value is true.
+		/// Gets or sets whether the annotated field or property should be included in serialization disregarding whether it is read-only or not. The default value is true.
 		/// </summary>
 		public bool Include { get; set; }
 		/// <summary>

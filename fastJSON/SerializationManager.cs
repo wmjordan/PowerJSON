@@ -46,7 +46,7 @@ namespace fastJSON
 		}
 
 		/// <summary>
-		/// Register <see cref="ReflectionOverride"/> for the <typeparamref name="T"/> type. If the type is already registered automatically or manually, the <paramref name="overrideInfo"/> will write onto the reflected info.
+		/// Registers <see cref="ReflectionOverride"/> for the <typeparamref name="T"/> type. If the type is already registered automatically or manually, the <paramref name="overrideInfo"/> will merged into the existing reflected info.
 		/// </summary>
 		/// <typeparam name="T">The type to be overridden.</typeparam>
 		/// <param name="overrideInfo">The override info of the type.</param>
@@ -55,7 +55,7 @@ namespace fastJSON
 		}
 
 		/// <summary>
-		/// Register <see cref="ReflectionOverride"/> for the <typeparamref name="T"/> type.
+		/// Registers <see cref="ReflectionOverride"/> for the <typeparamref name="T"/> type.
 		/// </summary>
 		/// <typeparam name="T">The type to be overridden.</typeparam>
 		/// <param name="overrideInfo">The override info of the type.</param>
@@ -65,7 +65,7 @@ namespace fastJSON
 		}
 
 		/// <summary>
-		/// Register <see cref="ReflectionOverride"/> for the specific type.
+		/// Registers <see cref="ReflectionOverride"/> for the specific type.
 		/// </summary>
 		/// <param name="type">The type to be overridden.</param>
 		/// <param name="overrideInfo">The override info of the type.</param>
@@ -174,7 +174,8 @@ namespace fastJSON
 		}
 
 		/// <summary>
-		/// Assigns an <see cref="IJsonInterceptor"/> to process a specific type.
+		/// <para>Assigns an <see cref="IJsonInterceptor"/> to process a specific type.</para>
+		/// <para>This is a simplified version of <see cref="RegisterReflectionOverride{T}(ReflectionOverride)"/> method replacing the <see cref="IJsonInterceptor"/> of a type.</para>
 		/// </summary>
 		/// <typeparam name="T">The type to be processed by the interceptor.</typeparam>
 		/// <param name="interceptor">The interceptor to intercept the serialization and deserialization.</param>
@@ -184,7 +185,8 @@ namespace fastJSON
 		}
 
 		/// <summary>
-		/// Assigns an <see cref="IJsonInterceptor"/> to process a specific type.
+		/// <para>Assigns an <see cref="IJsonInterceptor"/> to process a specific type.</para>
+		/// <para>This is a simplified version of <see cref="RegisterReflectionOverride{T}(ReflectionOverride)"/> method replacing the <see cref="IJsonInterceptor"/> of a type.</para>
 		/// </summary>
 		/// <param name="type">The type to be processed by the interceptor.</param>
 		/// <param name="interceptor">The interceptor to intercept the serialization and deserialization.</param>
@@ -194,7 +196,8 @@ namespace fastJSON
 		}
 
 		/// <summary>
-		/// Assigns the serialized name of a field or property.
+		/// <para>Assigns the serialized name of a field or property.</para>
+		/// <para>This is a simplified version of <see cref="RegisterReflectionOverride{T}(ReflectionOverride)"/> method replacing the serialized name of a member.</para>
 		/// </summary>
 		/// <typeparam name="T">The type containing the member.</typeparam>
 		/// <param name="memberName">The name of the field or property.</param>
@@ -205,7 +208,8 @@ namespace fastJSON
 		}
 
 		/// <summary>
-		/// Assigns the serialized name of a field or property.
+		/// <para>Assigns the serialized name of a field or property.</para>
+		/// <para>This is a simplified version of <see cref="RegisterReflectionOverride{T}(ReflectionOverride)"/> method replacing the serialized name of a member.</para>
 		/// </summary>
 		/// <param name="type">The type containing the member.</param>
 		/// <param name="memberName">The name of the field or property.</param>
@@ -218,7 +222,8 @@ namespace fastJSON
 		}
 
 		/// <summary>
-		/// Assigns an <see cref="IJsonConverter"/> to convert the value of the specific member.
+		/// <para>Assigns an <see cref="IJsonConverter"/> to convert the value of the specific member.</para>
+		/// <para>This is a simplified version of <see cref="RegisterReflectionOverride{T}(ReflectionOverride)"/> method replacing the <see cref="IJsonConverter"/> of a member.</para>
 		/// </summary>
 		/// <param name="type">The type containing the member.</param>
 		/// <param name="memberName">The member to be assigned.</param>
@@ -239,7 +244,6 @@ namespace fastJSON
 				p.Converter = converter;
 			}
 		}
-
 
 		internal string GetEnumName (Enum value) {
 			string t;
