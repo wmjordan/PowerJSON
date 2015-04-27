@@ -132,7 +132,13 @@ namespace fastJSON
     
     		if (conversionType == typeof(string))
     			return (string)value;
-    
+
+			//if (conversionType == typeof(double)) {
+			//	return (double)value;
+			//}
+			//if (conversionType == typeof(float)) {
+			//	return (float)(double)value;
+			//}
     		if (conversionType.IsEnum)
     			return CreateEnum(conversionType, value);
     
@@ -341,51 +347,54 @@ namespace fastJSON
     			}
     
     			object oset = null;
-    
-    			switch (pi.JsonDataType) {
-    				case JsonDataType.Int: oset = (int)((long)v); break;
-    				case JsonDataType.Long: oset = (long)v; break;
-    				case JsonDataType.String: oset = (string)v; break;
-    				case JsonDataType.Bool: oset = (bool)v; break;
-    				case JsonDataType.DateTime: oset = CreateDateTime ((string)v); break;
-    				case JsonDataType.Enum: oset = CreateEnum (pi.MemberType, v); break;
-    				case JsonDataType.Guid: oset = CreateGuid ((string)v); break;
-    				case JsonDataType.TimeSpan: oset = CreateTimeSpan ((string)v); break;
-    
-    				case JsonDataType.Array:
-    					if (!pi.IsValueType)
-    						oset = CreateArray ((List<object>)v, pi.MemberType, pi.ElementType, globaltypes);
-    					// what about 'else'?
-    					break;
-    				case JsonDataType.ByteArray: oset = Convert.FromBase64String ((string)v); break;
+
+				switch (pi.JsonDataType) {
+					case JsonDataType.Unknown: goto default;
+					case JsonDataType.Int: oset = (int)((long)v); break;
+					case JsonDataType.String:
+					case JsonDataType.Bool:
+					case JsonDataType.Long:
+					case JsonDataType.Double: oset = v; break;
+					case JsonDataType.Single: oset = (float)((double)v); break;
+					case JsonDataType.DateTime: oset = CreateDateTime ((string)v); break;
+					case JsonDataType.Enum: oset = CreateEnum (pi.MemberType, v); break;
+					case JsonDataType.Guid: oset = CreateGuid ((string)v); break;
+					case JsonDataType.TimeSpan: oset = CreateTimeSpan ((string)v); break;
+
+					case JsonDataType.Array:
+						if (!pi.IsValueType)
+							oset = CreateArray ((List<object>)v, pi.MemberType, pi.ElementType, globaltypes);
+						// what about 'else'?
+						break;
+					case JsonDataType.ByteArray: oset = Convert.FromBase64String ((string)v); break;
 #if !SILVERLIGHT
-    				case JsonDataType.DataSet: oset = CreateDataset ((Dictionary<string, object>)v, globaltypes); break;
-    				case JsonDataType.DataTable: oset = CreateDataTable ((Dictionary<string, object>)v, globaltypes); break;
-    				case JsonDataType.Hashtable: // same case as Dictionary
+					case JsonDataType.DataSet: oset = CreateDataset ((Dictionary<string, object>)v, globaltypes); break;
+					case JsonDataType.DataTable: oset = CreateDataTable ((Dictionary<string, object>)v, globaltypes); break;
+					case JsonDataType.Hashtable: // same case as Dictionary
 #endif
-    				case JsonDataType.Dictionary: oset = CreateDictionary ((List<object>)v, pi.MemberType, pi.GenericTypes, globaltypes); break;
-    				case JsonDataType.StringKeyDictionary: oset = CreateStringKeyDictionary ((Dictionary<string, object>)v, pi.MemberType, pi.GenericTypes, globaltypes); break;
-    				case JsonDataType.NameValue: oset = CreateNV ((Dictionary<string, object>)v); break;
-    				case JsonDataType.StringDictionary: oset = CreateSD ((Dictionary<string, object>)v); break;
-    				case JsonDataType.Custom: oset = Reflection.Instance.CreateCustom ((string)v, pi.MemberType); break;
-    				default: {
-    						if (pi.IsGenericType && pi.IsValueType == false && v is List<object>)
-    							oset = CreateGenericList ((List<object>)v, pi.MemberType, pi.ElementType, globaltypes);
-    
-    						else if ((pi.IsClass || pi.IsStruct) && v is Dictionary<string, object>)
-    							oset = ParseDictionary ((Dictionary<string, object>)v, globaltypes, pi.MemberType, pi.Getter (o));
-    
-    						else if (v is List<object>)
-    							oset = CreateArray ((List<object>)v, pi.MemberType, typeof (object), globaltypes);
-    
-    						else if (pi.IsValueType)
-    							oset = ChangeType (v, pi.ChangeType);
-    
-    						else
-    							oset = v;
-    					}
-    					break;
-    			}
+					case JsonDataType.Dictionary: oset = CreateDictionary ((List<object>)v, pi.MemberType, pi.GenericTypes, globaltypes); break;
+					case JsonDataType.StringKeyDictionary: oset = CreateStringKeyDictionary ((Dictionary<string, object>)v, pi.MemberType, pi.GenericTypes, globaltypes); break;
+					case JsonDataType.NameValue: oset = CreateNV ((Dictionary<string, object>)v); break;
+					case JsonDataType.StringDictionary: oset = CreateSD ((Dictionary<string, object>)v); break;
+					case JsonDataType.Custom: oset = Reflection.Instance.CreateCustom ((string)v, pi.MemberType); break;
+					default:
+						if (pi.IsGenericType && pi.IsValueType == false && v is List<object>)
+							oset = CreateGenericList ((List<object>)v, pi.MemberType, pi.ElementType, globaltypes);
+
+						else if ((pi.IsClass || pi.IsStruct) && v is Dictionary<string, object>)
+							oset = ParseDictionary ((Dictionary<string, object>)v, globaltypes, pi.MemberType, pi.Getter (o));
+
+						else if (v is List<object>)
+							oset = CreateArray ((List<object>)v, pi.MemberType, typeof (object), globaltypes);
+
+						else if (pi.IsValueType)
+							oset = ChangeType (v, pi.ChangeType);
+
+						else
+							oset = v;
+
+						break;
+				}
 
 				if (si != null && si.OnDeserializing (o, n, ref oset) == false) {
 					continue;
@@ -523,12 +532,14 @@ namespace fastJSON
     	}
     
     	private object CreateTimeSpan (string value) {
+			// TODO: Optimize TimeSpan
     		return TimeSpan.Parse (value);
     	}
     	private object CreateArray (List<object> data, Type pt, Type bt, Dictionary<string, object> globalTypes)
     	{
     		var c = data.Count;
     		Array col = Array.CreateInstance (bt, c);
+			Type et = null;
     		// create an array of objects
     		for (int i = 0; i < c; i++)
     		{
@@ -538,8 +549,12 @@ namespace fastJSON
 				}
     			if (ob is IDictionary)
     				col.SetValue(ParseDictionary((Dictionary<string, object>)ob, globalTypes, bt, null), i);
+				// Support multi-dimensional array
 				else if (ob is ICollection) {
-					col.SetValue (CreateArray ((List<object>)ob, bt, bt.GetElementType (), globalTypes), i);
+					if (et == null) {
+						et = bt.GetElementType ();
+					}
+					col.SetValue (CreateArray ((List<object>)ob, bt, et, globalTypes), i);
 				}
     			else
     				col.SetValue(ChangeType(ob, bt), i);

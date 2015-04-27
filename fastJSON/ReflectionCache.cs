@@ -171,6 +171,28 @@ namespace fastJSON
 				IsCollection = typeof (ICollection).IsAssignableFrom (t) && t != typeof (byte[]),
 				MemberType = t
 			};
+			if (t == typeof(int)) {
+				g.WriteValue = JSONSerializer.WriteInt32;
+			}
+			else if (t == typeof(long)) {
+				g.WriteValue = JSONSerializer.WriteInt64;
+			}
+			else if (t == typeof(byte)) {
+				g.WriteValue = JSONSerializer.WriteByte;
+			}
+			else if (t == typeof(float)) {
+				g.WriteValue = JSONSerializer.WriteSingle;
+			}
+			else if (t == typeof(double)) {
+				g.WriteValue = JSONSerializer.WriteDouble;
+			}
+			else if (t == typeof(bool)) {
+				g.WriteValue = JSONSerializer.WriteBoolean;
+			}
+			else if (t == typeof(string)) {
+				g.WriteValue = JSONSerializer.WriteString;
+			}
+
 			if (controller != null) {
 				g.Serializable = controller.IsMemberSerializable (memberInfo, g);
 				object dv;

@@ -1,0 +1,234 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<topic id="cf5512a6-56c4-4892-aa3e-d25b4395d111" revisionNumber="1">
+	<developerWalkthroughDocument
+	  xmlns="http://ddue.schemas.microsoft.com/authoring/2003/5"
+	  xmlns:xlink="http://www.w3.org/1999/xlink">
+
+		<!--
+    <summary>
+      <para>Optional summary abstract</para>
+    </summary>
+    -->
+
+		<introduction>
+			<!-- Uncomment this to generate an outline of the section and sub-section
+           titles.  Specify a numeric value as the inner text to limit it to
+           a specific number of sub-topics when creating the outline.  Specify
+           zero (0) to limit it to top-level sections only.  -->
+			<autoOutline />
+
+			<para>
+				This article will give you a simple walkthrough for the PowerJSON--a fork from the fastest JSON serialization engine, <externalLink>
+					<linkText>fastJSON</linkText>
+					<linkUri>http://fastjson.codeplex.com</linkUri>
+					<linkTarget>_blank</linkTarget>
+				</externalLink>.
+			</para>
+		</introduction>
+
+		<prerequisites>
+			<content>
+				<para>
+					If fastJSON is new to you, it is recommended that you <externalLink>
+						<linkText>read this article</linkText>
+						<linkUri>http://www.codeproject.com/Articles/159450/fastJSON</linkUri>
+						<linkTarget>_blank</linkTarget>
+					</externalLink> before you begin.
+				</para>
+				<para>
+					<newTerm>PowerJSON</newTerm> is forked from <newTerm>fastJSON</newTerm> and almost fully compatible with it.
+				</para>
+			</content>
+		</prerequisites>
+
+		<section>
+			<title>Serialization and Deserialization</title>
+			<content>
+				<procedure>
+					<title>Step by Step Guide</title>
+					<steps class="ordered">
+						<step>
+							<content>
+								<para>Reference to the library <literal>fastJSON.dll</literal>, or add the source code into your solution and compile the code.
+								</para>
+							</content>
+						</step>
+						<step>
+							<content>
+								<para>Create your data model for serialization. For example,</para>
+								<code language="c#">
+									<![CDATA[public class MyModel {
+	public string MyProperty { get; set; }
+}]]>
+								</code>
+							</content>
+						</step>
+						<step>
+							<content>
+								<para>Initialize an instance of the model.</para>
+								<code language="c#">var obj = new MyModel() { MyProperty = "hello world." };</code>
+							</content>
+						</step>
+						<step>
+							<content>
+								<para>Serialization could be done in one line:</para>
+								<code language="c#">string json = fastJSON.JSON.ToJSON (obj);</code>
+							</content>
+						</step>
+						<step>
+							<content>
+								<para>And deserialization could be done in one line too:</para>
+								<code language="c#"><![CDATA[MyModel result = fastJSON.JSON.ToObject<MyModel> (json);]]></code>
+							</content>
+						</step>
+					</steps>
+					<conclusion>
+						<content>
+							<para>OK, it is done.</para>
+							<para>
+								In this example, we can learn that the central part of the serialization and deserialization is done with the <codeEntityReference>T:fastJSON.JSON</codeEntityReference> class, and it is fairly easy.
+							</para>
+						</content>
+					</conclusion>
+				</procedure>
+			</content>
+		</section>
+		<section address="tweaking">
+			<title>Start Tweaking the Serialization Result</title>
+			<content>
+				<procedure>
+					<title>Removing Extensions</title>
+					<steps class="ordered">
+						<step>
+							<content>
+								<para>If you compile the above lines in a test project, and observe the serialization result of the <codeEntityReference>M:fastJSON.JSON.ToJSON(System.Object)</codeEntityReference> method, you might read something like this.</para>
+								<code language="none"><![CDATA[{"$types":{"consoletest.MyModel, consoletest, Version=1.0.5593.40826,
+Culture=neutral, PublicKeyToken=null":"1"},"$type":"1",
+"MyProperty":"hello world."}]]></code>
+								<para>If you have read about the <externalLink>
+									<linkText>JSON specification</linkText>
+									<linkUri>http://json.org/</linkUri>
+									<linkTarget>_blank</linkTarget>
+								</externalLink>, you might expect to see a cleaner result, like the following code shows.</para>
+								<code>{"MyProperty":"hello world."}</code>
+								<para>
+									The reason for the extra part like <codeInline>"$types":{"consoletest.MyModel, consoletest, Version=1.0.5593.40826, Culture=neutral, PublicKeyToken=null":"1"},"$type":"1"</codeInline> is to support polymorphic serialization and circular reference detection. Those added <codeInline>$types</codeInline> and <codeInline>$type</codeInline> fields are called <newTerm>JSON Extensions</newTerm>.
+								</para>
+							</content>
+						</step>
+						<step>
+							<content>
+								<para>You may not need those features at this moment, or the application which consume that JSON text does not support JSON Extensions. You have a reason to disable them.</para>
+							</content>
+						</step>
+						<step>
+							<content>
+								<para>To disable the JSON Extensions globally, you can add the following line before calling the <codeInline>JSON.ToJSON</codeInline> method.</para>
+								<code language="c#">fastJSON.JSON.Parameters.UseExtensions = false;</code>
+							</content>
+						</step>
+						<step>
+							<content>
+								<para>To disable the JSON Extensions for particular serialization results, you can initialize a new <codeEntityReference>T:fastJSON.JSONParameters</codeEntityReference> instance and set the <codeEntityReference>F:fastJSON.JSONParameters.UseExtensions</codeEntityReference> field to <codeInline>false</codeInline>. And then pass it to the <codeInline>ToJSON</codeInline> method, like the following code shows.</para>
+								<code language="c#">
+									<![CDATA[var parameters = new fastJSON.JSONParameters () { UseExtensions = false };
+string json = fastJSON.JSON.ToJSON (obj, parameters);]]></code>
+							</content>
+						</step>
+					</steps>
+					<!-- <conclusion>Optional conclusion</conclusion> -->
+				</procedure>
+				<procedure>
+					<title>Changing the Case of Serialized Field Names</title>
+					<steps class="ordered">
+						<step>
+							<content>
+								<para>When you observe the serialized JSON, you can notice that the name of the serialized field has a name <codeInline>MyProperty</codeInline>, which has the same name as the member <codeInline>MyProperty</codeInline> in the <codeInline>MyModel</codeInline> class in the example.
+							</para>
+							</content>
+						</step>
+						<step>
+							<content>
+								<para>In this walkthrough, we want the <codeInline>MyModel</codeInline> property to be serialized in camel-case, i.e, <codeInline>myModel</codeInline>.
+							</para>
+							</content>
+						</step>
+						<step>
+							<content>
+								<para>To change the case of serialized names, you can use the <codeEntityReference>P:fastJSON.JSONParameters.NamingConvention</codeEntityReference> setting, like the following code shows.
+							</para>
+								<code language="c#">fastJSON.JSON.Parameters.NamingConvention = fastJSON.NamingConvention.CamelCase;</code>
+								<para>The above code will set the serialized member name to camel-case.</para>
+							</content>
+						</step>
+					</steps>
+				</procedure>
+			</content>
+		</section>
+		<section address="conclusion">
+			<title>Conclusion</title>
+			<content>
+				<para>Here's the complete code snippet for this walkthrough.</para>
+				<code language="c#">
+					<![CDATA[
+public class MyModel
+{
+	public string MyProperty { get; set; }
+}
+public class Program
+{
+	public static void Main (string[] args) {
+		var obj = new MyModel () { MyProperty = "hello world." };
+		fastJSON.JSON.Parameters.UseExtensions = false;
+		fastJSON.JSON.Parameters.NamingConvention = fastJSON.NamingConvention.CamelCase;
+		string json = fastJSON.JSON.ToJSON (obj);
+		Console.WriteLine (json);
+	}
+}
+]]></code>
+				<para>And the output is:</para>
+				<code language="none">{"myProperty":"hello world."}</code>
+				<para>It is very simple, right? As you work on with your projects, you will encounter more complex requirements of JSON serialization and deserialization. We will disguss more in the following chapters.</para>
+			</content>
+		</section>
+		<!-- Optional next steps info
+    <nextSteps>
+      <content><para>Next steps info goes here</para></content>
+    </nextSteps>
+    -->
+
+		<relatedTopics>
+			<!-- One or more of the following:
+           - A local link
+           - An external link
+           - A code entity reference
+
+      <link xlink:href="Other Topic's ID">Link text</link>
+      <externalLink>
+          <linkText>Link text</linkText>
+          <linkAlternateText>Optional alternate link text</linkAlternateText>
+          <linkUri>URI</linkUri>
+      </externalLink>
+      <codeEntityReference>API member ID</codeEntityReference>
+
+      Examples:
+
+      <link xlink:href="00e97994-e9e6-46e0-b420-5be86b2f8278">Some other topic</link>
+
+      <externalLink>
+          <linkText>SHFB on CodePlex</linkText>
+          <linkAlternateText>Go to CodePlex</linkAlternateText>
+          <linkUri>http://shfb.codeplex.com</linkUri>
+      </externalLink>
+
+      <codeEntityReference>T:TestDoc.TestClass</codeEntityReference>
+      <codeEntityReference>P:TestDoc.TestClass.SomeProperty</codeEntityReference>
+      <codeEntityReference>M:TestDoc.TestClass.#ctor</codeEntityReference>
+      <codeEntityReference>M:TestDoc.TestClass.#ctor(System.String,System.Int32)</codeEntityReference>
+      <codeEntityReference>M:TestDoc.TestClass.ToString</codeEntityReference>
+      <codeEntityReference>M:TestDoc.TestClass.FirstMethod</codeEntityReference>
+      <codeEntityReference>M:TestDoc.TestClass.SecondMethod(System.Int32,System.String)</codeEntityReference>
+      -->
+		</relatedTopics>
+	</developerWalkthroughDocument>
+</topic>

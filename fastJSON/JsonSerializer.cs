@@ -66,12 +66,14 @@ namespace fastJSON
 			if (obj == null || obj is DBNull)
 				_output.Append ("null");
 
-			else if (obj is string || obj is char)
-				WriteString (obj.ToString ());
-
-			else if (obj is Guid)
-				WriteGuid ((Guid)obj);
-
+			else if (obj is string || obj is char) {
+				if (_useEscapedUnicode) {
+					WriteStringEscapeUnicode (_output, obj.ToString ());
+				}
+				else {
+					WriteString (_output, obj.ToString ());
+				}
+			}
 			else if (obj is bool)
 				_output.Append (((bool)obj) ? "true" : "false"); // conform to standard
 
@@ -86,6 +88,9 @@ namespace fastJSON
 
 			else if (obj is DateTime)
 				WriteDateTime ((DateTime)obj);
+
+			else if (obj is Guid)
+				WriteGuid ((Guid)obj);
 
 			else if (obj is TimeSpan) {
 				WriteTimeSpan ((TimeSpan)obj);
@@ -443,7 +448,14 @@ namespace fastJSON
 				if (append)
 					_output.Append(',');
 
-				WritePair (n, o);
+				if (p.WriteValue != null && p.Converter == null) {
+					WriteStringFast (n);
+					_output.Append (':');
+					p.WriteValue (_output, o, _params);
+				}
+				else {
+					WritePair (n, o);
+				}
 
 				if (o != null && _params.UseExtensions)
 				{
@@ -475,6 +487,39 @@ namespace fastJSON
 			_current_depth--;
 		}
 
+		#region WriteJsonValue delegate methods
+		internal static void WriteByte (StringBuilder output, object value, JSONParameters parameter) {
+			output.Append (((byte)value).ToString (NumberFormatInfo.InvariantInfo));
+		}
+		internal static void WriteInt32 (StringBuilder output, object value, JSONParameters parameter) {
+			output.Append (((int)value).ToString (NumberFormatInfo.InvariantInfo));
+		}
+		internal static void WriteInt64 (StringBuilder output, object value, JSONParameters parameter) {
+			output.Append (((long)value).ToString (NumberFormatInfo.InvariantInfo));
+		}
+		internal static void WriteSingle (StringBuilder output, object value, JSONParameters parameter) {
+			output.Append (((float)value).ToString (NumberFormatInfo.InvariantInfo));
+		}
+		internal static void WriteDouble (StringBuilder output, object value, JSONParameters parameter) {
+			output.Append (((double)value).ToString (NumberFormatInfo.InvariantInfo));
+		}
+		internal static void WriteBoolean (StringBuilder output, object value, JSONParameters parameter) {
+			output.Append ((bool)value ? "true" : "false");
+		}
+		internal static void WriteString (StringBuilder output, object value, JSONParameters parameter) {
+			if (value == null) {
+				output.Append ("null");
+				return;
+			}
+			if (parameter.UseEscapedUnicode) {
+				WriteStringEscapeUnicode (output, (string)value);
+			}
+			else {
+				WriteString (output, (string)value);
+			}
+		}
+		#endregion
+
 		private void WritePairFast(string name, string value)
 		{
 			WriteStringFast(name);
@@ -505,17 +550,15 @@ namespace fastJSON
 
 			var list = array as IList;
 			if (list != null) {
-				if (list.Count == 0) {
+				int c = list.Count;
+				if (c == 0) {
 					_output.Append (']');
 					return;
 				}
 				WriteValue (list[0]);
-				var length = list.Count;
-				if (length > 1) {
-					for (int i = 1; i < length; i++) {
-						_output.Append (',');
-						WriteValue (list[i]);
-					}
+				for (int i = 1; i < c; i++) {
+					_output.Append (',');
+					WriteValue (list[i]);
 				}
 			}
 			else {
@@ -574,7 +617,12 @@ namespace fastJSON
 					_output.Append ("\"\"");
 				}
 				else if (v.Length == 1) {
-					WriteString (v[0]);
+					if (_useEscapedUnicode) {
+						WriteStringEscapeUnicode (_output, v[0]);
+					}
+					else {
+						WriteString (_output, v[0]);
+					}
 				}
 				else {
 					WriteArray (v);
@@ -628,67 +676,93 @@ namespace fastJSON
 			_output.Append('\"');
 		}
 
-		private void WriteString(string s)
+		internal static void WriteStringEscapeUnicode (StringBuilder output, string s) {
+			output.Append ('\"');
+
+			int runIndex = -1;
+			int l = s.Length;
+			for (var index = 0; index < l; ++index) {
+				var c = s[index];
+				if (c >= ' ' && c < 128 && c != '\"' && c != '\\') {
+					if (runIndex == -1)
+						runIndex = index;
+
+					continue;
+				}
+
+				if (runIndex != -1) {
+					output.Append (s, runIndex, index - runIndex);
+					runIndex = -1;
+				}
+
+				switch (c) {
+					case '\t': output.Append ("\\t"); break;
+					case '\r': output.Append ("\\r"); break;
+					case '\n': output.Append ("\\n"); break;
+					case '"':
+					case '\\': output.Append ('\\'); output.Append (c); break;
+					default:
+						output.Append ("\\u");
+						// hard-code this line to improve performance:
+						// output.Append (((int)c).ToString ("X4", NumberFormatInfo.InvariantInfo));
+						var n = (c >> 12) & 0x0F;
+						output.Append ((char)(n > 9 ? n + ('A' - 10) : n + '0'));
+						n = (c >> 8) & 0x0F;
+						output.Append ((char)(n > 9 ? n + ('A' - 10) : n + '0'));
+						n = (c >> 4) & 0x0F;
+						output.Append ((char)(n > 9 ? n + ('A' - 10) : n + '0'));
+						n = c & 0x0F;
+						output.Append ((char)(n > 9 ? n + ('A' - 10) : n + '0'));
+						break;
+				}
+			}
+
+			if (runIndex != -1)
+				output.Append (s, runIndex, s.Length - runIndex);
+
+			output.Append ('\"');
+		}
+
+		internal static void WriteString(StringBuilder output, string s)
 		{
-			_output.Append('\"');
+			output.Append ('\"');
 
 			int runIndex = -1;
 			int l = s.Length;
 			for (var index = 0; index < l; ++index)
 			{
 				var c = s[index];
-
-				if (_useEscapedUnicode)
+				if (c != '\t' && c != '\n' && c != '\r' && c != '\"' && c != '\\')// && c != ':' && c!=',')
 				{
-					if (c >= ' ' && c < 128 && c != '\"' && c != '\\')
-					{
-						if (runIndex == -1)
-							runIndex = index;
+					if (runIndex == -1)
+						runIndex = index;
 
-						continue;
-					}
-				}
-				else
-				{
-					if (c != '\t' && c != '\n' && c != '\r' && c != '\"' && c != '\\')// && c != ':' && c!=',')
-					{
-						if (runIndex == -1)
-							runIndex = index;
-
-						continue;
-					}
+					continue;
 				}
 
 				if (runIndex != -1)
 				{
-					_output.Append(s, runIndex, index - runIndex);
+					output.Append (s, runIndex, index - runIndex);
 					runIndex = -1;
 				}
 
 				switch (c)
 				{
-					case '\t': _output.Append("\\t"); break;
-					case '\r': _output.Append("\\r"); break;
-					case '\n': _output.Append("\\n"); break;
+					case '\t': output.Append ("\\t"); break;
+					case '\r': output.Append ("\\r"); break;
+					case '\n': output.Append ("\\n"); break;
 					case '"':
-					case '\\': _output.Append('\\'); _output.Append(c); break;
+					case '\\': output.Append ('\\'); output.Append (c); break;
 					default:
-						if (_useEscapedUnicode)
-						{
-							_output.Append("\\u");
-							_output.Append(((int)c).ToString("X4", NumberFormatInfo.InvariantInfo));
-						}
-						else
-							_output.Append(c);
-
+						output.Append (c);
 						break;
 				}
 			}
 
 			if (runIndex != -1)
-				_output.Append(s, runIndex, s.Length - runIndex);
+				output.Append (s, runIndex, s.Length - runIndex);
 
-			_output.Append('\"');
+			output.Append ('\"');
 		}
 	}
 }

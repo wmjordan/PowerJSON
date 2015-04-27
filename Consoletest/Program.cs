@@ -29,35 +29,49 @@ namespace consoletest
 			Console.WriteLine ("\t4, Exotic Serialization Benchmark");
 			Console.WriteLine ("\t5, Exotic Deserialization Benchmark");
 			Console.WriteLine ("\t6, Exotic Misc. Tests");
+			Console.WriteLine ("\t7, Serialization Tests");
+			Console.WriteLine ("\t8, Deserialization Tests");
 			Console.WriteLine ("\tOther key: Exit");
 			Console.WriteLine ("Please select an option: ");
-			var k = Console.ReadKey ().Key;
+			var k = Console.ReadKey ().KeyChar;
 			Console.WriteLine();
 			switch (k) {
-				case ConsoleKey.D4:
+				case '4':
 					exotic = true;
 					SerializationTest ();
 					break;
-				case ConsoleKey.D1:
+				case '1':
 					exotic = false;
 					SerializationTest ();
 					break;
-				case ConsoleKey.D5:
+				case '7':
+					exotic = false;
+					SerializationTest ();
+					exotic = true;
+					SerializationTest ();
+					break;
+				case '5':
 					exotic = true;
 					DeserializationTest ();
 					break;
-				case ConsoleKey.D2:
+				case '2':
 					exotic = false;
 					DeserializationTest ();
 					break;
-				case ConsoleKey.D6:
+				case '8':
+					exotic = false;
+					DeserializationTest ();
+					exotic = true;
+					DeserializationTest ();
+					break;
+				case '6':
 					exotic = true;
 					WriteTestObject (CreateObject ());
 					WriteTestObject (CreateNVCollection ());
 					NullValueTest ();
 					TestCustomConverterType ();
 					break;
-				case ConsoleKey.D3:
+				case '3':
 					exotic = false;
 					WriteTestObject (CreateObject ());
 					WriteTestObject (CreateNVCollection ());
@@ -271,7 +285,6 @@ namespace consoletest
 
         private static void fastjson_deserialize()
         {
-            Console.WriteLine();
             Console.Write("fastjson deserialize");
             colclass c = CreateObject();
 
@@ -296,7 +309,6 @@ namespace consoletest
 
         private static void fastjson_serialize()
         {
-            Console.WriteLine();
             Console.Write("fastjson serialize");
             colclass c = CreateObject();
 			fastJSON.JSON.ToJSON (c);
@@ -317,7 +329,6 @@ namespace consoletest
 
         private static void bin_deserialize()
         {
-            Console.WriteLine();
             Console.Write("bin deserialize");
             colclass c = CreateObject();
 			var stopwatch = new Stopwatch();
@@ -344,7 +355,7 @@ namespace consoletest
 
         private static void bin_serialize()
         {
-            Console.Write("\r\nbin serialize");
+            Console.Write("bin serialize");
             colclass c = CreateObject();
 			var stopwatch = new Stopwatch();
             for (int pp = 0; pp < tcount; pp++)

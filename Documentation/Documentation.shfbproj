@@ -77,11 +77,13 @@ This is a fork of the project, arming at a more powerful control over JSON seria
   </PropertyGroup>
   <ItemGroup>
     <Folder Include="Content" />
+    <Folder Include="Content\Usage" />
     <Folder Include="Content\VersionHistory" />
     <Folder Include="icons" />
     <Folder Include="Media" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Content\Usage\Walkthrough.aml" />
     <None Include="Content\VersionHistory\v2.1.11.aml" />
     <None Include="Content\VersionHistory\VersionHistory.aml" />
     <None Include="Content\Welcome.aml" />

@@ -391,8 +391,8 @@ namespace UnitTests
 
             var s = JSON.ToJSON(ls);
             Console.WriteLine(s);
-            var o = JSON.ToObject(s);
-
+            var o = JSON.ToObject<List<string>>(s);
+			CollectionAssert.AreEqual (ls, o);
             Assert.IsNotNull(o);
         }
 
@@ -906,7 +906,7 @@ namespace UnitTests
 			a.int2d = new int[][] { new int[] { 1, 2, 3 }, new int[] { 2, 3, 4 } };
 			a.int3d = new int[][][] {
 				new int[][] { 
-					new int[] { 0, 0, 1 },
+					new int[] { 1 },
 					new int[] { 0, 1, 0 }
 				},
 				null,

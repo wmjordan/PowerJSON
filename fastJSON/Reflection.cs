@@ -34,6 +34,8 @@ namespace fastJSON
 		bool IsStatic { get; }
 	}
 
+	delegate void WriteJsonValue (System.Text.StringBuilder output, object value, JSONParameters parameter);
+
 	sealed class Getters : IMemberInfo
 	{
 		internal string MemberName;
@@ -43,6 +45,7 @@ namespace fastJSON
 		internal bool IsProperty;
 		internal bool IsReadOnly;
 		internal bool IsCollection;
+		internal WriteJsonValue WriteValue;
 
 		internal bool SpecificName;
 		internal string SerializedName;
@@ -65,6 +68,8 @@ namespace fastJSON
 		Long,
 		String,
 		Bool,
+		Single,
+		Double,
 		DateTime,
 		Enum,
 		Guid,
@@ -113,7 +118,9 @@ namespace fastJSON
 			JsonDataType dt = JsonDataType.Unknown;
 
 			if (type == typeof(int) || type == typeof(int?)) dt = JsonDataType.Int;
-			else if (type == typeof(long) || type == typeof(long?)) dt = JsonDataType.Long;
+			else if (type == typeof (long) || type == typeof (long?)) dt = JsonDataType.Long;
+			else if (type == typeof (float) || type == typeof (float?)) dt = JsonDataType.Single;
+			else if (type == typeof (double) || type == typeof (double?)) dt = JsonDataType.Double;
 			else if (type == typeof(string)) dt = JsonDataType.String;
 			else if (type == typeof(bool) || type == typeof(bool?)) dt = JsonDataType.Bool;
 			else if (type == typeof(DateTime) || type == typeof(DateTime?)) dt = JsonDataType.DateTime;

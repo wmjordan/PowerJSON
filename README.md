@@ -62,7 +62,7 @@ This fork also fixed some issues in the original fastJSON project:
 * Read-only `static` fields were serialized regardless `ShowReadOnlyProperties` was turned off. (2015-4-7)
 * `ShowReadOnlyProperties` was not in effect for the same type after change. (2015-4-7)
 * Deserialization on ``Dictionary<N, List<V>>` type could fail. (2015-4-9)
-* "Release" compiled edition did not supports `dynamic` types.
+* "Release" compiled edition did not support `dynamic` types.
 * Multi-demensional arrays could not be serialized. (2015-4-25)
 
 ### Other Enhancements
