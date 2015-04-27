@@ -1525,48 +1525,59 @@ namespace UnitTests
             Console.WriteLine(s);
             var iii = JSON.ToObject(s);
             Assert.AreEqual(3, (iii as lol2).r[0].Length);
-        }
-        //[TestMethod]
-        //public void Exception()
-        //{
-        //    var e = new Exception("hello");
 
-        //    var s = fastJSON.JSON.ToJSON(e);
-        //    Console.WriteLine(s);
-        //    var o = fastJSON.JSON.ToObject(s);
-        //    Assert.AreEqual("hello", (o as Exception).Message);
-        //}
-        //public class ilistclass
-        //{
-        //    public string name;
-        //    public IList<colclass> list { get; set; }
-        //}
+			var o3 = new List<baseclass[]> { new baseclass[] {
+				new baseclass() { Name="a" },
+				new baseclass() { Name="b", Code="c" }
+			}, new baseclass[] {
+				new baseclass { Name="d" },
+				null,
+			}, null };
+			s = JSON.ToJSON (o3, new JSONParameters () { UseExtensions = false });
+			var iv = JSON.ToObject<List<baseclass[]>> (s);
+            Console.WriteLine(JSON.ToJSON (iv));
+		}
+		//[TestMethod]
+		//public void Exception()
+		//{
+		//    var e = new Exception("hello");
 
-        //[TestMethod]
-        //public void ilist()
-        //{
-        //    ilistclass i = new ilistclass();
-        //    i.name = "aa";
-        //    i.list = new List<colclass>();
-        //    i.list.Add(new colclass() { gender = Gender.Female, date = DateTime.Now, isNew = true });
+		//    var s = fastJSON.JSON.ToJSON(e);
+		//    Console.WriteLine(s);
+		//    var o = fastJSON.JSON.ToObject(s);
+		//    Assert.AreEqual("hello", (o as Exception).Message);
+		//}
+		//public class ilistclass
+		//{
+		//    public string name;
+		//    public IList<colclass> list { get; set; }
+		//}
 
-        //    var s = fastJSON.JSON.ToJSON(i);
-        //    Console.WriteLine(s);
-        //    var o = fastJSON.JSON.ToObject(s);
-        //}
+		//[TestMethod]
+		//public void ilist()
+		//{
+		//    ilistclass i = new ilistclass();
+		//    i.name = "aa";
+		//    i.list = new List<colclass>();
+		//    i.list.Add(new colclass() { gender = Gender.Female, date = DateTime.Now, isNew = true });
+
+		//    var s = fastJSON.JSON.ToJSON(i);
+		//    Console.WriteLine(s);
+		//    var o = fastJSON.JSON.ToObject(s);
+		//}
 
 
-        //[TestMethod]
-        //public void listdic()
-        //{ 
-        //    string s = @"[{""1"":""a""},{""2"":""b""}]";
-        //    var o = fastJSON.JSON.ToDynamic(s);// ToObject<List<Dictionary<string, object>>>(s);
-        //    var d = o[0].Count;
-        //    Console.WriteLine(d.ToString());
-        //}
+		//[TestMethod]
+		//public void listdic()
+		//{ 
+		//    string s = @"[{""1"":""a""},{""2"":""b""}]";
+		//    var o = fastJSON.JSON.ToDynamic(s);// ToObject<List<Dictionary<string, object>>>(s);
+		//    var d = o[0].Count;
+		//    Console.WriteLine(d.ToString());
+		//}
 
 
-        public class Y
+		public class Y
         {
             public byte[] BinaryData;
         }

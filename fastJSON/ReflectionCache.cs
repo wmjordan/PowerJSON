@@ -192,6 +192,9 @@ namespace fastJSON
 			else if (t == typeof(string)) {
 				g.WriteValue = JSONSerializer.WriteString;
 			}
+			else if (t == typeof(DateTime)) {
+				g.WriteValue = JSONSerializer.WriteDateTime;
+			}
 
 			if (controller != null) {
 				g.Serializable = controller.IsMemberSerializable (memberInfo, g);

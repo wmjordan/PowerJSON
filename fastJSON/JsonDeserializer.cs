@@ -175,8 +175,12 @@ namespace fastJSON
     			object v = k;
     			if (k is Dictionary<string, object>)
     				v = ParseDictionary(k as Dictionary<string, object>, null, gtypes[0], null);
-    			else
-    				v = ChangeType(k, gtypes[0]);
+				// supports List<array>
+				else if (k is List<object>) {
+					v = CreateArray ((List<object>)k, type, gtypes[0].GetElementType (), null);
+				}
+				else
+					v = ChangeType (k, gtypes[0]);
     
     			o.Add(v);
     		}

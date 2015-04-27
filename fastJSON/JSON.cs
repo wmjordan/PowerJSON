@@ -151,7 +151,6 @@ namespace fastJSON
 		/// </summary>
 		/// <param name="json">The JSON string to be deserialized.</param>
 		/// <param name="param">The <see cref="JSONParameters"/> to control deserialization.</param>
-		/// <param name="manager">The <see cref="SerializationManager"/> to control advanced JSON deserialization.</param>
 		/// <returns>The deserialized object.</returns>
 		public static object ToObject(string json, JSONParameters param)
 		{

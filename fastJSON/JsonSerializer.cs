@@ -87,7 +87,7 @@ namespace fastJSON
 				_output.Append (((IConvertible)obj).ToString (NumberFormatInfo.InvariantInfo));
 
 			else if (obj is DateTime)
-				WriteDateTime ((DateTime)obj);
+				WriteDateTime (_output, obj, _params);
 
 			else if (obj is Guid)
 				WriteGuid ((Guid)obj);
@@ -199,34 +199,34 @@ namespace fastJSON
 		private void WriteTimeSpan (TimeSpan timeSpan) {
 			WriteStringFast (timeSpan.ToString ());
 		}
-		private void WriteDateTime(DateTime dateTime)
+		internal static void WriteDateTime(StringBuilder output, object value, JSONParameters parameter)
 		{
 			// datetime format standard : yyyy-MM-dd HH:mm:ss
-			DateTime dt = dateTime;
-			if (_params.UseUTCDateTime)
-				dt = dateTime.ToUniversalTime();
+			DateTime dt = (DateTime)value;
+			if (parameter.UseUTCDateTime)
+				dt = dt.ToUniversalTime();
 
-			_output.Append('\"');
-			_output.Append(dt.Year.ToString("0000", NumberFormatInfo.InvariantInfo));
-			_output.Append('-');
-			_output.Append(dt.Month.ToString("00", NumberFormatInfo.InvariantInfo));
-			_output.Append('-');
-			_output.Append(dt.Day.ToString("00", NumberFormatInfo.InvariantInfo));
-			_output.Append('T'); // strict ISO date compliance 
-			_output.Append(dt.Hour.ToString("00", NumberFormatInfo.InvariantInfo));
-			_output.Append(':');
-			_output.Append(dt.Minute.ToString("00", NumberFormatInfo.InvariantInfo));
-			_output.Append(':');
-			_output.Append(dt.Second.ToString("00", NumberFormatInfo.InvariantInfo));
-			if (_params.DateTimeMilliseconds)
+			output.Append('\"');
+			output.Append(dt.Year.ToString("0000", NumberFormatInfo.InvariantInfo));
+			output.Append('-');
+			output.Append(dt.Month.ToString("00", NumberFormatInfo.InvariantInfo));
+			output.Append('-');
+			output.Append(dt.Day.ToString("00", NumberFormatInfo.InvariantInfo));
+			output.Append('T'); // strict ISO date compliance 
+			output.Append(dt.Hour.ToString("00", NumberFormatInfo.InvariantInfo));
+			output.Append(':');
+			output.Append(dt.Minute.ToString("00", NumberFormatInfo.InvariantInfo));
+			output.Append(':');
+			output.Append(dt.Second.ToString("00", NumberFormatInfo.InvariantInfo));
+			if (parameter.DateTimeMilliseconds)
 			{
-				_output.Append('.');
-				_output.Append(dt.Millisecond.ToString("000", NumberFormatInfo.InvariantInfo));
+				output.Append('.');
+				output.Append(dt.Millisecond.ToString("000", NumberFormatInfo.InvariantInfo));
 			}
-			if (_params.UseUTCDateTime)
-				_output.Append('Z');
+			if (parameter.UseUTCDateTime)
+				output.Append('Z');
 
-			_output.Append('\"');
+			output.Append('\"');
 		}
 
 #if !SILVERLIGHT
@@ -606,17 +606,21 @@ namespace fastJSON
 					continue;
 				}
 				if (pendingSeparator) _output.Append (',');
+				pendingSeparator = true;
 				n = _params.NamingStrategy.Rename (collection.GetKey (i));
 				_output.Append ('\"');
 				_output.Append (n);
 				_output.Append ("\":");
 				if (v == null) {
 					_output.Append ("null");
+					continue;
 				}
-				else if (v.Length == 0) {
+				var vl = v.Length;
+				if (vl == 0) {
 					_output.Append ("\"\"");
+					continue;
 				}
-				else if (v.Length == 1) {
+				if (vl == 1) {
 					if (_useEscapedUnicode) {
 						WriteStringEscapeUnicode (_output, v[0]);
 					}
@@ -625,9 +629,24 @@ namespace fastJSON
 					}
 				}
 				else {
-					WriteArray (v);
+					_output.Append ('[');
+					if (_useEscapedUnicode) {
+						WriteStringEscapeUnicode (_output, v[0]);
+					}
+					else {
+						WriteString (_output, v[0]);
+					}
+					for (int vi = 1; vi < vl; vi++) {
+						_output.Append (',');
+						if (_useEscapedUnicode) {
+							WriteStringEscapeUnicode (_output, v[vi]);
+						}
+						else {
+							WriteString (_output, v[vi]);
+						}
+					}
+					_output.Append (']');
 				}
-				pendingSeparator = true;
 			}
 			_output.Append ('}');
 		}
