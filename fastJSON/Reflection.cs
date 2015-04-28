@@ -34,7 +34,7 @@ namespace fastJSON
 		bool IsStatic { get; }
 	}
 
-	delegate void WriteJsonValue (System.Text.StringBuilder output, object value, JSONParameters parameter);
+	delegate void WriteJsonValue (JSONSerializer output, object value);
 
 	sealed class Getters : IMemberInfo
 	{

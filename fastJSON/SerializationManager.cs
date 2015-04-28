@@ -10,6 +10,9 @@ namespace fastJSON
 	/// <summary>
 	/// The cached serialization information used by the reflection engine during serialization and deserialization.
 	/// </summary>
+	/// <remarks>
+	/// <para>The reflection overriding methods, such as <seealso cref="RegisterReflectionOverride{T}(ReflectionOverride)"/>, <seealso cref="RegisterMemberName{T}(string, string)"/>, etc., must be called before serialization or deserialization.</para>
+	/// </remarks>
 	/// <preliminary />
 	public sealed class SerializationManager
 	{
@@ -50,6 +53,7 @@ namespace fastJSON
 		/// </summary>
 		/// <typeparam name="T">The type to be overridden.</typeparam>
 		/// <param name="overrideInfo">The override info of the type.</param>
+		/// <seealso cref="RegisterReflectionOverride(Type,ReflectionOverride,bool)"/>
 		public void RegisterReflectionOverride<T> (ReflectionOverride overrideInfo) {
 			RegisterReflectionOverride (typeof (T), overrideInfo, false);
 		}
@@ -60,16 +64,21 @@ namespace fastJSON
 		/// <typeparam name="T">The type to be overridden.</typeparam>
 		/// <param name="overrideInfo">The override info of the type.</param>
 		/// <param name="purgeExisting">If this value is true, the reflection engine will reflect the type again and apply the <paramref name="overrideInfo"/>, otherwise, <paramref name="overrideInfo"/> is merged into the existing reflection cache.</param>
+		/// <seealso cref="RegisterReflectionOverride(Type,ReflectionOverride,bool)"/>
 		public void RegisterReflectionOverride<T> (ReflectionOverride overrideInfo, bool purgeExisting) {
 			RegisterReflectionOverride (typeof (T), overrideInfo, purgeExisting);
 		}
 
 		/// <summary>
-		/// Registers <see cref="ReflectionOverride"/> for the specific type.
+		/// Registers <see cref="ReflectionOverride"/> for the specific type and optionally purge existing overrides.
 		/// </summary>
 		/// <param name="type">The type to be overridden.</param>
 		/// <param name="overrideInfo">The override info of the type.</param>
 		/// <param name="purgeExisting">If this value is true, the reflection engine will reflect the type again and apply the <paramref name="overrideInfo"/>, otherwise, <paramref name="overrideInfo"/> is merged into the existing reflection cache.</param>
+		/// <remarks>
+		/// <para>At this moment, the override only affects the registered type.</para>
+		/// <para>If a class has its subclasses, the override will not be applied to its subclasses.</para>
+		/// </remarks>
 		public void RegisterReflectionOverride (Type type, ReflectionOverride overrideInfo, bool purgeExisting) {
 			var c = purgeExisting ? new ReflectionCache (type, this) : GetDefinition (type);
 			if (overrideInfo.OverrideInterceptor) {
@@ -232,13 +241,12 @@ namespace fastJSON
 		public void RegisterMemberInterceptor (Type type, string memberName, IJsonConverter converter) {
 			var c = GetDefinition (type);
 			string n = null;
-			foreach (var item in c.Getters) {
-				if (item.MemberName == memberName) {
-					item.Converter = converter;
-					n = item.SerializedName;
-					break;
-				}
+			var g = c.FindGetters (memberName);
+			if (g == null) {
+				throw new MissingMemberException (type.Name, memberName);
 			}
+			g.Converter = converter;
+			n = g.SerializedName;
 			myPropInfo p;
 			if (c.Properties.TryGetValue (n, out p)) {
 				p.Converter = converter;
@@ -308,6 +316,7 @@ namespace fastJSON
 	/// <summary>
 	/// Contains reflection overriding information, used in type reflection phase before serialization or deserialization.
 	/// </summary>
+	/// <seealso cref="SerializationManager"/>
 	/// <preliminary />
 	public class ReflectionOverride
 	{
@@ -341,6 +350,8 @@ namespace fastJSON
 	/// <summary>
 	/// Contains reflection override settings for a member.
 	/// </summary>
+	/// <seealso cref="SerializationManager"/>
+	/// <seealso cref="ReflectionOverride"/>
 	/// <preliminary />
 	public class MemberOverride
 	{

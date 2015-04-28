@@ -13,56 +13,51 @@ namespace fastJSON
 {
 	internal sealed class JSONSerializer
 	{
-		StringBuilder _output = new StringBuilder();
-		StringBuilder _before = new StringBuilder();
+		StringBuilder _output = new StringBuilder ();
+		StringBuilder _before = new StringBuilder ();
 		readonly int _MAX_DEPTH = 20;
 		int _current_depth = 0;
-		readonly Dictionary<string, int> _globalTypes = new Dictionary<string, int>();
-		readonly Dictionary<object, int> _cirobj = new Dictionary<object, int>();
+		readonly Dictionary<string, int> _globalTypes = new Dictionary<string, int> ();
+		readonly Dictionary<object, int> _cirobj = new Dictionary<object, int> ();
 		readonly JSONParameters _params;
 		readonly bool _useEscapedUnicode = false;
 		readonly SerializationManager _manager;
 
-		internal JSONSerializer(JSONParameters param, SerializationManager manager)
-		{
+		internal JSONSerializer (JSONParameters param, SerializationManager manager) {
 			_params = param;
 			_useEscapedUnicode = _params.UseEscapedUnicode;
 			_MAX_DEPTH = _params.SerializerMaxDepth;
 			_manager = manager;
 		}
 
-		internal string ConvertToJSON(object obj)
-		{
-			WriteValue(obj);
+		internal string ConvertToJSON (object obj) {
+			WriteValue (obj);
 
-			string str = "";
-			if (_params.UsingGlobalTypes && _globalTypes != null && _globalTypes.Count > 0)
-			{
-				StringBuilder sb = _before;
-				sb.Append("\"$types\":{");
-				bool pendingSeparator = false;
-				foreach (var kv in _globalTypes)
-				{
-					if (pendingSeparator) sb.Append(',');
+			var str = "";
+			if (_params.UsingGlobalTypes && _globalTypes != null && _globalTypes.Count > 0) {
+				var sb = _before;
+				sb.Append ("\"$types\":{");
+				var pendingSeparator = false;
+				foreach (var kv in _globalTypes) {
+					if (pendingSeparator) sb.Append (',');
 					pendingSeparator = true;
-					sb.Append('\"');
-					sb.Append(kv.Key);
-					sb.Append("\":\"");
-					sb.Append(kv.Value);
-					sb.Append('\"');
+					sb.Append ('\"');
+					sb.Append (kv.Key);
+					sb.Append ("\":\"");
+					sb.Append (kv.Value);
+					sb.Append ('\"');
 				}
-				sb.Append("},");
-				sb.Append(_output.ToString());
-				str = sb.ToString();
+				sb.Append ("},");
+				sb.Append (_output.ToString ());
+				str = sb.ToString ();
 			}
 			else
-				str = _output.ToString();
+				str = _output.ToString ();
 
 			return str;
 		}
 
-		private void WriteValue(object obj)
-		{
+		private void WriteValue (object obj) {
 			if (obj == null || obj is DBNull)
 				_output.Append ("null");
 
@@ -76,9 +71,11 @@ namespace fastJSON
 			}
 			else if (obj is bool)
 				_output.Append (((bool)obj) ? "true" : "false"); // conform to standard
-
+			else if (obj is int) {
+				_output.Append (Int32ToString ((int)obj));
+			}
 			else if (
-				obj is int || obj is long || obj is double ||
+				obj is long || obj is double ||
 				obj is decimal || obj is float ||
 				obj is byte || obj is short ||
 				obj is sbyte || obj is ushort ||
@@ -87,7 +84,7 @@ namespace fastJSON
 				_output.Append (((IConvertible)obj).ToString (NumberFormatInfo.InvariantInfo));
 
 			else if (obj is DateTime)
-				WriteDateTime (_output, obj, _params);
+				WriteDateTime (this, obj);
 
 			else if (obj is Guid)
 				WriteGuid ((Guid)obj);
@@ -96,7 +93,7 @@ namespace fastJSON
 				WriteTimeSpan ((TimeSpan)obj);
 			}
 			else if (_params.KVStyleStringDictionary == false && obj is IDictionary &&
-				obj.GetType ().IsGenericType && obj.GetType ().GetGenericArguments ()[0] == typeof (string))
+				obj.GetType ().IsGenericType && obj.GetType ().GetGenericArguments ()[0] == typeof(string))
 
 				WriteStringDictionary ((IDictionary)obj);
 #if NET_40_OR_GREATER
@@ -135,39 +132,34 @@ namespace fastJSON
 				WriteObject (obj);
 		}
 
-		private void WriteSD(StringDictionary stringDictionary)
-		{
-			_output.Append('{');
+		private void WriteSD (StringDictionary stringDictionary) {
+			_output.Append ('{');
 
-			bool pendingSeparator = false;
+			var pendingSeparator = false;
 
-			foreach (DictionaryEntry entry in stringDictionary)
-			{
-				if (_params.SerializeNullValues == false && entry.Value == null)
-				{
+			foreach (DictionaryEntry entry in stringDictionary) {
+				if (_params.SerializeNullValues == false && entry.Value == null) {
 				}
-				else
-				{
-					if (pendingSeparator) _output.Append(',');
+				else {
+					if (pendingSeparator) _output.Append (',');
 
 					WritePair (_params.NamingStrategy.Rename ((string)entry.Key), entry.Value);
 					pendingSeparator = true;
 				}
 			}
-			_output.Append('}');
+			_output.Append ('}');
 		}
 
-		private void WriteCustom(object obj)
-		{
+		private void WriteCustom (object obj) {
 			Serialize s;
-			Reflection.Instance._customSerializer.TryGetValue(obj.GetType(), out s);
-			WriteStringFast(s(obj));
+			Reflection.Instance._customSerializer.TryGetValue (obj.GetType (), out s);
+			WriteStringFast (s (obj));
 		}
 
 		private void WriteEnum (Enum e) {
 			// TODO : optimize enum write
 			if (_params.UseValuesOfEnums) {
-				_output.Append(Convert.ToInt64 (e).ToString(NumberFormatInfo.InvariantInfo));
+				_output.Append (Convert.ToInt64 (e).ToString (NumberFormatInfo.InvariantInfo));
 				return;
 			}
 			var n = _manager.GetEnumName (e);
@@ -179,18 +171,16 @@ namespace fastJSON
 			}
 		}
 
-		private void WriteGuid(Guid g)
-		{
+		private void WriteGuid (Guid g) {
 			if (_params.UseFastGuid == false)
-				WriteStringFast(g.ToString());
+				WriteStringFast (g.ToString ());
 			else
-				WriteBytes(g.ToByteArray());
+				WriteBytes (g.ToByteArray ());
 		}
 
-		private void WriteBytes(byte[] bytes)
-		{
+		private void WriteBytes (byte[] bytes) {
 #if !SILVERLIGHT
-			WriteStringFast(Convert.ToBase64String(bytes, 0, bytes.Length, Base64FormattingOptions.None));
+			WriteStringFast (Convert.ToBase64String (bytes, 0, bytes.Length, Base64FormattingOptions.None));
 #else
 			WriteStringFast(Convert.ToBase64String(bytes, 0, bytes.Length));
 #endif
@@ -199,71 +189,69 @@ namespace fastJSON
 		private void WriteTimeSpan (TimeSpan timeSpan) {
 			WriteStringFast (timeSpan.ToString ());
 		}
-		internal static void WriteDateTime(StringBuilder output, object value, JSONParameters parameter)
-		{
+		internal static void WriteDateTime (JSONSerializer serializer, object value) {
 			// datetime format standard : yyyy-MM-dd HH:mm:ss
-			DateTime dt = (DateTime)value;
+			var dt = (DateTime)value;
+			var parameter = serializer._params;
+			var output = serializer._output;
 			if (parameter.UseUTCDateTime)
-				dt = dt.ToUniversalTime();
+				dt = dt.ToUniversalTime ();
 
-			output.Append('\"');
-			output.Append(dt.Year.ToString("0000", NumberFormatInfo.InvariantInfo));
-			output.Append('-');
-			output.Append(dt.Month.ToString("00", NumberFormatInfo.InvariantInfo));
-			output.Append('-');
-			output.Append(dt.Day.ToString("00", NumberFormatInfo.InvariantInfo));
-			output.Append('T'); // strict ISO date compliance 
-			output.Append(dt.Hour.ToString("00", NumberFormatInfo.InvariantInfo));
-			output.Append(':');
-			output.Append(dt.Minute.ToString("00", NumberFormatInfo.InvariantInfo));
-			output.Append(':');
-			output.Append(dt.Second.ToString("00", NumberFormatInfo.InvariantInfo));
-			if (parameter.DateTimeMilliseconds)
-			{
-				output.Append('.');
-				output.Append(dt.Millisecond.ToString("000", NumberFormatInfo.InvariantInfo));
+			output.Append ('\"');
+			output.Append (ToFixedWidthString (dt.Year, 4));
+			output.Append ('-');
+			output.Append (ToFixedWidthString (dt.Month, 2));
+			output.Append ('-');
+			output.Append (ToFixedWidthString (dt.Day, 2));
+			output.Append ('T'); // strict ISO date compliance
+			output.Append (ToFixedWidthString (dt.Hour, 2));
+			output.Append (':');
+			output.Append (ToFixedWidthString (dt.Minute, 2));
+			output.Append (':');
+			output.Append (ToFixedWidthString (dt.Second, 2));
+			if (parameter.DateTimeMilliseconds) {
+				output.Append ('.');
+				output.Append (ToFixedWidthString (dt.Millisecond, 3));
 			}
 			if (parameter.UseUTCDateTime)
-				output.Append('Z');
+				output.Append ('Z');
 
-			output.Append('\"');
+			output.Append ('\"');
 		}
-
 #if !SILVERLIGHT
-		private DatasetSchema GetSchema(DataTable ds)
-		{
+		private DatasetSchema GetSchema (DataTable ds) {
 			if (ds == null) return null;
 
-			DatasetSchema m = new DatasetSchema();
-			m.Info = new List<string>();
-			m.Name = ds.TableName;
-
-			foreach (DataColumn c in ds.Columns)
+			var m = new DatasetSchema
 			{
-				m.Info.Add(ds.TableName);
-				m.Info.Add(c.ColumnName);
-				m.Info.Add(c.DataType.ToString());
+				Info = new List<string> (),
+				Name = ds.TableName
+			};
+
+			foreach (DataColumn c in ds.Columns) {
+				m.Info.Add (ds.TableName);
+				m.Info.Add (c.ColumnName);
+				m.Info.Add (c.DataType.ToString ());
 			}
 			// FEATURE : serialize relations and constraints here
 
 			return m;
 		}
 
-		private DatasetSchema GetSchema(DataSet ds)
-		{
+		private DatasetSchema GetSchema (DataSet ds) {
 			if (ds == null) return null;
 
-			DatasetSchema m = new DatasetSchema();
-			m.Info = new List<string>();
-			m.Name = ds.DataSetName;
-
-			foreach (DataTable t in ds.Tables)
+			var m = new DatasetSchema
 			{
-				foreach (DataColumn c in t.Columns)
-				{
-					m.Info.Add(t.TableName);
-					m.Info.Add(c.ColumnName);
-					m.Info.Add(c.DataType.ToString());
+				Info = new List<string> (),
+				Name = ds.DataSetName
+			};
+
+			foreach (DataTable t in ds.Tables) {
+				foreach (DataColumn c in t.Columns) {
+					m.Info.Add (t.TableName);
+					m.Info.Add (c.ColumnName);
+					m.Info.Add (c.DataType.ToString ());
 				}
 			}
 			// FEATURE : serialize relations and constraints here
@@ -271,107 +259,94 @@ namespace fastJSON
 			return m;
 		}
 
-		private string GetXmlSchema(DataTable dt)
-		{
-			using (var writer = new StringWriter())
-			{
-				dt.WriteXmlSchema(writer);
-				return dt.ToString();
+		private string GetXmlSchema (DataTable dt) {
+			using (var writer = new StringWriter ()) {
+				dt.WriteXmlSchema (writer);
+				return dt.ToString ();
 			}
 		}
 
-		private void WriteDataset(DataSet ds)
-		{
-			_output.Append('{');
-			if (_params.UseExtensions)
-			{
-				WritePair("$schema", _params.UseOptimizedDatasetSchema ? (object)GetSchema(ds) : ds.GetXmlSchema());
-				_output.Append(',');
+		private void WriteDataset (DataSet ds) {
+			_output.Append ('{');
+			if (_params.UseExtensions) {
+				WritePair ("$schema", _params.UseOptimizedDatasetSchema ? (object)GetSchema (ds) : ds.GetXmlSchema ());
+				_output.Append (',');
 			}
-			bool tablesep = false;
-			foreach (DataTable table in ds.Tables)
-			{
-				if (tablesep) _output.Append(',');
+			var tablesep = false;
+			foreach (DataTable table in ds.Tables) {
+				if (tablesep) _output.Append (',');
 				tablesep = true;
-				WriteDataTableData(table);
+				WriteDataTableData (table);
 			}
 			// end dataset
-			_output.Append('}');
+			_output.Append ('}');
 		}
 
-		private void WriteDataTableData(DataTable table)
-		{
-			_output.Append('\"');
-			_output.Append(table.TableName);
-			_output.Append("\":[");
-			DataColumnCollection cols = table.Columns;
-			bool rowseparator = false;
-			foreach (DataRow row in table.Rows)
-			{
-				if (rowseparator) _output.Append(',');
+		private void WriteDataTableData (DataTable table) {
+			_output.Append ('\"');
+			_output.Append (table.TableName);
+			_output.Append ("\":[");
+			var cols = table.Columns;
+			var rowseparator = false;
+			foreach (DataRow row in table.Rows) {
+				if (rowseparator) _output.Append (',');
 				rowseparator = true;
-				_output.Append('[');
+				_output.Append ('[');
 
-				bool pendingSeperator = false;
-				foreach (DataColumn column in cols)
-				{
-					if (pendingSeperator) _output.Append(',');
-					WriteValue(row[column]);
+				var pendingSeperator = false;
+				foreach (DataColumn column in cols) {
+					if (pendingSeperator) _output.Append (',');
+					WriteValue (row[column]);
 					pendingSeperator = true;
 				}
-				_output.Append(']');
+				_output.Append (']');
 			}
 
-			_output.Append(']');
+			_output.Append (']');
 		}
 
-		void WriteDataTable(DataTable dt)
-		{
-			_output.Append('{');
-			if (_params.UseExtensions)
-			{
-				WritePair("$schema", _params.UseOptimizedDatasetSchema ? (object)GetSchema(dt) : GetXmlSchema(dt));
-				_output.Append(',');
+		void WriteDataTable (DataTable dt) {
+			_output.Append ('{');
+			if (_params.UseExtensions) {
+				WritePair ("$schema", _params.UseOptimizedDatasetSchema ? (object)GetSchema (dt) : GetXmlSchema (dt));
+				_output.Append (',');
 			}
 
-			WriteDataTableData(dt);
+			WriteDataTableData (dt);
 
-			_output.Append('}');
+			_output.Append ('}');
 		}
 #endif
 
 		bool _TypesWritten = false;
-		private void WriteObject(object obj)
-		{
-			int i = 0;
-			if (_cirobj.TryGetValue(obj, out i) == false)
-				_cirobj.Add(obj, _cirobj.Count + 1);
-			else
-			{
-				if (_current_depth > 0 && _params.InlineCircularReferences == false)
-				{
+		private void WriteObject (object obj) {
+			var i = 0;
+			if (_cirobj.TryGetValue (obj, out i) == false)
+				_cirobj.Add (obj, _cirobj.Count + 1);
+			else {
+				if (_current_depth > 0 && _params.InlineCircularReferences == false) {
 					//_circular = true;
-					_output.Append("{\"$i\":" + i + "}");
+					_output.Append ("{\"$i\":");
+					_output.Append (Int32ToString (i));
+					_output.Append ("}");
 					return;
 				}
 			}
-			ReflectionCache def = _manager.GetDefinition (obj.GetType ());
+			var def = _manager.GetDefinition (obj.GetType ());
 			var si = def.Interceptor;
 			if (si != null && si.OnSerializing (obj) == false) {
 				return;
 			}
 			if (_params.UsingGlobalTypes == false)
-				_output.Append('{');
-			else
-			{
-				if (_TypesWritten == false)
-				{
-					_output.Append('{');
+				_output.Append ('{');
+			else {
+				if (_TypesWritten == false) {
+					_output.Append ('{');
 					_before = _output;
-					_output = new StringBuilder();
+					_output = new StringBuilder ();
 				}
 				else
-					_output.Append('{');
+					_output.Append ('{');
 			}
 			_TypesWritten = true;
 			_current_depth++;
@@ -379,31 +354,27 @@ namespace fastJSON
 				throw new JsonSerializationException ("Serializer encountered maximum depth of " + _MAX_DEPTH);
 
 
-			Dictionary<string, string> map = new Dictionary<string, string>();
-			bool append = false;
-			if (_params.UseExtensions)
-			{
+			var map = new Dictionary<string, string> ();
+			var append = false;
+			if (_params.UseExtensions) {
 				if (_params.UsingGlobalTypes == false)
-					WritePairFast("$type", def.AssemblyName);
-				else
-				{
-					int dt = 0;
-					string ct = def.AssemblyName;
-					if (_globalTypes.TryGetValue(ct, out dt) == false)
-					{
+					WritePairFast ("$type", def.AssemblyName);
+				else {
+					var dt = 0;
+					var ct = def.AssemblyName;
+					if (_globalTypes.TryGetValue (ct, out dt) == false) {
 						dt = _globalTypes.Count + 1;
-						_globalTypes.Add(ct, dt);
+						_globalTypes.Add (ct, dt);
 					}
-					WritePairFast("$type", dt.ToString());
+					WritePairFast ("$type", dt.ToString ());
 				}
 				append = true;
 			}
 
-			Getters[] g = def.Getters;
-			int c = g.Length;
+			var g = def.Getters;
+			var c = g.Length;
 			var rp = _params.ShowReadOnlyProperties;
-			for (int ii = 0; ii < c; ii++)
-			{
+			for (int ii = 0; ii < c; ii++) {
 				var p = g[ii];
 				if (p.Serializable == TriState.False) {
 					continue;
@@ -414,8 +385,8 @@ namespace fastJSON
 						continue;
 					}
 				}
-				object o = p.Getter(obj);
-				string n = p.MemberName;
+				var o = p.Getter (obj);
+				var n = p.MemberName;
 				if (p.Converter != null) {
 					o = p.Converter.SerializationConvert (n, o);
 				}
@@ -430,8 +401,7 @@ namespace fastJSON
 				else {
 					n = p.SerializedName;
 				}
-				if (_params.SerializeNullValues == false && (o == null || o is DBNull))
-				{
+				if (_params.SerializeNullValues == false && (o == null || o is DBNull)) {
 					//append = false;
 					continue;
 				}
@@ -446,29 +416,27 @@ namespace fastJSON
 					n = _params.NamingStrategy.Rename (p.SerializedName);
 				}
 				if (append)
-					_output.Append(',');
+					_output.Append (',');
 
 				if (p.WriteValue != null && p.Converter == null) {
 					WriteStringFast (n);
 					_output.Append (':');
-					p.WriteValue (_output, o, _params);
+					p.WriteValue (this, o);
 				}
 				else {
 					WritePair (n, o);
 				}
 
-				if (o != null && _params.UseExtensions)
-				{
-					Type tt = o.GetType ();
+				if (o != null && _params.UseExtensions) {
+					var tt = o.GetType ();
 					if (tt == typeof(object))
-						map.Add(p.SerializedName, tt.ToString());
+						map.Add (p.SerializedName, tt.ToString ());
 				}
 				append = true;
 			}
-			if (map.Count > 0 && _params.UseExtensions)
-			{
-				_output.Append(",\"$map\":");
-				WriteStringDictionary(map);
+			if (map.Count > 0 && _params.UseExtensions) {
+				_output.Append (",\"$map\":");
+				WriteStringDictionary (map);
 				append = true;
 			}
 			if (si != null) {
@@ -483,74 +451,71 @@ namespace fastJSON
 				}
 				si.OnSerialized (obj);
 			}
-			_output.Append('}');
+			_output.Append ('}');
 			_current_depth--;
 		}
 
 		#region WriteJsonValue delegate methods
-		internal static void WriteByte (StringBuilder output, object value, JSONParameters parameter) {
-			output.Append (((byte)value).ToString (NumberFormatInfo.InvariantInfo));
+		internal static void WriteByte (JSONSerializer serializer, object value) {
+			serializer._output.Append (((byte)value).ToString (NumberFormatInfo.InvariantInfo));
 		}
-		internal static void WriteInt32 (StringBuilder output, object value, JSONParameters parameter) {
-			output.Append (((int)value).ToString (NumberFormatInfo.InvariantInfo));
+		internal static void WriteInt32 (JSONSerializer serializer, object value) {
+			serializer._output.Append (Int32ToString ((int)value));
 		}
-		internal static void WriteInt64 (StringBuilder output, object value, JSONParameters parameter) {
-			output.Append (((long)value).ToString (NumberFormatInfo.InvariantInfo));
+		internal static void WriteInt64 (JSONSerializer serializer, object value) {
+			serializer._output.Append (((long)value).ToString (NumberFormatInfo.InvariantInfo));
 		}
-		internal static void WriteSingle (StringBuilder output, object value, JSONParameters parameter) {
-			output.Append (((float)value).ToString (NumberFormatInfo.InvariantInfo));
+		internal static void WriteSingle (JSONSerializer serializer, object value) {
+			serializer._output.Append (((float)value).ToString (NumberFormatInfo.InvariantInfo));
 		}
-		internal static void WriteDouble (StringBuilder output, object value, JSONParameters parameter) {
-			output.Append (((double)value).ToString (NumberFormatInfo.InvariantInfo));
+		internal static void WriteDouble (JSONSerializer serializer, object value) {
+			serializer._output.Append (((double)value).ToString (NumberFormatInfo.InvariantInfo));
 		}
-		internal static void WriteBoolean (StringBuilder output, object value, JSONParameters parameter) {
-			output.Append ((bool)value ? "true" : "false");
+		internal static void WriteBoolean (JSONSerializer serializer, object value) {
+			serializer._output.Append ((bool)value ? "true" : "false");
 		}
-		internal static void WriteString (StringBuilder output, object value, JSONParameters parameter) {
+		internal static void WriteString (JSONSerializer serializer, object value) {
 			if (value == null) {
-				output.Append ("null");
+				serializer._output.Append ("null");
 				return;
 			}
-			if (parameter.UseEscapedUnicode) {
-				WriteStringEscapeUnicode (output, (string)value);
+			if (serializer._params.UseEscapedUnicode) {
+				WriteStringEscapeUnicode (serializer._output, (string)value);
 			}
 			else {
-				WriteString (output, (string)value);
+				WriteString (serializer._output, (string)value);
 			}
 		}
 		#endregion
 
-		private void WritePairFast(string name, string value)
-		{
-			WriteStringFast(name);
+		private void WritePairFast (string name, string value) {
+			WriteStringFast (name);
 
-			_output.Append(':');
+			_output.Append (':');
 
-			WriteStringFast(value);
+			WriteStringFast (value);
 		}
 
-		private void WritePair(string name, object value)
-		{
-			WriteStringFast(name);
+		private void WritePair (string name, object value) {
+			WriteStringFast (name);
 
-			_output.Append(':');
+			_output.Append (':');
 
-			WriteValue(value);
+			WriteValue (value);
 		}
 
-		private void WriteArray(IEnumerable array)
-		{
+		private void WriteArray (IEnumerable array) {
 			//if (_params.SerializeEmptyCollections == false) {
 			//	var c = array as ICollection;
 			//	if (c.Count == 0) {
 			//		return;
 			//	}
 			//}
-			_output.Append('[');
+			_output.Append ('[');
 
 			var list = array as IList;
 			if (list != null) {
-				int c = list.Count;
+				var c = list.Count;
 				if (c == 0) {
 					_output.Append (']');
 					return;
@@ -562,42 +527,38 @@ namespace fastJSON
 				}
 			}
 			else {
-				bool pendingSeperator = false;
+				var pendingSeperator = false;
 
-				foreach (object obj in array)
-				{
-					if (pendingSeperator) _output.Append(',');
+				foreach (object obj in array) {
+					if (pendingSeperator) _output.Append (',');
 
-					WriteValue(obj);
+					WriteValue (obj);
 
 					pendingSeperator = true;
 				}
 			}
-			_output.Append(']');
+			_output.Append (']');
 		}
 
-		private void WriteStringDictionary(IDictionary dic)
-		{
-			_output.Append('{');
+		private void WriteStringDictionary (IDictionary dic) {
+			_output.Append ('{');
 
-			bool pendingSeparator = false;
+			var pendingSeparator = false;
 
-			foreach (DictionaryEntry entry in dic)
-			{
-				if (_params.SerializeNullValues == false && (entry.Value == null))
-				{
+			foreach (DictionaryEntry entry in dic) {
+				if (_params.SerializeNullValues == false && entry.Value == null) {
 					continue;
 				}
-				if (pendingSeparator) _output.Append(',');
+				if (pendingSeparator) _output.Append (',');
 				WritePair (_params.NamingStrategy.Rename ((string)entry.Key), entry.Value);
 				pendingSeparator = true;
 			}
-			_output.Append('}');
+			_output.Append ('}');
 		}
 
 		private void WriteNameValueCollection (NameValueCollection collection) {
 			_output.Append ('{');
-			bool pendingSeparator = false;
+			var pendingSeparator = false;
 			var length = collection.Count;
 			string n;
 			for (int i = 0; i < length; i++) {
@@ -651,55 +612,49 @@ namespace fastJSON
 			_output.Append ('}');
 		}
 
-		private void WriteStringDictionary (IDictionary<string, object> dic)
-		{
-			_output.Append('{');
-			bool pendingSeparator = false;
-			foreach (KeyValuePair<string, object> entry in dic)
-			{
-				if (_params.SerializeNullValues == false && (entry.Value == null))
-				{
+		private void WriteStringDictionary (IDictionary<string, object> dic) {
+			_output.Append ('{');
+			var pendingSeparator = false;
+			foreach (KeyValuePair<string, object> entry in dic) {
+				if (_params.SerializeNullValues == false && (entry.Value == null)) {
 					continue;
 				}
-				if (pendingSeparator) _output.Append(',');
+				if (pendingSeparator) _output.Append (',');
 				WritePair (_params.NamingStrategy.Rename (entry.Key), entry.Value);
 				pendingSeparator = true;
 			}
-			_output.Append('}');
+			_output.Append ('}');
 		}
 
-		private void WriteDictionary(IDictionary dic)
-		{
-			_output.Append('[');
+		private void WriteDictionary (IDictionary dic) {
+			_output.Append ('[');
 
-			bool pendingSeparator = false;
+			var pendingSeparator = false;
 
-			foreach (DictionaryEntry entry in dic)
-			{
-				if (pendingSeparator) _output.Append(',');
-				_output.Append('{');
-				WritePair("k", entry.Key);
-				_output.Append(",");
-				WritePair("v", entry.Value);
-				_output.Append('}');
+			foreach (DictionaryEntry entry in dic) {
+				if (pendingSeparator) _output.Append (',');
+				_output.Append ('{');
+				WritePair ("k", entry.Key);
+				_output.Append (",");
+				WritePair ("v", entry.Value);
+				_output.Append ('}');
 
 				pendingSeparator = true;
 			}
-			_output.Append(']');
+			_output.Append (']');
 		}
 
-		private void WriteStringFast(string s)
-		{
-			_output.Append('\"');
-			_output.Append(s);
-			_output.Append('\"');
+		private void WriteStringFast (string s) {
+			_output.Append ('\"');
+			_output.Append (s);
+			_output.Append ('\"');
 		}
 
 		internal static void WriteStringEscapeUnicode (StringBuilder output, string s) {
 			output.Append ('\"');
 
-			int runIndex = -1;
-			int l = s.Length;
+			var runIndex = -1;
+			var l = s.Length;
 			for (var index = 0; index < l; ++index) {
 				var c = s[index];
 				if (c >= ' ' && c < 128 && c != '\"' && c != '\\') {
@@ -742,14 +697,12 @@ namespace fastJSON
 			output.Append ('\"');
 		}
 
-		internal static void WriteString(StringBuilder output, string s)
-		{
+		internal static void WriteString (StringBuilder output, string s) {
 			output.Append ('\"');
 
-			int runIndex = -1;
-			int l = s.Length;
-			for (var index = 0; index < l; ++index)
-			{
+			var runIndex = -1;
+			var l = s.Length;
+			for (var index = 0; index < l; ++index) {
 				var c = s[index];
 				if (c != '\t' && c != '\n' && c != '\r' && c != '\"' && c != '\\')// && c != ':' && c!=',')
 				{
@@ -759,14 +712,12 @@ namespace fastJSON
 					continue;
 				}
 
-				if (runIndex != -1)
-				{
+				if (runIndex != -1) {
 					output.Append (s, runIndex, index - runIndex);
 					runIndex = -1;
 				}
 
-				switch (c)
-				{
+				switch (c) {
 					case '\t': output.Append ("\\t"); break;
 					case '\r': output.Append ("\\r"); break;
 					case '\n': output.Append ("\\n"); break;
@@ -782,6 +733,46 @@ namespace fastJSON
 				output.Append (s, runIndex, s.Length - runIndex);
 
 			output.Append ('\"');
+		}
+
+		static string ToFixedWidthString (int value, int digits) {
+			var chs = new char[digits];
+			for (int i = chs.Length - 1; i >= 0; i--) {
+				chs[i] = (char)('0' + (value % 10));
+				value /= 10;
+			}
+			return new string (chs);
+		}
+
+		static string Int32ToString (int value) {
+			var n = false;
+			var d = 11;
+			if (value < 0) {
+				if (value == Int32.MinValue) {
+					return "-2147483648";
+				}
+				n = true;
+				value = -value;
+			}
+			if (value < 10) {
+				d = 1;
+				if (value < 1000) {
+					d = 3;
+				}
+			}
+			var chs = new char[d];
+			var i = d;
+			while (--i > 0) {
+				chs[i] = (char)('0' + (value % 10));
+				value /= 10;
+				if (value == 0) {
+					break;
+				}
+			}
+			if (n) {
+				chs[--i] = '-';
+			}
+			return new string (chs, i, d - i);
 		}
 	}
 }
