@@ -303,7 +303,7 @@ namespace fastJSON
 	{
 		/// <summary>
 		/// <para>The type of converter to convert string to object. The type should implement <see cref="IJsonConverter"/>.</para>
-		/// <para>During serialization and deserialization, an instance of <see cref="IJsonConverter"/> will be used to convert values between their orginal type and target type.</para>
+		/// <para>During serialization and deserialization, an instance of <see cref="IJsonConverter"/> will be used to convert values between their original type and target type.</para>
 		/// </summary>
 		public Type ConverterType {
 			get { return Converter == null ? null : Converter.GetType (); }
@@ -367,7 +367,7 @@ namespace fastJSON
 		Type ITypeConverter.ElementType { get { return _ElementType; } }
 
 		/// <summary>
-		/// Creates an instance of <see cref="JsonConverter"/>.
+		/// Creates an instance of <see cref="JsonConverter{O, S}"/>.
 		/// </summary>
 		protected JsonConverter () {
 			var s = typeof (S);

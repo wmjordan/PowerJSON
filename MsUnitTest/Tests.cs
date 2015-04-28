@@ -427,16 +427,16 @@ namespace UnitTests
         [TestMethod]
         public void Variables()
         {
-			var s = fastJSON.JSON.ToJSON (42);
-			var o = fastJSON.JSON.ToObject (s);
+			var s = JSON.ToJSON (42);
+			var o = JSON.ToObject (s);
 			Assert.AreEqual (42, Convert.ToInt32 (o));
 
-			s = fastJSON.JSON.ToJSON ("hello");
-			o = fastJSON.JSON.ToObject (s);
+			s = JSON.ToJSON ("hello");
+			o = JSON.ToObject (s);
 			Assert.AreEqual (o, "hello");
 
-			s = fastJSON.JSON.ToJSON (42.42M);
-			o = fastJSON.JSON.ToObject (s);
+			s = JSON.ToJSON (42.42M);
+			o = JSON.ToObject (s);
 			Assert.AreEqual(42.42M, Convert.ToDecimal (o));
         }
 
