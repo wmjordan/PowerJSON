@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 namespace fastJSON
 {
+	delegate void WriteJsonValue (JSONSerializer output, object value);
 	delegate object CreateObject ();
 	delegate object GenericSetter (object target, object value);
 	delegate object GenericGetter (object obj);
@@ -21,6 +22,9 @@ namespace fastJSON
 		readonly SafeDictionary<Type, ReflectionCache> _reflections = new SafeDictionary<Type, ReflectionCache> ();
 		readonly IReflectionController _controller;
 		internal readonly SafeDictionary<Enum, string> EnumValueCache = new SafeDictionary<Enum, string> ();
+		// JSON custom
+		internal readonly SafeDictionary<Type, Serialize> _customSerializer = new SafeDictionary<Type, Serialize> ();
+		internal readonly SafeDictionary<Type, Deserialize> _customDeserializer = new SafeDictionary<Type, Deserialize> ();
 
 		/// <summary>
 		/// Returns the <see cref="IReflectionController"/> currently used by the <see cref="SerializationManager"/>. The instance could be casted to concrete type for more functionalities.
@@ -38,6 +42,46 @@ namespace fastJSON
 		/// <param name="controller">The controller to control object reflections before serialization.</param>
 		public SerializationManager (IReflectionController controller) {
 			_controller = controller;
+		}
+
+		/// <summary>
+		/// Clears all cached reflection information.
+		/// </summary>
+		public void ResetCache () {
+			_reflections.Clear ();
+		}
+
+		internal object CreateCustom (string v, Type type) {
+			Deserialize d;
+			_customDeserializer.TryGetValue (type, out d);
+			return d (v);
+		}
+		internal Serialize GetCustomSerializer(Type type) {
+			Serialize s;
+			_customSerializer.TryGetValue (type, out s);
+			return s;
+		}
+		internal bool IsTypeRegistered (Type t) {
+			if (_customSerializer.Count == 0)
+				return false;
+			Serialize s;
+			return _customSerializer.TryGetValue (t, out s);
+		}
+
+		/// <summary>
+		/// <para>Registers custom type handlers for <paramref name="type"/> not natively handled by fastJSON.</para>
+		/// <para>NOTICE: This method will call <see cref="ResetCache"/> to make the custom serializer effective. All reflection overrides will be lost after that.</para>
+		/// </summary>
+		/// <param name="type">The type to be handled.</param>
+		/// <param name="serializer">The delegate to be used in serialization.</param>
+		/// <param name="deserializer">The delegate to be used in deserialization.</param>
+		public void RegisterCustomType (Type type, Serialize serializer, Deserialize deserializer) {
+			if (type != null && serializer != null && deserializer != null) {
+				_customSerializer.Add (type, serializer);
+				_customDeserializer.Add (type, deserializer);
+				// reset property cache
+				ResetCache ();
+			}
 		}
 
 		internal ReflectionCache GetDefinition (Type type) {
@@ -146,7 +190,7 @@ namespace fastJSON
 								throw new InvalidCastException ("The override type (" + t.FullName + ") does not derive from the member type (" + g.MemberType.FullName + ")");
 							}
 							var n = item.Value;
-							var p = new myPropInfo (t, g.MemberName, Reflection.Instance.IsTypeRegistered (t));
+							var p = new myPropInfo (t, g.MemberName, IsTypeRegistered (t));
 							p.Getter = mp.Getter;
 							p.Setter = mp.Setter;
 							p.CanWrite = mp.CanWrite;

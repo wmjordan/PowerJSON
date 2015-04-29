@@ -51,11 +51,15 @@ namespace fastJSON
     	{
     		//_params = Parameters;
     		_params.FixValues();
-    		Type t = null;
-    		if (type != null && type.IsGenericType)
-    			t = Reflection.Instance.GetGenericTypeDefinition(type);
-    		if (t == typeof(Dictionary<,>) || t == typeof(List<>))
-    			_params.UsingGlobalTypes = false;
+
+			ReflectionCache c = null;
+			if (type != null) {
+				c = _manager.GetDefinition (type);
+				if (c.CommonType == ComplexType.Dictionary
+					|| c.CommonType == ComplexType.List) {
+					_params.UsingGlobalTypes = false;
+				}
+			}
     		_usingglobals = _params.UsingGlobalTypes;
     
     		object o = new JsonParser(json).Decode();
@@ -70,7 +74,7 @@ namespace fastJSON
     #endif
     		if (o is IDictionary)
     		{
-    			if (type != null && t == typeof(Dictionary<,>)) // deserialize a dictionary
+    			if (type != null && c.CommonType == ComplexType.Dictionary) // deserialize a dictionary
     				return RootDictionary(o, type);
     			else // deserialize an object
     				return ParseDictionary(o as Dictionary<string, object>, null, type, null);
@@ -79,10 +83,10 @@ namespace fastJSON
     		if (o is List<object>)
     		{
     			if (type != null) {
-    				if (t == typeof(Dictionary<,>)) // kv format
+    				if (c.CommonType == ComplexType.Dictionary) // kv format
     					return RootDictionary(o, type);
     
-    				if (t == typeof(List<>)) // deserialize to generic list
+    				if (c.CommonType == ComplexType.List) // deserialize to generic list
     					return RootList(o, type);
     
     				if (type == typeof(Hashtable))
@@ -131,7 +135,7 @@ namespace fastJSON
     			return (long)value;
     
     		if (conversionType == typeof(string))
-    			return (string)value;
+    			return value;
 
 			//if (conversionType == typeof(double)) {
 			//	return (double)value;
@@ -145,18 +149,19 @@ namespace fastJSON
     		if (conversionType == typeof(DateTime))
     			return CreateDateTime((string)value);
     
-    		if (Reflection.Instance.IsTypeRegistered(conversionType))
-    			return Reflection.Instance.CreateCustom((string)value, conversionType);
-    
-    		// 8-30-2014 - James Brooks - Added code for nullable types.
-    		if (Reflection.Instance.IsNullable(conversionType))
-    		{
-    			if (value == null)
-    			{
-    				return value;
-    			}
-    			conversionType = Reflection.Instance.GetGenericArguments (conversionType)[0];
-    		}
+    		if (_manager.IsTypeRegistered(conversionType))
+    			return _manager.CreateCustom((string)value, conversionType);
+
+			// 8-30-2014 - James Brooks - Added code for nullable types.
+			if (conversionType.IsGenericType) {
+				var c = _manager.GetDefinition (conversionType);
+				if (c.CommonType == ComplexType.Nullable) {
+					if (value == null) {
+						return value;
+					}
+					conversionType = c.ArgumentTypes[0];
+				}
+			}
     
     		// 8-30-2014 - James Brooks - Nullable Guid is a special case so it was moved after the "IsNullable" check.
     		if (conversionType == typeof(Guid))
@@ -167,8 +172,9 @@ namespace fastJSON
     
     	private object RootList(object parse, Type type)
     	{
-    		Type[] gtypes = Reflection.Instance.GetGenericArguments(type);
-    		IList o = (IList)_manager.GetDefinition(type).Instantiate ();
+			var c = _manager.GetDefinition (type);
+    		Type[] gtypes = c.ArgumentTypes;
+    		IList o = (IList)c.Instantiate ();
     		foreach (var k in (IList)parse)
     		{
     			_usingglobals = false;
@@ -189,8 +195,9 @@ namespace fastJSON
     
     	private object RootDictionary(object parse, Type type)
     	{
-    		Type[] gtypes = Reflection.Instance.GetGenericArguments(type);
-    		Type t1 = null;
+			var c = _manager.GetDefinition (type);
+			Type[] gtypes = c.ArgumentTypes;
+			Type t1 = null;
     		Type t2 = null;
     		if (gtypes != null)
     		{
@@ -199,39 +206,46 @@ namespace fastJSON
     		}
     		if (parse is Dictionary<string, object>)
     		{
-    			IDictionary o = (IDictionary)_manager.GetDefinition (type).Instantiate ();
+    			IDictionary o = (IDictionary)c.Instantiate ();
     
-    			foreach (var kv in (Dictionary<string, object>)parse)
-    			{
-    				object v;
-    				object k = ChangeType(kv.Key, t1);
-    
-    				if (kv.Value is Dictionary<string, object>)
-    					v = ParseDictionary(kv.Value as Dictionary<string, object>, null, t2, null);
-    
-    				else if (t2.IsArray)
-    					v = CreateArray ((List<object>)kv.Value, t2, t2.GetElementType (), null);
-    
-    				else if (t2.IsGenericType && Reflection.Instance.GetGenericTypeDefinition (t2).Equals (typeof (List<>))) {
-    					v = CreateGenericList ((List<object>)kv.Value, t2, Reflection.Instance.GetGenericArguments (t2)[0], null);
-    				}
-    				else if (kv.Value is IList)
-    					v = CreateGenericList ((List<object>)kv.Value, t2, t1, null);
-    				else
-    					v = ChangeType(kv.Value, t2);
-    
-    				o.Add(k, v);
-    			}
-    
-    			return o;
+    			foreach (var kv in (Dictionary<string, object>)parse) {
+					object k = ChangeType (kv.Key, t1);
+					object v = kv.Value;
+					o.Add (k, ConvertObjectType (v, t2));
+				}
+
+				return o;
     		}
     		if (parse is List<object>)
     			return CreateDictionary(parse as List<object>, type, gtypes, null);
     
     		return null;
     	}
-    
-    	internal object ParseDictionary(Dictionary<string, object> d, Dictionary<string, object> globaltypes, Type type, object input)
+
+		/// <summary>
+		/// Converts parsed object to <paramref name="targetType"/>.
+		/// </summary>
+		/// <param name="source">The object created from <see cref="JsonParser"/>.</param>
+		/// <param name="targetType">The type to convert to.</param>
+		/// <returns>An object having <paramref name="targetType"/>.</returns>
+		private object ConvertObjectType (object source, Type targetType) {
+			if (source is Dictionary<string, object>)
+				return ParseDictionary (source as Dictionary<string, object>, null, targetType, null);
+
+			var c = _manager.GetDefinition (targetType);
+			if (c.CommonType == ComplexType.Array) {
+				return CreateArray ((List<object>)source, targetType, c.ArgumentTypes[0], null);
+			}
+			if (c.CommonType == ComplexType.List) {
+				return CreateGenericList ((List<object>)source, targetType, c.ArgumentTypes[0], null);
+			}
+			// NOTE: replaced by the above three lines, t1: see RootDictionary
+			//else if (v is IList)
+			//	return CreateGenericList ((List<object>)v, t2, t1, null);
+			return ChangeType (source, targetType);
+		}
+
+		internal object ParseDictionary(Dictionary<string, object> d, Dictionary<string, object> globaltypes, Type type, object input)
     	{
     		object tn = "";
     		if (type == typeof(NameValueCollection))
@@ -353,7 +367,7 @@ namespace fastJSON
     			object oset = null;
 
 				switch (pi.JsonDataType) {
-					case JsonDataType.Unknown: goto default;
+					case JsonDataType.Undefined: goto default;
 					case JsonDataType.Int: oset = (int)((long)v); break;
 					case JsonDataType.String:
 					case JsonDataType.Bool:
@@ -380,7 +394,7 @@ namespace fastJSON
 					case JsonDataType.StringKeyDictionary: oset = CreateStringKeyDictionary ((Dictionary<string, object>)v, pi.MemberType, pi.GenericTypes, globaltypes); break;
 					case JsonDataType.NameValue: oset = CreateNV ((Dictionary<string, object>)v); break;
 					case JsonDataType.StringDictionary: oset = CreateSD ((Dictionary<string, object>)v); break;
-					case JsonDataType.Custom: oset = Reflection.Instance.CreateCustom ((string)v, pi.MemberType); break;
+					case JsonDataType.Custom: oset = _manager.CreateCustom ((string)v, pi.MemberType); break;
 					default:
 						if (pi.IsGenericType && pi.IsValueType == false && v is List<object>)
 							oset = CreateGenericList ((List<object>)v, pi.MemberType, pi.ElementType, globaltypes);
@@ -543,8 +557,8 @@ namespace fastJSON
     	{
     		var c = data.Count;
     		Array col = Array.CreateInstance (bt, c);
-			Type et = null;
-    		// create an array of objects
+			Type et = bt.GetElementType ();
+    		// creates an array of objects
     		for (int i = 0; i < c; i++)
     		{
     			object ob = data[i];
@@ -553,11 +567,8 @@ namespace fastJSON
 				}
     			if (ob is IDictionary)
     				col.SetValue(ParseDictionary((Dictionary<string, object>)ob, globalTypes, bt, null), i);
-				// Support multi-dimensional array
+				// Supports multi-dimensional array
 				else if (ob is ICollection) {
-					if (et == null) {
-						et = bt.GetElementType ();
-					}
 					col.SetValue (CreateArray ((List<object>)ob, bt, et, globalTypes), i);
 				}
     			else
@@ -580,7 +591,7 @@ namespace fastJSON
     			else if (ob is List<object>)
     			{
     				if (bt.IsGenericType)
-    					col.Add((List<object>)ob);//).ToArray());
+    					col.Add(ob);//).ToArray());
     				else
     					col.Add(((List<object>)ob).ToArray());
     			}

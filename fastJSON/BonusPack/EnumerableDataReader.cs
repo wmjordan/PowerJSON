@@ -140,10 +140,11 @@ namespace fastJSON.BonusPack
 				row["ColumnName"] = GetName (i);
 				row["ColumnOrdinal"] = i;
 				Type type = GetFieldType (i);
-				if (Reflection.Instance.IsNullable (type)) {
-					type = Reflection.Instance.GetGenericArguments (type)[0];
+				var c = SerializationManager.Instance.GetDefinition (type);
+				if (c.CommonType == ComplexType.Nullable) {
+					type = c.ArgumentTypes[0];
 				}
-				row["DataType"] = GetFieldType (i);
+				row["DataType"] = type;
 				row["DataTypeName"] = GetDataTypeName (i);
 				row["ColumnSize"] = -1;
 				t.Rows.Add (row);

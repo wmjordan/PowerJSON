@@ -74,7 +74,7 @@ namespace fastJSON
 		/// <summary>
 		/// Ignores attributes to check for (default : XmlIgnoreAttribute)
 		/// </summary>
-		[Obsolete ("This property is provided for backward compatibility. It returns the FastJsonReflectionController.IgnoreAttributes from the controller instance in SerializationManager.Instance. The default SerialziationManager is used by JSON.ToJSON and JSON.ToObject methods without SerializationManager parameters.")]
+		[Obsolete ("This property is provided for backward compatibility. It returns the FastJsonReflectionController.IgnoreAttributes from the controller instance in SerializationManager.Instance, which is used by JSON.ToJSON and JSON.ToObject methods without SerializationManager parameters. For other method overloads in JSON class with the SerializationManager parameter, this setting will not work.")]
 		public List<Type> IgnoreAttributes { get { return (SerializationManager.Instance.ReflectionController as FastJsonReflectionController).IgnoreAttributes; } }
 
 		/// <summary>

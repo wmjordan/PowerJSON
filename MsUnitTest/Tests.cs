@@ -1,17 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
-#if !SILVERLIGHT
-using System.Data;
-#endif
 using System.Collections;
 using System.Threading;
-using fastJSON;
-using System.Dynamic;
 using System.Collections.Specialized;
 using System.Reflection.Emit;
 using System.Linq.Expressions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using fastJSON;
+#if !SILVERLIGHT
+using System.Data;
+#endif
+
+#pragma warning disable CS0618
 
 namespace UnitTests
 {

@@ -30,11 +30,18 @@ namespace fastJSON
         }
 
 		/// <summary>
+		/// Clears all items.
+		/// </summary>
+		public void Clear () {
+			lock (_Padlock)
+				_Dictionary.Clear ();
+		}
+		/// <summary>
 		/// Gets the value associated with the specified key.
 		/// </summary>
 		/// <param name="key">The key of the value to get.</param>
 		/// <param name="value">When this method returns, contains the value associated with the specified key, if the key is found; otherwise, the default value for the type of the <paramref name="value"/> parameter. This parameter is passed uninitialized. </param>
-		/// <returns> true if the dictionary contains an element with the specified key; otherwise, false.</returns>
+		/// <returns>Returns true if the dictionary contains an element with the specified key; otherwise, false.</returns>
 		public bool TryGetValue(TKey key, out TValue value)
         {
             lock (_Padlock)

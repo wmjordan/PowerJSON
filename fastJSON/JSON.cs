@@ -69,15 +69,15 @@ namespace fastJSON
 		public static string ToJSON(object obj, JSONParameters param, SerializationManager manager)
 		{
 			param.FixValues();
-			Type t = null;
 
 			if (obj == null)
 				return "null";
 
-			if (obj.GetType().IsGenericType)
-				t = Reflection.Instance.GetGenericTypeDefinition(obj.GetType());
-			if (t == typeof(Dictionary<,>) || t == typeof(List<>))
+			ReflectionCache c = manager.GetDefinition (obj.GetType ());
+
+			if (c.CommonType == ComplexType.Dictionary || c.CommonType == ComplexType.List) {
 				param.UsingGlobalTypes = false;
+			}
 
 			// FEATURE : enable extensions when you can deserialize anon types
 			if (param.EnableAnonymousTypes) { param.UseExtensions = false; param.UsingGlobalTypes = false; }
@@ -238,7 +238,7 @@ namespace fastJSON
 		/// <param name="deserializer">The delegate to be used in deserialization.</param>
 		public static void RegisterCustomType(Type type, Serialize serializer, Deserialize deserializer)
 		{
-			Reflection.Instance.RegisterCustomType(type, serializer, deserializer);
+			SerializationManager.Instance.RegisterCustomType(type, serializer, deserializer);
 		}
 		/// <summary>
 		/// Clears the internal reflection cache so you can start from new (you will loose performance)
@@ -246,7 +246,7 @@ namespace fastJSON
 		[Obsolete ("The reflection is managed by SerializationManager. Please use the methods provided by that class to alter the reflection cache.")]
 		public static void ClearReflectionCache()
 		{
-			Reflection.Instance.ClearReflectionCache();
+			SerializationManager.Instance.ResetCache();
 		}
 
 	}
