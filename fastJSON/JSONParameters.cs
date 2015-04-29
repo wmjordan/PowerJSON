@@ -55,7 +55,8 @@ namespace fastJSON
 		/// </summary>
 		public bool EnableAnonymousTypes = false;
 		/// <summary>
-		/// Enables fastJSON extensions $types, $type, $map (default = True)
+		/// Enables fastJSON extensions $types, $type, $map (default = True).
+		/// This setting must be set to true if circular reference detection is required.
 		/// </summary>
 		public bool UseExtensions = true;
 		/// <summary>

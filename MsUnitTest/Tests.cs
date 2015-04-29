@@ -1598,7 +1598,27 @@ namespace UnitTests
             public DateTime DataC;
         }
 
-        public class Root
+		public interface INamed
+		{
+			string Name { get; set; }
+		}
+		public abstract class A<T> where T : INamed
+		{
+			public abstract string Name { get; set; }
+			public T Next { get; set; }
+		}
+
+		public class D : A<D>, INamed
+		{
+			string _Name;
+			public override string Name {
+				get { return _Name; }
+				set {
+					_Name = value;
+				}
+			}
+		}
+		public class Root
         {
             public Y TheY;
             public List<A> ListOfAs = new List<A>();
@@ -1606,6 +1626,7 @@ namespace UnitTests
             public Root NextRoot;
             public int MagicInt { get; set; }
             public A TheReferenceA;
+			public D GenericD;
 
             public void SetMagicInt(int value)
             {
@@ -1613,29 +1634,40 @@ namespace UnitTests
             }
         }
 
-        [TestMethod]
-        public void complexobject()
-        {
-            Root r = new Root();
-            r.TheY = new Y { BinaryData = new byte[] { 0xDE, 0xAD, 0xBE, 0xEF } };
-            r.ListOfAs.Add(new A { DataA = 10 });
-            r.ListOfAs.Add(new B { DataA = 20, DataB = "Hello" });
-            r.ListOfAs.Add(new C { DataA = 30, DataC = DateTime.Today });
-            r.UnicodeText = "Žlutý kůň ∊ WORLD";
-            r.ListOfAs[2].NextA = r.ListOfAs[1];
-            r.ListOfAs[1].NextA = r.ListOfAs[2];
-            r.TheReferenceA = r.ListOfAs[2];
-            r.NextRoot = r;
+		[TestMethod]
+		public void complexobject () {
+			Root r = new Root ();
+			r.TheY = new Y { BinaryData = new byte[] { 0xDE, 0xAD, 0xBE, 0xEF } };
+			r.ListOfAs.Add (new A { DataA = 10 });
+			r.ListOfAs.Add (new B { DataA = 20, DataB = "Hello" });
+			r.ListOfAs.Add (new C { DataA = 30, DataC = DateTime.Today });
+			r.UnicodeText = "Žlutý kůň ∊ WORLD";
+			r.ListOfAs[2].NextA = r.ListOfAs[1];
+			r.ListOfAs[1].NextA = r.ListOfAs[2];
+			r.TheReferenceA = r.ListOfAs[2];
+			r.NextRoot = r;
+			r.GenericD = new D { Name = "d" };
+			r.GenericD.Next = r.GenericD;
 
             var jsonParams = new JSONParameters();
             jsonParams.UseEscapedUnicode = false;
 
-            Console.WriteLine("JSON:\n---\n{0}\n---", JSON.ToJSON(r, jsonParams));
+			var s = JSON.ToJSON (r, jsonParams);
+            Console.WriteLine("JSON:\n---\n{0}\n---", s);
 
             Console.WriteLine();
 
-            Console.WriteLine("Nice JSON:\n---\n{0}\n---", JSON.ToNiceJSON(JSON.ToObject<Root>(JSON.ToNiceJSON(r, jsonParams)), jsonParams));
-        }
+			var o = JSON.ToObject<Root> (s);
+            Console.WriteLine("Nice JSON:\n---\n{0}\n---", JSON.ToNiceJSON(o, jsonParams));
+
+			CollectionAssert.AreEqual (r.TheY.BinaryData, o.TheY.BinaryData);
+			Assert.AreEqual (r.ListOfAs[0].DataA, o.ListOfAs[0].DataA);
+			Assert.AreEqual (r.ListOfAs[1].DataA, o.ListOfAs[1].DataA);
+			Assert.AreEqual (((B)r.ListOfAs[1]).DataB, ((B)o.ListOfAs[1]).DataB);
+			Assert.AreEqual (((C)r.ListOfAs[2]).DataC, ((C)o.ListOfAs[2]).DataC);
+			Assert.AreEqual (r.UnicodeText, o.UnicodeText);
+			Assert.AreEqual (r.GenericD.Name, o.GenericD.Name);
+		}
 
         [TestMethod]
         public void TestMilliseconds()

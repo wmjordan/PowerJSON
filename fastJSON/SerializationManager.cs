@@ -3,11 +3,6 @@ using System.Collections.Generic;
 
 namespace fastJSON
 {
-	delegate void WriteJsonValue (JSONSerializer output, object value);
-	delegate object CreateObject ();
-	delegate object GenericSetter (object target, object value);
-	delegate object GenericGetter (object obj);
-
 	/// <summary>
 	/// The cached serialization information used by the reflection engine during serialization and deserialization.
 	/// </summary>

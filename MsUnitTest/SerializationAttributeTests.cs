@@ -47,8 +47,8 @@ namespace UnitTests
 					Field = 3
 				}
 			};
-			var ss = fastJSON.JSON.ToJSON (so, _JP);
-			var ps = fastJSON.JSON.ToObject<PrivateStruct> (ss);
+			var ss = JSON.ToJSON (so, _JP);
+			var ps = JSON.ToObject<PrivateStruct> (ss);
 			Console.WriteLine (ss);
 			Assert.AreEqual (so.Field, ps.Field);
 			Assert.AreEqual (2, ps.Field);
@@ -56,29 +56,29 @@ namespace UnitTests
 
 			var o = new PrivateClass ();
 			o.StructData = new PrivateStruct () { Field = 4 };
-			var s = fastJSON.JSON.ToJSON (o, _JP);
-			var p = fastJSON.JSON.ToObject<PrivateClass> (s);
+			var s = JSON.ToJSON (o, _JP);
+			var p = JSON.ToObject<PrivateClass> (s);
 			Console.WriteLine (s);
 			Assert.AreEqual (o.Field, p.Field);
 			Assert.AreEqual (4, p.StructData.Field);
 
 			var l = new List<PrivateClass> () { new PrivateClass () { Field = 1 } };
-			var sl = fastJSON.JSON.ToJSON (l, _JP);
-			var pl = fastJSON.JSON.ToObject<List<PrivateClass>> (sl);
+			var sl = JSON.ToJSON (l, _JP);
+			var pl = JSON.ToObject<List<PrivateClass>> (sl);
 			Console.WriteLine (sl);
 			Assert.AreEqual (l[0].Field, pl[0].Field);
 
 			var a = new PrivateClass[] { new PrivateClass () { Field = 1 } };
-			var sa = fastJSON.JSON.ToJSON (a, _JP);
-			var pa = fastJSON.JSON.ToObject<PrivateClass[]> (sa);
+			var sa = JSON.ToJSON (a, _JP);
+			var pa = JSON.ToObject<PrivateClass[]> (sa);
 			Console.WriteLine (sa);
 			Assert.AreEqual (a[0].Field, pa[0].Field);
 
 			var d = new Dictionary<string, List<PrivateClass>> () { 
 				{ "test", l }
 			};
-			var sd = fastJSON.JSON.ToJSON (d, _JP);
-			var pd = fastJSON.JSON.ToObject<Dictionary<string, List<PrivateClass>>> (sd);
+			var sd = JSON.ToJSON (d, _JP);
+			var pd = JSON.ToObject<Dictionary<string, List<PrivateClass>>> (sd);
 			Console.WriteLine (sd);
 			Assert.AreEqual (l[0].Field, d["test"][0].Field);
 		}
@@ -87,9 +87,9 @@ namespace UnitTests
 		[ExpectedException (typeof (JsonSerializationException))]
 		public void FailOnNonPublicClass () {
 			var ns = new NonSerializableClass () { Field = 1 };
-			var s = fastJSON.JSON.ToJSON (ns, _JP);
+			var s = JSON.ToJSON (ns, _JP);
 			Console.WriteLine (s);
-			var np = fastJSON.JSON.ToObject<NonSerializableClass> (s);
+			var np = JSON.ToObject<NonSerializableClass> (s);
 			np.Field = 2;
 		} 
 		#endregion
@@ -116,9 +116,9 @@ namespace UnitTests
 			o.ShowMe = 1;
 			o.IgnoreThisField = 2;
 			o.IgnoreThisProperty = 3;
-			var s = fastJSON.JSON.ToJSON (o, _JP);
+			var s = JSON.ToJSON (o, _JP);
 			Assert.IsFalse (s.Contains (@"""ReadonlyProperty"":"));
-			var p = fastJSON.JSON.ToObject<IncludeAttributeTest> (s);
+			var p = JSON.ToObject<IncludeAttributeTest> (s);
 			Console.WriteLine (s);
 			Assert.AreEqual (1, p.ShowMe);
 			Assert.AreEqual (0, p.IgnoreThisProperty);
@@ -176,13 +176,13 @@ namespace UnitTests
 		[TestMethod]
 		public void JsonEnumValueTest () {
 			var so = new EnumTestSample ();
-			var ss = fastJSON.JSON.ToJSON (so, _JP);
+			var ss = JSON.ToJSON (so, _JP);
 			Console.WriteLine (ss);
 			StringAssert.Contains (ss, @"""NumericFruit"":13");
-			var ps = fastJSON.JSON.ToObject<EnumTestSample> (ss);
+			var ps = JSON.ToObject<EnumTestSample> (ss);
 			Console.WriteLine (ss);
-			Assert.AreEqual ("\"bananaaaa\"", fastJSON.JSON.ToJSON (Fruits.Banana));
-			Assert.AreEqual ("33", fastJSON.JSON.ToJSON ((Fruits)33));
+			Assert.AreEqual ("\"bananaaaa\"", JSON.ToJSON (Fruits.Banana));
+			Assert.AreEqual ("33", JSON.ToJSON ((Fruits)33));
 			Assert.AreEqual (Fruits.Apple, ps.Apple);
 			Assert.AreEqual (Fruits.Apple | Fruits.Banana, ps.MixedFruit);
 			Assert.AreEqual ((Fruits)5, ps.ConvertedFruit);
@@ -513,7 +513,7 @@ namespace UnitTests
 			StringAssert.Contains (t, "\"Vip\":true");
 			StringAssert.Contains (t, "\"Id\":123");
 			StringAssert.Contains (t, "\"Date\":\"2000-01-01T00:00:00\"");
-			var o = fastJSON.JSON.ToObject<CustomConverterType> (t, _JP);
+			var o = JSON.ToObject<CustomConverterType> (t, _JP);
 			Console.WriteLine (JSON.ToJSON (o, _JP));
 			CollectionAssert.AreEqual (c.Array, o.Array);
 			CollectionAssert.AreEqual (c.NormalArray, o.NormalArray);
@@ -525,7 +525,7 @@ namespace UnitTests
 			Assert.AreEqual (c.Date, o.Date);
 			CollectionAssert.AreEqual (c.IdList, o.IdList);
 
-			o = fastJSON.JSON.ToObject<CustomConverterType> ("{\"Id\":\"id123\", \"intArray1\": [ 1, 2, 3 ] }");
+			o = JSON.ToObject<CustomConverterType> ("{\"Id\":\"id123\", \"intArray1\": [ 1, 2, 3 ] }");
 			Assert.AreEqual ("id123", o.Id);
 			CollectionAssert.AreEqual ((ICollection)new int[] { 1, 2, 3 }, (ICollection)o.Variable1);
 		} 

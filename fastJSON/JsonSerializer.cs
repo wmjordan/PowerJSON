@@ -435,17 +435,14 @@ namespace fastJSON
 					goto EXIT;
 				}
 
-				var t = serializer._manager.GetDefinition (list.GetType ()).ArgumentTypes;
-				if (t != null && t.Length == 1 && t[0] != typeof(object)) {
-					var w = GetWriteJsonMethod (t[0]);
-					if (w != null) {
-						w (serializer, list[0]);
-						for (int i = 1; i < c; i++) {
-							serializer._output.Append (',');
-							w (serializer, list[i]);
-						}
-						goto EXIT;
+				var w = serializer._manager.GetDefinition (list.GetType ()).ItemSerializer;
+				if (w != null) {
+					w (serializer, list[0]);
+					for (int i = 1; i < c; i++) {
+						serializer._output.Append (',');
+						w (serializer, list[i]);
 					}
+					goto EXIT;
 				}
 
 				serializer.WriteValue (list[0]);

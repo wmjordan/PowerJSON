@@ -3,28 +3,40 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Data;
-using System.Reflection;
-using System.Reflection.Emit;
 
 namespace fastJSON
 {
-    class ReflectionCache
+	delegate object RevertJsonValue (JSONDeserializer deserializer, object value);
+	delegate void WriteJsonValue (JSONSerializer serializer, object value);
+	delegate object CreateObject ();
+	delegate object GenericSetter (object target, object value);
+	delegate object GenericGetter (object obj);
+
+	class ReflectionCache
     {
     	internal readonly string TypeName;
     	internal readonly string AssemblyName;
+
+		#region Definition for Generic or Array Types
 		internal readonly Type GenericDefinition;
 		internal readonly Type[] ArgumentTypes;
 		internal readonly ComplexType CommonType;
+		internal readonly WriteJsonValue ItemSerializer;
+		internal readonly RevertJsonValue ItemDeserializer;
+		#endregion
 
+		#region Object Serialization and Deserialization Info
 		internal readonly bool AlwaysDeserializable;
-    	internal readonly CreateObject Constructor;
-    	internal readonly Getters[] Getters;
-    	internal readonly Dictionary<string, myPropInfo> Properties;
+		internal readonly CreateObject Constructor;
+		internal readonly Getters[] Getters;
+		internal readonly Dictionary<string, myPropInfo> Properties;
+		internal IJsonInterceptor Interceptor;
+		#endregion
 
-    	internal readonly bool IsFlaggedEnum;
-    	internal readonly Dictionary<string, Enum> EnumNames;
-
-    	internal IJsonInterceptor Interceptor;
+		#region Enum Info
+		internal readonly bool IsFlaggedEnum;
+		internal readonly Dictionary<string, Enum> EnumNames; 
+		#endregion
 
     	internal ReflectionCache (Type type, SerializationManager manager) {
     		var controller = manager.ReflectionController;
@@ -48,10 +60,15 @@ namespace fastJSON
 				else if (GenericDefinition.Equals (typeof(Nullable<>))) {
 					CommonType = ComplexType.Nullable;
 				}
+				if (ArgumentTypes.Length == 1 && ArgumentTypes[0] != typeof (object)) {
+					ItemSerializer = JSONSerializer.GetWriteJsonMethod (ArgumentTypes[0]);
+					ItemDeserializer = JSONDeserializer.GetReadJsonMethod (ArgumentTypes[0]);
+				}
 			}
 			else if (type.IsArray) {
 				ArgumentTypes = new Type[] { type.GetElementType () };
 				CommonType = ComplexType.Array;
+				ItemDeserializer = JSONDeserializer.GetReadJsonMethod (ArgumentTypes[0]);
 			}
 			if (controller != null) {
     			AlwaysDeserializable = controller.IsAlwaysDeserializable (type);
