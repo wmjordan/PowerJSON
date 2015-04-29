@@ -365,6 +365,7 @@ namespace UnitTests
 		#region JsonConverterAttribute
 		class FakeEncryptionConverter : IJsonConverter
 		{
+
 			public object SerializationConvert (string fieldName, object fieldValue) {
 				var s = fieldValue as string;
 				if (s != null) {
@@ -378,6 +379,10 @@ namespace UnitTests
 					return s.Substring ("Encrypted: ".Length);
 				}
 				return fieldValue;
+			}
+
+			public Type GetReversiveType (string fieldName, object fieldValue) {
+				return null;
 			}
 		}
 		public class JsonConverterTestSample
@@ -397,7 +402,7 @@ namespace UnitTests
 			Assert.AreEqual (s, o.MyProperty);
 		}
 
-		public class PersonInfo
+		public class PersonInfo : IName
 		{
 			public string Name { get; set; }
 			public bool Vip { get; set; }
@@ -431,9 +436,14 @@ namespace UnitTests
 			public string Id { get; set; }
 			[JsonConverter (typeof (IdListConverter))]
 			public List<string> IdList { get; set; }
+			[JsonConverter (typeof (NamedClassConverter))]
+			public IName NamedObject { get; set; }
 		}
 		class Int32ArrayConverter : IJsonConverter
 		{
+			public Type GetReversiveType (string fieldName, object fieldValue) {
+				return null;
+			}
 
 			public object DeserializationConvert (string fieldName, object fieldValue) {
 				var s = fieldValue as string;
@@ -494,7 +504,35 @@ namespace UnitTests
 				return fieldValue.ConvertAll ((i) => { return "id" + i.ToString (); });
 			}
 		}
-
+		class NamedClassConverter : JsonConverter<IName, IName>
+		{
+			public override Type GetReversiveType (string fieldName, object fieldValue) {
+				var d = fieldValue as Dictionary<string, object>;
+				if (d == null) {
+					return null;
+				}
+				if (d.ContainsKey ("Vip")) {
+					return typeof(PersonInfo);
+				}
+				else if (d.ContainsKey ("Value")) {
+					var v = d["Value"];
+					if (v is bool) {
+						return typeof(NamedClassA);
+					}
+					// NOTE: keep in mind that there's no Int32 in primitive types
+					if (v is long) {
+						return typeof(NamedClassB);
+					}
+				}
+				return null;
+			}
+			public override IName Convert (string fieldName, IName fieldValue) {
+				return fieldValue;
+			}
+			public override IName Revert (string fieldName, IName fieldValue) {
+				return fieldValue;
+			}
+		}
 		[TestMethod]
 		public void ConvertDataAndType () {
 			var c = new CustomConverterType () {
@@ -506,7 +544,8 @@ namespace UnitTests
 				Worker = "Gates",
 				Id = "id123",
 				IdList = new List<string> () { "id1", "id2", "id3" },
-				Date = new DateTime (1999, 12, 31, 23, 0, 0)
+				Date = new DateTime (1999, 12, 31, 23, 0, 0),
+				NamedObject = new PersonInfo () { Name = "person", Vip = false }
 			};
 			var t = JSON.ToJSON (c, _JP);
 			Console.WriteLine (t);
@@ -524,6 +563,22 @@ namespace UnitTests
 			Assert.AreEqual (c.Id, o.Id);
 			Assert.AreEqual (c.Date, o.Date);
 			CollectionAssert.AreEqual (c.IdList, o.IdList);
+			Assert.AreEqual (c.NamedObject.Name, o.NamedObject.Name);
+			Assert.IsTrue (c.NamedObject is PersonInfo);
+
+			c.NamedObject = new NamedClassA () { Name = "classA", Value = true };
+			t = JSON.ToJSON (c, _JP);
+			Console.WriteLine (t);
+			o = JSON.ToObject<CustomConverterType> (t, _JP);
+			Assert.AreEqual (c.NamedObject.Name, o.NamedObject.Name);
+			Assert.IsTrue (c.NamedObject is NamedClassA);
+
+			c.NamedObject = new NamedClassB() { Name = "classB", Value = 1 };
+			t = JSON.ToJSON (c, _JP);
+			Console.WriteLine (t);
+			o = JSON.ToObject<CustomConverterType> (t, _JP);
+			Assert.AreEqual (c.NamedObject.Name, o.NamedObject.Name);
+			Assert.IsTrue (c.NamedObject is NamedClassB);
 
 			o = JSON.ToObject<CustomConverterType> ("{\"Id\":\"id123\", \"intArray1\": [ 1, 2, 3 ] }");
 			Assert.AreEqual ("id123", o.Id);

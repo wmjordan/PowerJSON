@@ -283,24 +283,27 @@ namespace fastJSON
 				object v = data[n];
 
 				if (pi.Converter != null) {
-					var tc = pi.Converter as ITypeConverter;
+					var c = pi.Converter;
+					var st = c.GetReversiveType (n, v);
 					var xv = v;
-					if (tc != null && xv != null) {
-						var st = tc.SerializedType;
-						if (st != null && st != typeof(object)) {
-							if (v is Dictionary<string, object>) {
-								xv = ParseDictionary ((Dictionary<string, object>)xv, globaltypes, st, pi.Getter (o));
+					if (v != null && st != null && st != typeof(object)) {
+						if (v is Dictionary<string, object>) {
+							xv = ParseDictionary ((Dictionary<string, object>)xv, globaltypes, st, pi.Getter (o));
+						}
+						else if (v is List<object>) {
+							if (st.IsSubclassOf (typeof(Array))) {
+								xv = CreateArray ((List<object>)xv, st, globaltypes);
 							}
-							else if (v is List<object>) {
+							else {
 								xv = CreateGenericList ((List<object>)xv, st, globaltypes);
 							}
-							else if (pi.MemberType.Equals (xv.GetType ()) == false) {
-								xv = ChangeType (xv, st);
-							}
+						}
+						else if (pi.MemberType.Equals (xv.GetType ()) == false) {
+							xv = ChangeType (xv, st);
 						}
 					}
 					var cv = pi.Converter.DeserializationConvert (n, xv);
-					if (ReferenceEquals (cv, xv) == false) {
+					if (ReferenceEquals (cv, v) == false) {
 						// use the converted value
 						if (cv != null || pi.IsClass || pi.IsNullable) {
 							if (si != null && si.OnDeserializing (o, n, ref cv) == false) {

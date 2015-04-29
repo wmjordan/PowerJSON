@@ -328,9 +328,22 @@ namespace fastJSON
 	/// <summary>
 	/// Converts the member value being serialized or deserialized.
 	/// </summary>
+	/// <remarks>
+	/// <para>During deserialization, the JSON string is parsed and converted to primitive data. The data could be of the following six primitive types returned from the JSON Parser: <see cref="Boolean"/>, <see cref="Int64"/>, <see cref="Double"/>, <see cref="String"/>, <see cref="List{Object}"/> and <see cref="Dictionary{String, Object}"/>.</para>
+	/// <para>The <see cref="DeserializationConvert"/> method should be able to process the above six types, as well as the null value, and convert the primitive value to match the type of the member being deserialized.</para>
+	/// <para>If the <see cref="GetReversiveType"/> method returns a <see cref="Type"/>, the deserializer will firstly attempt to convert the primitive value to match the type, and then pass the converted value rather than the primitive value to the "fieldValue" parameter of the <see cref="DeserializationConvert"/> method. By this means, the implementation of <see cref="DeserializationConvert"/> method does not have to cope with primitive field values.</para>
+	/// </remarks>
 	/// <preliminary />
 	public interface IJsonConverter
 	{
+		/// <summary>
+		/// Returns the expected type from primitive data. If the returned type is not null, the deserializer will attempt to convert <paramref name="fieldValue"/> to match the returned type.
+		/// </summary>
+		/// <param name="fieldName">The name of the field or property.</param>
+		/// <param name="fieldValue">The primitive value of the field of property.</param>
+		/// <returns>The expected data type.</returns>
+		Type GetReversiveType (string fieldName, object fieldValue);
+
 		/// <summary>
 		/// Converts fieldValue to a new value during serialization.
 		/// </summary>
@@ -340,18 +353,12 @@ namespace fastJSON
 		object SerializationConvert (string fieldName, object fieldValue);
 		/// <summary>
 		/// <para>Converts fieldValue to a new value during deserialization. The type of the <paramref name="fieldValue"/> and the returned value can be different types, which enables adapting various data types from deserialization.</para>
-		/// <para>At this moment the type of the fieldValue could be one of the following six primitive types returned from the JSON Parser: <see cref="Boolean"/>, <see cref="Int64"/>, <see cref="Double"/>, <see cref="String"/>, <see cref="List&lt;Object&gt;"/> and <see cref="Dictionary&lt;String, Object&gt;"/>.</para>
+		/// <para>At this moment the type of the fieldValue could be one of the following </para>
 		/// </summary>
 		/// <param name="fieldName">The name of the field or property.</param>
-		/// <param name="fieldValue">The value of the field of property.</param>
+		/// <param name="fieldValue">The primitive value of the field of property.</param>
 		/// <returns>The converted value.</returns>
 		object DeserializationConvert (string fieldName, object fieldValue);
-	}
-
-	internal interface ITypeConverter
-	{
-		Type SerializedType { get; }
-		Type ElementType { get; }
 	}
 
 	/// <summary>
@@ -359,28 +366,35 @@ namespace fastJSON
 	/// </summary>
 	/// <typeparam name="O">The original type of the data being serialized.</typeparam>
 	/// <typeparam name="S">The serialized type of the data.</typeparam>
+	/// <remarks>For further details about implementation, please refer to <seealso cref="IJsonConverter"/>.</remarks>
 	/// <preliminary />
-	public abstract class JsonConverter<O, S> : IJsonConverter, ITypeConverter
+	public abstract class JsonConverter<O, S> : IJsonConverter
 	{
-		Type _SerializedType, _ElementType;
-		Type ITypeConverter.SerializedType { get { return _SerializedType; } }
-		Type ITypeConverter.ElementType { get { return _ElementType; } }
+		Type _SerializedType;
 
 		/// <summary>
 		/// Creates an instance of <see cref="JsonConverter{O, S}"/>.
 		/// </summary>
 		protected JsonConverter () {
 			var s = typeof (S);
-			if (s == typeof (bool) || s == typeof (string) || s == typeof (double) || s == typeof (long)
+			if (s == typeof (bool) || s == typeof (string)
+				|| s == typeof (double) || s == typeof (long)
 				|| s == typeof (List<object>)
 				|| s == typeof (Dictionary<string, object>)
 			) {
 				return;
 			}
 			_SerializedType = s;
-			if (s.IsGenericType && typeof(System.Collections.IList).IsAssignableFrom (s)) {
-				_ElementType = s.GetGenericArguments ()[0];
-			}
+		}
+
+		/// <summary>
+		/// Returns the expected type of <paramref name="fieldValue"/>. The implemenation returns <typeparamref name="S"/>.
+		/// </summary>
+		/// <param name="fieldName">The name of the annotated member.</param>
+		/// <param name="fieldValue">The value being serialized.</param>
+		/// <returns>The type of <typeparamref name="S"/>.</returns>
+		public virtual Type GetReversiveType (string fieldName, object fieldValue) {
+			return _SerializedType;
 		}
 
 		/// <summary>
@@ -424,6 +438,7 @@ namespace fastJSON
 		/// <param name="fieldValue">The serialized value.</param>
 		/// <returns>The reverted value which has the same type as the annotated member.</returns>
 		public abstract O Revert (string fieldName, S fieldValue);
+
 	}
 
 	internal static class AttributeHelper

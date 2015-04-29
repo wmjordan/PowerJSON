@@ -102,18 +102,22 @@ namespace consoletest
 	public class Int32ArrayConverter : IJsonConverter
 	{
 
-		public object DeserializationConvert (string fieldName, object fieldValue) {
-			var s = fieldValue as string;
-			if (s != null) {
-				return Array.ConvertAll (s.Split (','), Int32.Parse);
-			}
-			return fieldValue;
+		public Type GetReversiveType (string fieldName, object fieldValue) {
+			return null;
 		}
 
 		public object SerializationConvert (string fieldName, object fieldValue) {
 			var l = fieldValue as int[];
 			if (l != null) {
 				return String.Join (",", Array.ConvertAll (l, Convert.ToString));
+			}
+			return fieldValue;
+		}
+
+		public object DeserializationConvert (string fieldName, object fieldValue) {
+			var s = fieldValue as string;
+			if (s != null) {
+				return Array.ConvertAll (s.Split (','), Int32.Parse);
 			}
 			return fieldValue;
 		}
