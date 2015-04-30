@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Data;
+using System.Reflection;
 
 namespace fastJSON
 {
@@ -144,14 +145,14 @@ namespace fastJSON
 
 	sealed class Getters : IMemberInfo
 	{
-		internal string MemberName;
-		internal Type MemberType;
-		internal GenericGetter Getter;
-		internal bool IsStatic;
-		internal bool IsProperty;
-		internal bool IsReadOnly;
-		internal bool IsCollection;
-		internal WriteJsonValue WriteValue;
+		internal readonly string MemberName;
+		internal readonly Type MemberType;
+		internal readonly GenericGetter Getter;
+		internal readonly bool IsStatic;
+		internal readonly bool IsProperty;
+		internal readonly bool IsReadOnly;
+		internal readonly bool IsCollection;
+		internal readonly WriteJsonValue WriteValue;
 
 		internal bool SpecificName;
 		internal string SerializedName;
@@ -159,6 +160,7 @@ namespace fastJSON
 		internal object DefaultValue;
 		internal IDictionary<Type, string> TypedNames;
 		internal IJsonConverter Converter;
+		internal IJsonConverter ItemConverter;
 		internal TriState Serializable;
 
 		string IMemberInfo.MemberName { get { return MemberName; } }
@@ -166,6 +168,37 @@ namespace fastJSON
 		bool IMemberInfo.IsProperty { get { return IsProperty; } }
 		bool IMemberInfo.IsReadOnly { get { return IsReadOnly; } }
 		bool IMemberInfo.IsStatic { get { return IsStatic; } }
+
+		public Getters (MemberInfo memberInfo, GenericGetter getter) {
+			bool s;	// static
+			bool ro; // read-only
+			Type t;	// member type
+			bool tp; // property
+			if (memberInfo is FieldInfo) {
+				var f = ((FieldInfo)memberInfo);
+				s = f.IsStatic;
+				ro = f.IsInitOnly;
+				t = f.FieldType;
+				tp = false;
+			}
+			else { // PropertyInfo
+				var p = ((PropertyInfo)memberInfo);
+				s = (p.GetGetMethod () ?? p.GetSetMethod ()).IsStatic;
+				ro = p.GetSetMethod () == null;	// p.CanWrite can return true if the setter is non-public
+				t = p.PropertyType;
+				tp = true;
+			}
+			MemberName = memberInfo.Name;
+			Getter = getter;
+			SerializedName = MemberName;
+			IsStatic = s;
+			IsProperty = tp;
+			IsReadOnly = ro;
+			IsCollection = typeof(ICollection).IsAssignableFrom (t) && t != typeof(byte[]);
+			MemberType = t;
+			WriteValue = JSONSerializer.GetWriteJsonMethod (t);
+		}
+
 	}
 
 	enum JsonDataType // myPropInfoType
@@ -215,6 +248,7 @@ namespace fastJSON
 		internal GenericGetter Getter;
 		internal bool CanWrite;
 		internal IJsonConverter Converter;
+		internal IJsonConverter ItemConverter;
 
 		myPropInfo (Type type, string name) {
 			MemberName = name;

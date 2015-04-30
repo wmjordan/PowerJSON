@@ -77,17 +77,6 @@ namespace fastJSON
 				if (m.GetIndexParameters ().Length > 0) {// Property is an indexer
 					continue;
 				}
-				// shares the definition from declaring type (base type)
-				// FIXME: Commented out because of immaturity.
-				// 1) If we re-register the base type and purge existing, the link between inherit types
-				// and the base type will be cut off.
-				// 2) IgnoreAttributes setting will be ignored. (see unit test)
-				//
-				//if (m.DeclaringType != type) {
-				//	var g = manager.GetDefinition (m.DeclaringType).FindGetters (m.Name);
-				//	getters.Add (m.Name, g);
-				//	continue;
-				//}
 				AddGetter (getters, m, CreateGetProperty (type, m), controller);
 			}
 
@@ -110,40 +99,13 @@ namespace fastJSON
 
 		internal static void AddGetter (Dictionary<string, Getters> getters, MemberInfo memberInfo, GenericGetter getter, IReflectionController controller) {
 			var n = memberInfo.Name;
-			bool s;	// static
-			bool ro; // read-only
-			Type t;	// member type
-			bool tp; // property
-			if (memberInfo is FieldInfo) {
-				var f = ((FieldInfo)memberInfo);
-				s = f.IsStatic;
-				ro = f.IsInitOnly;
-				t = f.FieldType;
-				tp = false;
-			}
-			else { // PropertyInfo
-				var p = ((PropertyInfo)memberInfo);
-				s = (p.GetGetMethod () ?? p.GetSetMethod ()).IsStatic;
-				ro = p.GetSetMethod () == null;	// p.CanWrite can return true if the setter is non-public
-				t = p.PropertyType;
-				tp = true;
-			}
-			var g = new Getters {
-				MemberName = memberInfo.Name,
-				Getter = getter,
-				SerializedName = n,
-				IsStatic = s,
-				IsProperty = tp,
-				IsReadOnly = ro,
-				IsCollection = typeof(ICollection).IsAssignableFrom (t) && t != typeof(byte[]),
-				MemberType = t,
-				WriteValue = JSONSerializer.GetWriteJsonMethod (t)
-			};
+			Getters g = new Getters (memberInfo, getter);
 
 			if (controller != null) {
 				g.Serializable = controller.IsMemberSerializable (memberInfo, g);
 				object dv;
 				g.Converter = controller.GetMemberConverter (memberInfo);
+				g.ItemConverter = controller.GetMemberItemConverter (memberInfo);
 				g.HasDefaultValue = controller.GetDefaultValue (memberInfo, out dv);
 				if (g.HasDefaultValue) {
 					g.DefaultValue = dv;
@@ -363,6 +325,7 @@ namespace fastJSON
 				return;
 			}
 			d.Converter = controller.GetMemberConverter (member);
+			d.ItemConverter = controller.GetMemberItemConverter (member);
 			var tn = controller.GetSerializedNames (member);
 			if (tn == null) {
 				sd.Add (d.MemberName, d);
@@ -376,6 +339,7 @@ namespace fastJSON
 				dt.Getter = d.Getter;
 				dt.Setter = d.Setter;
 				dt.Converter = d.Converter;
+				dt.ItemConverter = d.Converter;
 				dt.CanWrite = d.CanWrite;
 				sd.Add (sn, dt);
 			}

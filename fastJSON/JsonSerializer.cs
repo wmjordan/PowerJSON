@@ -262,14 +262,14 @@ namespace fastJSON
 
 		bool _TypesWritten = false;
 		private void WriteObject (object obj) {
-			var i = 0;
-			if (_cirobj.TryGetValue (obj, out i) == false)
+			var ci = 0;
+			if (_cirobj.TryGetValue (obj, out ci) == false)
 				_cirobj.Add (obj, _cirobj.Count + 1);
 			else {
 				if (_current_depth > 0 && _params.InlineCircularReferences == false) {
 					//_circular = true;
 					_output.Append ("{\"$i\":");
-					_output.Append (Int32ToString (i));
+					_output.Append (Int32ToString (ci));
 					_output.Append ("}");
 					return;
 				}
@@ -329,11 +329,18 @@ namespace fastJSON
 				}
 				var o = p.Getter (obj);
 				var n = p.MemberName;
+				if (si != null && si.OnSerializing (obj, ref n, ref o) == false) {
+					continue;
+				}
 				if (p.Converter != null) {
 					o = p.Converter.SerializationConvert (n, o);
 				}
-				if (si != null && si.OnSerializing (obj, ref n, ref o) == false) {
-					continue;
+				if (p.ItemConverter != null && o is IEnumerable) {
+					var ol = new List<object> ();
+					foreach (var item in (o as IEnumerable)) {
+						ol.Add (p.ItemConverter.SerializationConvert (n, item));
+					}
+					o = ol;
 				}
 				if (p.SpecificName) {
 					if (o == null || p.TypedNames == null || p.TypedNames.TryGetValue (o.GetType (), out n) == false) {
@@ -344,7 +351,6 @@ namespace fastJSON
 					n = p.SerializedName;
 				}
 				if (_params.SerializeNullValues == false && (o == null || o is DBNull)) {
-					//append = false;
 					continue;
 				}
 				if (p.HasDefaultValue && Equals (o, p.DefaultValue)) {
@@ -354,12 +360,12 @@ namespace fastJSON
 				if (p.IsCollection && _params.SerializeEmptyCollections == false && o is ICollection && (o as ICollection).Count == 0) {
 					continue;
 				}
-				if (p.SpecificName == false) {
-					n = _params.NamingStrategy.Rename (p.SerializedName);
-				}
 				if (append)
 					_output.Append (',');
 
+				if (p.SpecificName == false) {
+					n = _params.NamingStrategy.Rename (p.SerializedName);
+				}
 				if (p.WriteValue != null && p.Converter == null) {
 					WriteStringFast (n);
 					_output.Append (':');

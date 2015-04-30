@@ -45,6 +45,7 @@ namespace fastJSON
 		/// Gets or sets the name when the annotated field or property is serialized or deserialized. This overrides the <see cref="JSONParameters.NamingConvention"/> setting in <see cref="JSONParameters"/>.
 		/// </summary>
 		public string Name { get; set; }
+
 		/// <summary>
 		/// The type of the field or property. The same field or property with multiple <see cref="JsonFieldAttribute"/> can have various names mapped to various types.
 		/// </summary>
@@ -57,6 +58,7 @@ namespace fastJSON
 		public JsonFieldAttribute (string name) {
 			Name = name;
 		}
+
 		/// <summary>
 		/// Specifies the name of the serialized field or property which has a associated type.
 		/// </summary>
@@ -77,6 +79,7 @@ namespace fastJSON
 		/// Gets or sets the serialization order of the annotated field or property.
 		/// </summary>
 		public int Order { get; set; }
+
 		/// <summary>
 		/// Specifies the order of the serialized field or property.
 		/// </summary>
@@ -326,12 +329,43 @@ namespace fastJSON
 	}
 
 	/// <summary>
+	/// Controls data conversion of <see cref="System.Collections.IEnumerable"/> items in serialization and deserialization.
+	/// </summary>
+	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
+	public class JsonItemConverterAttribute : Attribute
+	{
+		/// <summary>
+		/// <para>The type of converter to convert string to object. The type should implement <see cref="IJsonConverter"/>.</para>
+		/// <para>During serialization and deserialization, an instance of <see cref="IJsonConverter"/> will be used to convert values between their original type and target type.</para>
+		/// </summary>
+		public Type ConverterType {
+			get { return Converter == null ? null : Converter.GetType (); }
+			set { Converter = value != null ? Activator.CreateInstance (value) as IJsonConverter : null; }
+		}
+
+		internal IJsonConverter Converter { get; private set; }
+
+		/// <summary>
+		/// Marks the item value of a field or a property to be converted by an <see cref="IJsonConverter"/>.
+		/// </summary>
+		/// <param name="converter">The type of the <see cref="IJsonConverter"/>.</param>
+		/// <exception cref="JsonSerializationException">Exception can be thrown if the type does not implements <see cref="IJsonConverter"/>.</exception>
+		public JsonItemConverterAttribute (Type converter) {
+			if (converter.IsInterface || typeof(IJsonConverter).IsAssignableFrom (converter) == false) {
+				throw new JsonSerializationException (String.Concat ("The type ", converter.FullName, " defined in ", typeof(JsonConverterAttribute).FullName, " does not implement interface ", typeof(IJsonConverter).FullName));
+			}
+			ConverterType = converter;
+		}
+	}
+
+	/// <summary>
 	/// Converts the member value being serialized or deserialized.
 	/// </summary>
 	/// <remarks>
-	/// <para>During deserialization, the JSON string is parsed and converted to primitive data. The data could be of the following six primitive types returned from the JSON Parser: <see cref="Boolean"/>, <see cref="Int64"/>, <see cref="Double"/>, <see cref="String"/>, <see cref="List{Object}"/> and <see cref="Dictionary{String, Object}"/>.</para>
-	/// <para>The <see cref="DeserializationConvert"/> method should be able to process the above six types, as well as the null value, and convert the primitive value to match the type of the member being deserialized.</para>
-	/// <para>If the <see cref="GetReversiveType"/> method returns a <see cref="Type"/>, the deserializer will firstly attempt to convert the primitive value to match the type, and then pass the converted value rather than the primitive value to the "fieldValue" parameter of the <see cref="DeserializationConvert"/> method. By this means, the implementation of <see cref="DeserializationConvert"/> method does not have to cope with primitive field values.</para>
+	/// <para>During deserialization, the JSON string is parsed and converted to primitive data. The data could be of the following six types returned from the JSON Parser: <see cref="Boolean"/>, <see cref="Int64"/>, <see cref="Double"/>, <see cref="String"/>, <see cref="List{Object}"/> and <see cref="Dictionary{String, Object}"/>.</para>
+	/// <para>The <see cref="DeserializationConvert"/> method should be able to process the above six types, as well as the null value, and convert the value to match the type of the member being deserialized.</para>
+	/// <para>If the <see cref="GetReversiveType"/> method returns a <see cref="Type"/>, the deserializer will firstly attempt to revert the primitive data to match the type, and then pass the reverted value to the "fieldValue" parameter of the <see cref="DeserializationConvert"/> method. By this means, the implementation of <see cref="DeserializationConvert"/> method does not have to cope with primitive data.</para>
+	/// <para>To implement the <see cref="GetReversiveType"/> method, keep in mind that the "fieldValue" is always primitive data.</para>
 	/// </remarks>
 	/// <preliminary />
 	public interface IJsonConverter
@@ -351,9 +385,10 @@ namespace fastJSON
 		/// <param name="fieldValue">The value of the field of property.</param>
 		/// <returns>The converted value.</returns>
 		object SerializationConvert (string fieldName, object fieldValue);
+
 		/// <summary>
 		/// <para>Converts fieldValue to a new value during deserialization. The type of the <paramref name="fieldValue"/> and the returned value can be different types, which enables adapting various data types from deserialization.</para>
-		/// <para>At this moment the type of the fieldValue could be one of the following </para>
+		/// <para>The field value could be one of six primitive value types. For further information, refer to <see cref="IJsonConverter"/>.</para>
 		/// </summary>
 		/// <param name="fieldName">The name of the field or property.</param>
 		/// <param name="fieldValue">The primitive value of the field of property.</param>

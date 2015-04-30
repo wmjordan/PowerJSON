@@ -171,6 +171,19 @@ namespace fastJSON
 			}
 			return null;
 		}
+
+		/// <summary>
+		/// This method returns an <see cref="IJsonConverter"/> instance to convert item values for a field or a property which is of <see cref="System.Collections.IEnumerable"/> type during serialization and deserialization. If no converter is used, null can be returned. The converter can be set via <see cref="JsonItemConverterAttribute"/>.
+		/// </summary>
+		/// <param name="member">The <see cref="MemberInfo"/> of the field or property.</param>
+		/// <returns>The converter.</returns>
+		public virtual IJsonConverter GetMemberItemConverter (MemberInfo member) {
+			var cv = AttributeHelper.GetAttribute<JsonItemConverterAttribute> (member, true);
+			if (cv != null) {
+				return cv.Converter;
+			}
+			return null;
+		}
 	}
 
 	/// <summary>
@@ -244,6 +257,13 @@ namespace fastJSON
 		/// <param name="member">The <see cref="MemberInfo"/> of the field or property.</param>
 		/// <returns>The converter.</returns>
 		public virtual IJsonConverter GetMemberConverter (MemberInfo member) { return null; }
+
+		/// <summary>
+		/// This method returns an <see cref="IJsonConverter"/> instance to convert item values for a field or a property which is of <see cref="System.Collections.IEnumerable"/> type during serialization and deserialization. If no converter is used, null can be returned.
+		/// </summary>
+		/// <param name="member">The <see cref="MemberInfo"/> of the field or property.</param>
+		/// <returns>The converter.</returns>
+		public virtual IJsonConverter GetMemberItemConverter (MemberInfo member) { return null; }
 	}
 
 	/// <summary>
@@ -314,11 +334,18 @@ namespace fastJSON
 		bool GetDefaultValue (MemberInfo member, out object defaultValue);
 
 		/// <summary>
-		/// This method returns the <see cref="IJsonConverter"/> to convert values for a field or a property during serialization and deserialization. If no converter is used, null can be returned.
+		/// This method returns an <see cref="IJsonConverter"/> instance to convert values for a field or a property during serialization and deserialization. If no converter is used, null can be returned.
 		/// </summary>
 		/// <param name="member">The <see cref="MemberInfo"/> of the field or property.</param>
 		/// <returns>The converter.</returns>
 		IJsonConverter GetMemberConverter (MemberInfo member);
+
+		/// <summary>
+		/// This method returns an <see cref="IJsonConverter"/> instance to convert item values for a field or a property which is of <see cref="System.Collections.IEnumerable"/> type during serialization and deserialization. If no converter is used, null can be returned.
+		/// </summary>
+		/// <param name="member">The <see cref="MemberInfo"/> of the field or property.</param>
+		/// <returns>The converter.</returns>
+		IJsonConverter GetMemberItemConverter (MemberInfo member);
 	}
 
 	/// <summary>

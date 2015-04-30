@@ -583,10 +583,60 @@ namespace UnitTests
 			o = JSON.ToObject<CustomConverterType> ("{\"Id\":\"id123\", \"intArray1\": [ 1, 2, 3 ] }");
 			Assert.AreEqual ("id123", o.Id);
 			CollectionAssert.AreEqual ((ICollection)new int[] { 1, 2, 3 }, (ICollection)o.Variable1);
-		} 
+		}
 
 		#endregion
 
+		#region JsonItemConverterAttribute
+		public class ItemConverterTestSample
+		{
+			[JsonItemConverter (typeof(KVConverter))]
+			public List<KeyValuePair<string, string>> Pairs { get; set; }
+			[JsonItemConverter (typeof(DateNumberConverter))]
+			public DateTime[] Dates { get; set; }
+		}
+		class KVConverter : JsonConverter<KeyValuePair<string, string>, string>
+		{
+			public override string Convert (string fieldName, KeyValuePair<string, string> fieldValue) {
+				return fieldValue.Key + ":" + fieldValue.Value;
+			}
+
+			public override KeyValuePair<string, string> Revert (string fieldName, string fieldValue) {
+				var p = fieldValue.IndexOf (':');
+				return new KeyValuePair<string, string> (fieldValue.Substring (0, p), fieldValue.Substring (p + 1));
+			}
+		}
+		class DateNumberConverter : JsonConverter<DateTime, long>
+		{
+			public override long Convert (string fieldName, DateTime fieldValue) {
+				return fieldValue.Ticks;
+			}
+
+			public override DateTime Revert (string fieldName, long fieldValue) {
+				return new DateTime (fieldValue);
+			}
+		}
+		[TestMethod]
+		public void ItemConverterTest () {
+			var d = new ItemConverterTestSample () {
+				Pairs = new List<KeyValuePair<string, string>> {
+					new KeyValuePair<string, string> ("a","1"),
+					new KeyValuePair<string, string> ("b","2")
+				},
+				Dates = new DateTime[] {
+					new DateTime (1997,7,1),
+					new DateTime (1999,12,31)
+				}
+			};
+			var s = JSON.ToJSON (d, _JP);
+			StringAssert.Contains (s, "a:1");
+			StringAssert.Contains (s, "b:2");
+			Console.WriteLine (s);
+			var o = JSON.ToObject<ItemConverterTestSample> (s);
+			CollectionAssert.AreEqual (d.Pairs, o.Pairs);
+			CollectionAssert.AreEqual (d.Dates, o.Dates);
+		}
+		#endregion
 		#region ReadOnly members
 		public class ReadOnlyTestSample
 		{

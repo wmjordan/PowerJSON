@@ -137,89 +137,101 @@ namespace fastJSON
 					continue;
 				}
 
-				if (mo.Serializable != TriState.Default) {
-					g.Serializable = mo.Serializable;
-				}
-
-				var ot = mo.OverrideTypedNames;
-				if (ot) {
-					g.TypedNames = mo.TypedNames;
-				}
-				var sn = mo.SerializedName;
-				if (mo.OverrideSerializedName || mo.OverrideTypedNames) {
-					if (sn == g.MemberName) {
-						g.SpecificName = g.TypedNames != null && g.TypedNames.Count > 0;
-					}
-					else {
-						g.SpecificName = true;
-					}
-				}
-
-				if (mo.OverrideConverter) {
-					g.Converter = mo.Converter;
-				}
-
-				myPropInfo mp = null;
-				if (ot) {
-					// remove previous polymorphic deserialization info
-					var rt = new List<string> ();
-					foreach (var item in s) {
-						if (item.Value.MemberName == mo.MemberName) {
-							if (item.Value.MemberType != g.MemberType) {
-								rt.Add (item.Key);
-							}
-							mp = item.Value;
-						}
-					}
-					if (mp == null) {
-						throw new MissingMemberException (g.MemberType.FullName, mo.MemberName);
-					}
-					foreach (var item in rt) {
-						s.Remove (item);
-					}
-					// add new polymorphic deserialization info
-					if (mo.TypedNames.Count > 0) {
-						foreach (var item in mo.TypedNames) {
-							var t = item.Key;
-							if (g.MemberType.IsAssignableFrom (t) == false) {
-								throw new InvalidCastException ("The override type (" + t.FullName + ") does not derive from the member type (" + g.MemberType.FullName + ")");
-							}
-							var n = item.Value;
-							var p = new myPropInfo (t, g.MemberName, IsTypeRegistered (t));
-							p.Getter = mp.Getter;
-							p.Setter = mp.Setter;
-							p.CanWrite = mp.CanWrite;
-							myPropInfo tp;
-							if (s.TryGetValue (n, out tp) && tp.MemberType == g.MemberType) {
-								s[n] = p;
-							}
-							else {
-								s.Add (n, p);
-							}
-						}
-					}
-				}
-				else if (mo.OverrideSerializedName && g.SerializedName != mo.SerializedName) {
-					mp = s[g.SerializedName];
-					s.Remove (g.SerializedName);
-					s.Add (sn, mp);
-				}
-				foreach (var item in s) {
-					mp = item.Value;
-					if (mp.MemberName == mo.MemberName) {
-						if (mo.OverrideConverter) {
-							mp.Converter = mo.Converter;
-						}
-					}
-				}
-				if (mo.OverrideSerializedName) {
-					g.SerializedName = sn;
-				}
+				OverrideGetters (g, mo);
+				OverrideMyPropInfo (s, mo, g);
 			}
 			if (purgeExisting) {
 				_reflections[type] = c;
 			}
 		}
+
+		private void OverrideMyPropInfo (Dictionary<string, myPropInfo> s, MemberOverride mo, Getters g) {
+			myPropInfo mp = null;
+			if (mo.OverrideTypedNames) {
+				// remove previous polymorphic deserialization info
+				var rt = new List<string> ();
+				foreach (var item in s) {
+					if (item.Value.MemberName == mo.MemberName) {
+						if (Equals (item.Value.MemberType, g.MemberType) == false) {
+							rt.Add (item.Key);
+						}
+						mp = item.Value;
+					}
+				}
+				if (mp == null) {
+					throw new MissingMemberException (g.MemberType.FullName, mo.MemberName);
+				}
+				foreach (var item in rt) {
+					s.Remove (item);
+				}
+				// add new polymorphic deserialization info
+				if (mo.TypedNames.Count > 0) {
+					foreach (var item in mo.TypedNames) {
+						var t = item.Key;
+						if (g.MemberType.IsAssignableFrom (t) == false) {
+							throw new InvalidCastException ("The override type (" + t.FullName + ") does not derive from the member type (" + g.MemberType.FullName + ")");
+						}
+						var n = item.Value;
+						var p = new myPropInfo (t, g.MemberName, IsTypeRegistered (t));
+						p.Getter = mp.Getter;
+						p.Setter = mp.Setter;
+						p.CanWrite = mp.CanWrite;
+						myPropInfo tp;
+						if (s.TryGetValue (n, out tp) && Equals (tp.MemberType, g.MemberType)) {
+							s[n] = p;
+						}
+						else {
+							s.Add (n, p);
+						}
+					}
+				}
+			}
+			else if (mo.OverrideSerializedName && g.SerializedName != mo.SerializedName) {
+				mp = s[g.SerializedName];
+				s.Remove (g.SerializedName);
+				s.Add (mo.SerializedName, mp);
+			}
+			foreach (var item in s) {
+				mp = item.Value;
+				if (mp.MemberName == mo.MemberName) {
+					if (mo.OverrideConverter) {
+						mp.Converter = mo.Converter;
+					}
+					if (mo.OverrideItemConverter) {
+						mp.ItemConverter = mo.ItemConverter;
+					}
+				}
+			}
+			if (mo.OverrideSerializedName) {
+				g.SerializedName = mo.SerializedName;
+			}
+		}
+
+		private static void OverrideGetters (Getters getter, MemberOverride mo) {
+			if (mo.Serializable != TriState.Default) {
+				getter.Serializable = mo.Serializable;
+			}
+
+			if (mo.OverrideTypedNames) {
+				getter.TypedNames = mo.TypedNames;
+			}
+			if (mo.OverrideSerializedName || mo.OverrideTypedNames) {
+				if (mo.SerializedName == getter.MemberName) {
+					getter.SpecificName = getter.TypedNames != null && getter.TypedNames.Count > 0;
+				}
+				else {
+					getter.SpecificName = true;
+				}
+			}
+
+			if (mo.OverrideConverter) {
+				getter.Converter = mo.Converter;
+			}
+			if (mo.OverrideItemConverter) {
+				getter.ItemConverter = mo.ItemConverter;
+			}
+		}
+
 
 		/// <summary>
 		/// <para>Assigns an <see cref="IJsonInterceptor"/> to process a specific type.</para>
@@ -277,7 +289,8 @@ namespace fastJSON
 		/// <param name="memberName">The member to be assigned.</param>
 		/// <param name="converter">The converter to process the member value.</param>
 		/// <remarks>If the member has already gotten an <see cref="IJsonConverter"/>, the new <paramref name="converter"/> will replace it. If the new converter is null, existing converter will be removed from the type.</remarks>
-		public void RegisterMemberInterceptor (Type type, string memberName, IJsonConverter converter) {
+		/// <exception cref="MissingMemberException">No field or property matches <paramref name="memberName"/> in <paramref name="type"/>.</exception>
+		public void RegisterMemberConverter (Type type, string memberName, IJsonConverter converter) {
 			var c = GetDefinition (type);
 			string n = null;
 			var g = c.FindGetters (memberName);
@@ -418,6 +431,17 @@ namespace fastJSON
 		public IJsonConverter Converter {
 			get { return _Converter; }
 			set { _Converter = value; OverrideConverter = true; }
+		}
+
+		internal bool OverrideItemConverter;
+		IJsonConverter _ItemConverter;
+		/// <summary>
+		/// Gets or sets the <see cref="IJsonConverter"/> for the item of an <see cref="System.Collections.IEnumerable"/> member.
+		/// </summary>
+		/// <remarks>If the member has an item converter before the override, and the value of this converter is null, existing converter will be removed after the override.</remarks>
+		public IJsonConverter ItemConverter {
+			get { return _ItemConverter; }
+			set { _ItemConverter = value; OverrideItemConverter = true; }
 		}
 
 		internal bool OverrideTypedNames {

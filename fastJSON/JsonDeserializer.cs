@@ -44,7 +44,6 @@ namespace fastJSON
 		}
 
 		public object ToObject (string json, Type type) {
-			//_params = Parameters;
 			_params.FixValues ();
 
 			ReflectionCache c = null;
@@ -152,7 +151,7 @@ namespace fastJSON
 				object v = k;
 				if (k is Dictionary<string, object>)
 					v = ParseDictionary (k as Dictionary<string, object>, null, gtypes[0], null);
-				// supports List<array>
+				// support List<array>
 				else if (k is List<object>) {
 					v = CreateArray ((List<object>)k, gtypes[0], null);
 				}
@@ -281,39 +280,69 @@ namespace fastJSON
 				if (props.TryGetValue (n, out pi) == false || pi.CanWrite == false)
 					continue;
 				object v = data[n];
-
+				object cv = v;
+				bool converted = false;
+				// convert IEnumerable item
+				if (v is IList && pi.ItemConverter != null) {
+					var vl = v as IList;
+					var l = vl.Count;
+					for (int i = 0; i < l; i++) {
+						var vi = vl[i];
+						var xv = pi.ItemConverter.DeserializationConvert (n, vi);
+						if (Equals (vi, xv) == false) {
+							vl[i] = xv;
+							converted = true;
+						}
+					}
+					if (converted) {
+						if (pi.JsonDataType == JsonDataType.Array) {
+							cv = Array.CreateInstance (pi.ElementType, l);
+							vl.CopyTo ((Array)cv, 0);
+						}
+						else {
+							cv = _manager.GetDefinition (pi.MemberType).Instantiate ();
+							var gl = cv as IList;
+							for (int i = 0; i < l; i++) {
+								gl.Add (vl[i]);
+							}
+						}
+					}
+				}
+				// convert member data and type
 				if (pi.Converter != null) {
 					var c = pi.Converter;
-					var st = c.GetReversiveType (n, v);
+					var rt = c.GetReversiveType (n, v);
 					var xv = v;
-					if (v != null && st != null && st != typeof(object)) {
+					if (v != null && rt != null && rt != typeof(object)) {
 						if (v is Dictionary<string, object>) {
-							xv = ParseDictionary ((Dictionary<string, object>)xv, globaltypes, st, pi.Getter (o));
+							xv = ParseDictionary ((Dictionary<string, object>)xv, globaltypes, rt, pi.Getter (o));
 						}
 						else if (v is List<object>) {
-							if (st.IsSubclassOf (typeof(Array))) {
-								xv = CreateArray ((List<object>)xv, st, globaltypes);
+							if (rt.IsSubclassOf (typeof(Array))) {
+								xv = CreateArray ((List<object>)xv, rt, globaltypes);
 							}
 							else {
-								xv = CreateGenericList ((List<object>)xv, st, globaltypes);
+								xv = CreateGenericList ((List<object>)xv, rt, globaltypes);
 							}
 						}
 						else if (pi.MemberType.Equals (xv.GetType ()) == false) {
-							xv = ChangeType (xv, st);
+							xv = ChangeType (xv, rt);
 						}
 					}
-					var cv = pi.Converter.DeserializationConvert (n, xv);
-					if (ReferenceEquals (cv, v) == false) {
-						// use the converted value
-						if (cv != null || pi.IsClass || pi.IsNullable) {
-							if (si != null && si.OnDeserializing (o, n, ref cv) == false) {
-								continue;
-							}
-							o = pi.Setter (o, cv);
-						}
-						continue;
-					}
+					cv = pi.Converter.DeserializationConvert (n, xv);
 				}
+
+				// use the converted value
+				if (ReferenceEquals (cv, v) == false || converted) {
+					if (cv != null || pi.IsClass || pi.IsNullable) {
+						if (si != null && si.OnDeserializing (o, n, ref cv) == false) {
+							continue;
+						}
+						o = pi.Setter (o, cv);
+					}
+					continue;
+				}
+				// process null value
 				if (v == null) {
 					if (si != null && si.OnDeserializing (o, n, ref v) == false) {
 						continue;
@@ -323,7 +352,7 @@ namespace fastJSON
 					}
 					continue;
 				}
-
+				// set member value
 				object oset = null;
 
 				switch (pi.JsonDataType) {
@@ -564,7 +593,7 @@ namespace fastJSON
 				return col;
 			}
 
-			// creates an array of objects
+			// create an array of objects
 			for (int i = 0; i < l; i++) {
 				object ob = data[i];
 				if (ob == null) {
@@ -572,7 +601,7 @@ namespace fastJSON
 				}
 				if (ob is IDictionary)
 					col.SetValue (ParseDictionary ((Dictionary<string, object>)ob, globalTypes, et, null), i);
-				// Supports multi-dimensional array
+				// support multi-dimensional array
 				else if (ob is ICollection) {
 					col.SetValue (CreateArray ((List<object>)ob, et, globalTypes), i);
 				}

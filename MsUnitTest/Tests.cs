@@ -11,7 +11,7 @@ using fastJSON;
 using System.Data;
 #endif
 
-#pragma warning disable CS0618
+#pragma warning disable 0618
 
 namespace UnitTests
 {
