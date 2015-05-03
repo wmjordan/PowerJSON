@@ -46,7 +46,8 @@ namespace fastJSON
 			if (objtype.IsClass) {
 				var dynMethod = skipVisibility ? new DynamicMethod (n, objtype, null, objtype, true) : new DynamicMethod (n, objtype, Type.EmptyTypes);
 				var ilGen = dynMethod.GetILGenerator ();
-				var ct = objtype.GetConstructor (Type.EmptyTypes);
+				var ct = objtype.GetConstructor (Type.EmptyTypes)
+					?? objtype.GetConstructor (BindingFlags.NonPublic | BindingFlags.Instance, null, Type.EmptyTypes, null);
 				if (ct == null) {
 					return null;
 				}

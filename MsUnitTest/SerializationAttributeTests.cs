@@ -38,6 +38,11 @@ namespace UnitTests
 		private class NonSerializableClass
 		{
 			public int Field { get; set; }
+
+			public class NonSerializablePublicClass
+			{
+				public int Data;
+			}
 		}
 		[TestMethod]
 		public void CreateNonPublicInstance () {
@@ -91,7 +96,17 @@ namespace UnitTests
 			Console.WriteLine (s);
 			var np = JSON.ToObject<NonSerializableClass> (s);
 			np.Field = 2;
-		} 
+		}
+
+		[TestMethod]
+		[ExpectedException (typeof (JsonSerializationException))]
+		public void FailOnNonPublicNestedClass () {
+			var ns = new NonSerializableClass.NonSerializablePublicClass () { Data = 1 };
+			var s = JSON.ToJSON (ns, _JP);
+			Console.WriteLine (s);
+			var np = JSON.ToObject<NonSerializableClass.NonSerializablePublicClass> (s);
+			np.Data = 2;
+		}
 		#endregion
 
 		#region IncludeAttribute
@@ -637,6 +652,7 @@ namespace UnitTests
 			CollectionAssert.AreEqual (d.Dates, o.Dates);
 		}
 		#endregion
+
 		#region ReadOnly members
 		public class ReadOnlyTestSample
 		{
@@ -779,16 +795,26 @@ namespace UnitTests
 		#endregion
 
 		#region SerializationOverride
-		public class PolymorphicTest
+		[Flags]
+		public enum OverrideEnumSample
+		{
+			Field0 = 0,
+			Field1 = 1,
+			Field2 = 2,
+			Field3 = 4,
+			All = Field1 | Field2 | Field3
+		}
+		public class PolymorphicSample
 		{
 			public string ID { get; set; }
 			public IName A { get; set; }
 			public int[] Array { get; set; }
+			public OverrideEnumSample[] Enums { get; set; }
 		}
 		[TestMethod]
 		public void SerializationOverrideTest () {
 			var m = SerializationManager.Instance;
-			m.RegisterReflectionOverride<PolymorphicTest> (new ReflectionOverride ()
+			m.RegisterReflectionOverride<PolymorphicSample> (new ReflectionOverride ()
 			{
 				MemberOverrides = {
 					new MemberOverride ("A") {
@@ -802,25 +828,35 @@ namespace UnitTests
 					new MemberOverride ("inexistent", "shouldBeIgnored")
 				}
 			});
-			var d = new PolymorphicTest ()
+			m.RegisterEnumValueNames<OverrideEnumSample> (new Dictionary<string, string> {
+				{ "Field1", "a" }, { "Field2", "b" }, { "Field3", "c" }
+			});
+			var d = new PolymorphicSample ()
 			{
 				ID = "123",
 				A = new NamedClassA () { Name = "a", Value = true },
-				Array = new int[] { 1, 2, 3 }
+				Array = new int[] { 1, 2, 3 },
+				Enums = new OverrideEnumSample[] {
+					OverrideEnumSample.Field0,
+					OverrideEnumSample.Field2,
+					OverrideEnumSample.Field1 | OverrideEnumSample.Field3,
+					OverrideEnumSample.All
+				}
 			};
             var s = JSON.ToJSON (d, _JP);
             Console.WriteLine (s);
-			var o = JSON.ToObject<PolymorphicTest> (s, _JP);
+			var o = JSON.ToObject<PolymorphicSample> (s, _JP);
 			Assert.AreEqual (d.A.Name, o.A.Name);
 			Assert.AreEqual (true, ((NamedClassA)o.A).Value);
 			Assert.AreEqual (d.ID, o.ID);
 			CollectionAssert.AreEqual (d.Array, o.Array);
-			s = JSON.ToJSON (new PolymorphicTest ()
+			CollectionAssert.AreEqual (d.Enums, o.Enums);
+			s = JSON.ToJSON (new PolymorphicSample ()
 			{
 				ID = null,
 				A = new NamedClassB () { Name = "b", Value = 1 }
 			}, _JP);
-			o = JSON.ToObject<PolymorphicTest> (s, _JP);
+			o = JSON.ToObject<PolymorphicSample> (s, _JP);
 			Assert.AreEqual ("b", o.A.Name);
 			Assert.AreEqual (1, ((NamedClassB)o.A).Value);
 			Assert.AreEqual (null, o.ID);
@@ -830,7 +866,7 @@ namespace UnitTests
 		[ExpectedException (typeof(InvalidCastException))]
 		public void InvalidPolymorphicOverride () {
 			var m = SerializationManager.Instance;
-			m.RegisterReflectionOverride<PolymorphicTest> (new ReflectionOverride () {
+			m.RegisterReflectionOverride<PolymorphicSample> (new ReflectionOverride () {
 				MemberOverrides = {
 					new MemberOverride ("A") {
 						TypedNames = {

@@ -26,43 +26,47 @@ namespace fastJSON
 		/// Global parameters for controlling the serializer.
 		/// </summary>
 		public static JSONParameters Parameters = new JSONParameters();
+		/// <summary>
+		/// The default serialization manager for controlling the serializer.
+		/// </summary>
+		public static SerializationManager Manager = SerializationManager.Instance;
 
 		/// <summary>
 		/// Creates a formatted JSON string (beautified) from an object.
 		/// </summary>
-		/// <param name="obj"></param>
+		/// <param name="obj">The object to be serialized.</param>
 		/// <param name="param"></param>
 		/// <returns></returns>
 		public static string ToNiceJSON(object obj, JSONParameters param)
 		{
-			string s = ToJSON(obj, param, SerializationManager.Instance);
+			string s = ToJSON(obj, param, Manager);
 
 			return Beautify(s);
 		}
 		/// <summary>
 		/// Creates a JSON representation for an object with the default <see cref="Parameters"/>.
 		/// </summary>
-		/// <param name="obj"></param>
+		/// <param name="obj">The object to be serialized.</param>
 		/// <returns></returns>
 		public static string ToJSON(object obj)
 		{
-			return ToJSON(obj, Parameters, SerializationManager.Instance);
+			return ToJSON (obj, Parameters, Manager);
 		}
 
 		/// <summary>
 		/// Creates a JSON representation for an object with parameter override on this call
 		/// </summary>
-		/// <param name="obj">The object to serialize.</param>
+		/// <param name="obj">The object to be serialized.</param>
 		/// <param name="param">The <see cref="JSONParameters"/> to control serialization.</param>
 		/// <returns>The serialized JSON string.</returns>
 		public static string ToJSON (object obj, JSONParameters param) {
-			return ToJSON (obj, param, SerializationManager.Instance);
+			return ToJSON (obj, param, Manager);
 		}
 
 		/// <summary>
 		/// Creates a JSON representation for an object with parameter and serialization manager override on this call.
 		/// </summary>
-		/// <param name="obj">The object to serialize.</param>
+		/// <param name="obj">The object to be serialized.</param>
 		/// <param name="param">The <see cref="JSONParameters"/> to control serialization.</param>
 		/// <param name="manager">The <see cref="SerializationManager"/> to control advanced JSON serialization.</param>
 		/// <returns>The serialized JSON string.</returns>
@@ -85,10 +89,10 @@ namespace fastJSON
 		}
 
 		/// <summary>
-		/// Parses a JSON string and generate a Dictionary&lt;string,object&gt; or List&lt;object&gt; structure
+		/// Parses a JSON string and generate a <see cref="Dictionary{System.String,System.Object}"/> or <see cref="List{System.Object}"/> instance.
 		/// </summary>
-		/// <param name="json"></param>
-		/// <returns></returns>
+		/// <param name="obj">The object to be parsed.</param>
+		/// <returns>The parsed object.</returns>
 		public static object Parse(string json)
 		{
 			return new JsonParser(json).Decode();
@@ -107,23 +111,23 @@ namespace fastJSON
 		/// <summary>
 		/// Creates a typed generic object from the JSON with the default <see cref="Parameters"/> and <see cref="SerializationManager"/>.
 		/// </summary>
-		/// <typeparam name="T"></typeparam>
+		/// <typeparam name="T">The type of the expected object after deserialization.</typeparam>
 		/// <param name="json">The JSON string to be deserialized.</param>
 		/// <returns>The deserialized object of type <typeparamref name="T"/>.</returns>
 		public static T ToObject<T>(string json)
 		{
-			return new JSONDeserializer(Parameters, SerializationManager.Instance).ToObject<T>(json);
+			return new JSONDeserializer(Parameters, Manager).ToObject<T>(json);
 		}
 		/// <summary>
 		/// Create a typed generic object from the JSON with parameter override on this call.
 		/// </summary>
-		/// <typeparam name="T"></typeparam>
+		/// <typeparam name="T">The type of the expected object after deserialization.</typeparam>
 		/// <param name="json">The JSON string to be deserialized.</param>
 		/// <param name="param">The <see cref="JSONParameters"/> to control deserialization.</param>
 		/// <returns>The deserialized object of type <typeparamref name="T"/>.</returns>
 		public static T ToObject<T>(string json, JSONParameters param)
 		{
-			return new JSONDeserializer(param, SerializationManager.Instance).ToObject<T>(json);
+			return new JSONDeserializer(param, Manager).ToObject<T>(json);
 		}
 		/// <summary>
 		/// Creates a typed generic object from the JSON with parameter and serialization manager override on this call.
@@ -144,7 +148,7 @@ namespace fastJSON
 		/// <returns></returns>
 		public static object ToObject(string json)
 		{
-			return new JSONDeserializer(Parameters, SerializationManager.Instance).ToObject(json, null);
+			return new JSONDeserializer(Parameters, Manager).ToObject(json, null);
 		}
 		/// <summary>
 		/// Creates an object from the JSON with parameter override on this call.
@@ -154,7 +158,7 @@ namespace fastJSON
 		/// <returns>The deserialized object.</returns>
 		public static object ToObject(string json, JSONParameters param)
 		{
-			return new JSONDeserializer(param, SerializationManager.Instance).ToObject(json, null);
+			return new JSONDeserializer(param, Manager).ToObject(json, null);
 		}
 
 		/// <summary>
@@ -176,7 +180,7 @@ namespace fastJSON
 		/// <returns>The deserialized object of type <paramref name="type"/>.</returns>
 		public static object ToObject(string json, Type type)
 		{
-			return new JSONDeserializer(Parameters, SerializationManager.Instance).ToObject(json, type);
+			return new JSONDeserializer(Parameters, Manager).ToObject(json, type);
 		}
 
 		/// <summary>
@@ -189,27 +193,27 @@ namespace fastJSON
 		{
 			Dictionary<string, object> ht = new JsonParser(json).Decode() as Dictionary<string, object>;
 			if (ht == null) return null;
-			return new JSONDeserializer(Parameters, SerializationManager.Instance).ParseDictionary(ht, null, input.GetType(), input);
+			return new JSONDeserializer(Parameters, Manager).ParseDictionary(ht, null, input.GetType(), input);
 		}
 
 		/// <summary>
 		/// Deep-copies an object i.e. clones to a new object.
 		/// </summary>
-		/// <param name="obj"></param>
-		/// <returns></returns>
+		/// <param name="obj">The object to be deep copied.</param>
+		/// <returns>The copy of <paramref name="obj"/>.</returns>
 		public static object DeepCopy(object obj)
 		{
-			return new JSONDeserializer(Parameters, SerializationManager.Instance).ToObject(ToJSON(obj));
+			return new JSONDeserializer(Parameters, Manager).ToObject(ToJSON(obj));
 		}
 		/// <summary>
-		/// 
+		/// Deep-copies an object i.e. clones to a new object.
 		/// </summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="obj"></param>
-		/// <returns></returns>
-		public static T DeepCopy<T>(T obj)
+		/// <typeparam name="T">The type of the object to be copied.</typeparam>
+		/// <param name="obj">The object to be deep copied.</param>
+		/// <returns>The copy of <paramref name="obj"/>.</returns>
+		public static T DeepCopy<T> (T obj)
 		{
-			return new JSONDeserializer(Parameters, SerializationManager.Instance).ToObject<T>(ToJSON(obj));
+			return new JSONDeserializer(Parameters, Manager).ToObject<T>(ToJSON(obj));
 		}
 
 		/// <summary>
@@ -236,9 +240,10 @@ namespace fastJSON
 		/// <param name="type">The type to be handled.</param>
 		/// <param name="serializer">The delegate to be used in serialization.</param>
 		/// <param name="deserializer">The delegate to be used in deserialization.</param>
-		public static void RegisterCustomType(Type type, Serialize serializer, Deserialize deserializer)
+		[Obsolete ("The reflection is managed by SerializationManager. Please use the methods provided by that class to register custom serializer.")]
+		public static void RegisterCustomType (Type type, Serialize serializer, Deserialize deserializer)
 		{
-			SerializationManager.Instance.RegisterCustomType(type, serializer, deserializer);
+			Manager.RegisterCustomType(type, serializer, deserializer);
 		}
 		/// <summary>
 		/// Clears the internal reflection cache so you can start from new (you will loose performance)
@@ -246,7 +251,7 @@ namespace fastJSON
 		[Obsolete ("The reflection is managed by SerializationManager. Please use the methods provided by that class to alter the reflection cache.")]
 		public static void ClearReflectionCache()
 		{
-			SerializationManager.Instance.ResetCache();
+			Manager.ResetCache();
 		}
 
 	}

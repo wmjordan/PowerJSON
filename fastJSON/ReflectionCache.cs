@@ -27,10 +27,11 @@ namespace fastJSON
 		#endregion
 
 		#region Object Serialization and Deserialization Info
-		internal readonly bool AlwaysDeserializable;
+		internal readonly ConstructorTypes ConstructorInfo;
 		internal readonly CreateObject Constructor;
 		internal readonly Getters[] Getters;
 		internal readonly Dictionary<string, myPropInfo> Properties;
+		internal bool AlwaysDeserializable;
 		internal IJsonInterceptor Interceptor;
 		#endregion
 
@@ -77,13 +78,34 @@ namespace fastJSON
     		}
 			if (CommonType != ComplexType.Array
 				&& CommonType != ComplexType.Nullable) {
-    			var skip = false;
-    			if (AlwaysDeserializable == false) {
-    				if (GenericDefinition != null) {
-    					skip = Reflection.ShouldSkipVisibilityCheck (ArgumentTypes, manager);
-    				}
-    			}
-    			Constructor = Reflection.CreateConstructorMethod (type, skip | AlwaysDeserializable);
+				//var skip = false;
+				//if (AlwaysDeserializable == false) {
+				//	if (GenericDefinition != null) {
+				//		skip = Reflection.ShouldSkipVisibilityCheck (ArgumentTypes, manager);
+				//	}
+				//}
+				var t = type;
+				if (type.IsNested == false && type.IsPublic == false) {
+					ConstructorInfo |= ConstructorTypes.NonPublic;
+				}
+				else {
+					while (t != null && t.IsNested) {
+						if (t.IsNestedPublic == false) {
+							ConstructorInfo |= ConstructorTypes.NonPublic;
+						}
+						t = t.DeclaringType;
+					}
+				}
+    			Constructor = Reflection.CreateConstructorMethod (type, type.IsVisible == false);
+				if (Constructor != null && Constructor.Method.IsPublic == false) {
+					ConstructorInfo |= ConstructorTypes.NonPublic;
+				}
+				if (Constructor == null) {
+					var c = type.GetConstructors (BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+					if (c != null && c.Length > 0) {
+						ConstructorInfo |= ConstructorTypes.Parameterized;
+					}
+				}
 			}
     		if (typeof (IEnumerable).IsAssignableFrom (type)) {
     			return;
@@ -96,12 +118,15 @@ namespace fastJSON
 			if (Constructor == null) {
 				return null;
 			}
-    		try {
+			if (ConstructorInfo != ConstructorTypes.Default && AlwaysDeserializable == false) {
+				throw new JsonSerializationException ("The constructor of type \"" + TypeName + "\" from assembly \"" + AssemblyName + "\" is not publicly visible.");
+			}
+			try {
     			return Constructor ();
-    		}
-    		catch (Exception ex) {
-    			throw new JsonSerializationException(string.Format("Failed to fast create instance for type '{0}' from assembly '{1}'", TypeName, AssemblyName), ex);
-    		}
+			}
+			catch (Exception ex) {
+				throw new JsonSerializationException (string.Format (@"Failed to fast create instance for type ""{0}"" from assembly ""{1}""", TypeName, AssemblyName), ex);
+			}
     	}
 
 		internal Getters FindGetters (string memberName) {
@@ -301,6 +326,15 @@ namespace fastJSON
 			ChangeType = IsNullable ? ElementType : type;
 			JsonDataType = dt;
 		}
+	}
+
+	[Flags]
+	enum ConstructorTypes
+	{
+		// public, parameterless
+		Default = 0,
+		NonPublic = 1,
+		Parameterized = 2
 	}
 
 	enum ComplexType

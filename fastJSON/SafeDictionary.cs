@@ -85,5 +85,15 @@ namespace fastJSON
                     _Dictionary.Add(key, value);
             }
         }
+
+		/// <summary>
+		/// Removes specific key from the dictionary.
+		/// </summary>
+		/// <param name="key">The key of the element to remove.</param>
+		public void Remove (TKey key) {
+			lock (_Padlock) {
+				_Dictionary.Remove (key);
+			}
+		}
     }
 }
