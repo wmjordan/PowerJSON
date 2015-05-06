@@ -22,14 +22,22 @@ namespace fastJSON
 	/// </summary>
 	public static class JSON
 	{
+		static JSONParameters _Parameters = new JSONParameters();
+		static SerializationManager _Manager = SerializationManager.Instance;
 		/// <summary>
 		/// Global parameters for controlling the serializer.
 		/// </summary>
-		public static JSONParameters Parameters = new JSONParameters();
+		public static JSONParameters Parameters {
+			get { return _Parameters; }
+			set { _Parameters = value; }
+		}
 		/// <summary>
 		/// The default serialization manager for controlling the serializer.
 		/// </summary>
-		public static SerializationManager Manager = SerializationManager.Instance;
+		public static SerializationManager Manager {
+			get { return _Manager; }
+			set { _Manager = value; }
+		}
 
 		/// <summary>
 		/// Creates a formatted JSON string (beautified) from an object.
@@ -85,13 +93,13 @@ namespace fastJSON
 
 			// FEATURE : enable extensions when you can deserialize anon types
 			if (param.EnableAnonymousTypes) { param.UseExtensions = false; param.UsingGlobalTypes = false; }
-			return new JSONSerializer(param, manager).ConvertToJSON(obj);
+			return new JsonSerializer(param, manager).ConvertToJSON(obj);
 		}
 
 		/// <summary>
-		/// Parses a JSON string and generate a <see cref="Dictionary{System.String,System.Object}"/> or <see cref="List{System.Object}"/> instance.
+		/// Parses a JSON string and generate a <see cref="Dictionary{TKey, TValue}"/> or <see cref="List{T}"/> instance.
 		/// </summary>
-		/// <param name="obj">The object to be parsed.</param>
+		/// <param name="json">The object to be parsed.</param>
 		/// <returns>The parsed object.</returns>
 		public static object Parse(string json)
 		{
@@ -116,7 +124,7 @@ namespace fastJSON
 		/// <returns>The deserialized object of type <typeparamref name="T"/>.</returns>
 		public static T ToObject<T>(string json)
 		{
-			return new JSONDeserializer(Parameters, Manager).ToObject<T>(json);
+			return new JsonDeserializer(Parameters, Manager).ToObject<T>(json);
 		}
 		/// <summary>
 		/// Create a typed generic object from the JSON with parameter override on this call.
@@ -127,7 +135,7 @@ namespace fastJSON
 		/// <returns>The deserialized object of type <typeparamref name="T"/>.</returns>
 		public static T ToObject<T>(string json, JSONParameters param)
 		{
-			return new JSONDeserializer(param, Manager).ToObject<T>(json);
+			return new JsonDeserializer(param, Manager).ToObject<T>(json);
 		}
 		/// <summary>
 		/// Creates a typed generic object from the JSON with parameter and serialization manager override on this call.
@@ -139,16 +147,16 @@ namespace fastJSON
 		/// <returns>The deserialized object of type <typeparamref name="T"/>.</returns>
 		public static T ToObject<T>(string json, JSONParameters param, SerializationManager manager)
 		{
-			return new JSONDeserializer(param, manager).ToObject<T>(json);
+			return new JsonDeserializer(param, manager).ToObject<T>(json);
 		}
 		/// <summary>
 		/// Creates an object from the JSON with the default <see cref="Parameters"/>.
 		/// </summary>
-		/// <param name="json"></param>
-		/// <returns></returns>
+		/// <param name="json">The JSON string to be deserialized.</param>
+		/// <returns>The serialized object.</returns>
 		public static object ToObject(string json)
 		{
-			return new JSONDeserializer(Parameters, Manager).ToObject(json, null);
+			return new JsonDeserializer(Parameters, Manager).ToObject(json, null);
 		}
 		/// <summary>
 		/// Creates an object from the JSON with parameter override on this call.
@@ -158,7 +166,7 @@ namespace fastJSON
 		/// <returns>The deserialized object.</returns>
 		public static object ToObject(string json, JSONParameters param)
 		{
-			return new JSONDeserializer(param, Manager).ToObject(json, null);
+			return new JsonDeserializer(param, Manager).ToObject(json, null);
 		}
 
 		/// <summary>
@@ -170,7 +178,7 @@ namespace fastJSON
 		/// <returns>The deserialized object.</returns>
 		public static object ToObject(string json, JSONParameters param, SerializationManager manager)
 		{
-			return new JSONDeserializer(param, manager).ToObject(json, null);
+			return new JsonDeserializer(param, manager).ToObject(json, null);
 		}
 		/// <summary>
 		/// Creates an object of type from the JSON with the default <see cref="Parameters"/>.
@@ -180,7 +188,7 @@ namespace fastJSON
 		/// <returns>The deserialized object of type <paramref name="type"/>.</returns>
 		public static object ToObject(string json, Type type)
 		{
-			return new JSONDeserializer(Parameters, Manager).ToObject(json, type);
+			return new JsonDeserializer(Parameters, Manager).ToObject(json, type);
 		}
 
 		/// <summary>
@@ -191,9 +199,9 @@ namespace fastJSON
 		/// <returns>The <paramref name="input" /> object containing deserialized properties and fields from the JSON string.</returns>
 		public static object FillObject(object input, string json)
 		{
-			Dictionary<string, object> ht = new JsonParser(json).Decode() as Dictionary<string, object>;
+			var ht = new JsonParser(json).Decode() as JsonDict;
 			if (ht == null) return null;
-			return new JSONDeserializer(Parameters, Manager).ParseDictionary(ht, null, input.GetType(), input);
+			return new JsonDeserializer(Parameters, Manager).ParseDictionary(ht, input.GetType(), input);
 		}
 
 		/// <summary>
@@ -203,7 +211,7 @@ namespace fastJSON
 		/// <returns>The copy of <paramref name="obj"/>.</returns>
 		public static object DeepCopy(object obj)
 		{
-			return new JSONDeserializer(Parameters, Manager).ToObject(ToJSON(obj));
+			return new JsonDeserializer(Parameters, Manager).ToObject(ToJSON(obj));
 		}
 		/// <summary>
 		/// Deep-copies an object i.e. clones to a new object.
@@ -213,7 +221,7 @@ namespace fastJSON
 		/// <returns>The copy of <paramref name="obj"/>.</returns>
 		public static T DeepCopy<T> (T obj)
 		{
-			return new JSONDeserializer(Parameters, Manager).ToObject<T>(ToJSON(obj));
+			return new JsonDeserializer(Parameters, Manager).ToObject<T>(ToJSON(obj));
 		}
 
 		/// <summary>

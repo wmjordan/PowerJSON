@@ -15,7 +15,7 @@
     <!-- SHFB properties -->
     <FrameworkVersion>.NET Framework 4.0</FrameworkVersion>
     <OutputPath>..\output\Help\</OutputPath>
-    <HtmlHelpName>fastJSON</HtmlHelpName>
+    <HtmlHelpName>PowerJSON</HtmlHelpName>
     <Language>en-US</Language>
     <TransformComponentArguments>
       <Argument Key="logoFile" Value="Help.png" xmlns="" />
@@ -30,22 +30,22 @@
     <NamespaceGrouping>False</NamespaceGrouping>
     <SyntaxFilters>C#, Visual Basic, Managed C++</SyntaxFilters>
     <SdkLinkTarget>Blank</SdkLinkTarget>
-    <RootNamespaceContainer>False</RootNamespaceContainer>
+    <RootNamespaceContainer>True</RootNamespaceContainer>
     <PresentationStyle>VS2013</PresentationStyle>
     <Preliminary>False</Preliminary>
     <NamingMethod>MemberName</NamingMethod>
-    <HelpTitle>fastJSON %28Power fork%29 Documentation</HelpTitle>
-    <FeedbackEMailLinkText>Feedback to the author WMJordan</FeedbackEMailLinkText>
+    <HelpTitle>PowerJSON Documentation</HelpTitle>
+    <FeedbackEMailLinkText>WMJordan</FeedbackEMailLinkText>
     <FeedbackEMailAddress>wmj%40live.cn</FeedbackEMailAddress>
-    <CopyrightText>This is a fork, an enhanced version, of Mehdi Gholam&amp;#39%3bs brilliant project fastJSON.</CopyrightText>
+    <CopyrightText>Introduction article on CodeProject</CopyrightText>
     <CopyrightHref>http://www.codeproject.com/Articles/888604/A-More-Powerful-fastJSON</CopyrightHref>
     <ContentPlacement>AboveNamespaces</ContentPlacement>
-    <VisibleItems>Attributes, InheritedMembers, InheritedFrameworkMembers, Protected, ProtectedInternalAsProtected</VisibleItems>
+    <VisibleItems>Attributes, InheritedMembers, Protected, ProtectedInternalAsProtected</VisibleItems>
     <DocumentationSources>
       <DocumentationSource sourceFile="..\fastJSON\PowerJSON.csproj" />
     </DocumentationSources>
     <ProjectSummary>fastJSON is a high performance JSON serializer and deserializer, created by Mehdi Gholam.
-This is a fork of the project, arming at a more powerful control over JSON serialization and deserialization.
+PowerJSON is a fork of fastJSON, arming at a more powerful control over JSON serialization and deserialization without sacrificing performance.
 
 </ProjectSummary>
     <MissingTags>AutoDocumentCtors, AutoDocumentDispose</MissingTags>
@@ -56,6 +56,7 @@ This is a fork of the project, arming at a more powerful control over JSON seria
     <DisableCodeBlockComponent>False</DisableCodeBlockComponent>
     <CppCommentsFixup>False</CppCommentsFixup>
     <CleanIntermediates>True</CleanIntermediates>
+    <FooterText>PowerJSON is a fork, an enhanced version, of Mehdi Gholam&amp;#39%3bs brilliant project fastJSON.</FooterText>
   </PropertyGroup>
   <!-- There are no properties for these groups.  AnyCPU needs to appear in order for Visual Studio to perform
 			 the build.  The others are optional common platform types that may appear. -->
@@ -83,7 +84,7 @@ This is a fork of the project, arming at a more powerful control over JSON seria
     <Folder Include="Media" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Content\Usage\Walkthrough.aml" />
+    <None Include="Content\Usage\GettingStarted.aml" />
     <None Include="Content\VersionHistory\v2.1.11.aml" />
     <None Include="Content\VersionHistory\VersionHistory.aml" />
     <None Include="Content\Welcome.aml" />

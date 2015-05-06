@@ -28,6 +28,9 @@ namespace fastJSON
         {
             _Dictionary = new Dictionary<TKey, TValue>();
         }
+		internal SafeDictionary (Dictionary<TKey, TValue> dict) {
+			_Dictionary = dict;
+		}
 
 		/// <summary>
 		/// Clears all items.

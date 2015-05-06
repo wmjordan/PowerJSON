@@ -1,22 +1,21 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Data;
 using System.Reflection;
 
 namespace fastJSON
 {
-	delegate object RevertJsonValue (JSONDeserializer deserializer, object value);
-	delegate void WriteJsonValue (JSONSerializer serializer, object value);
+	delegate object RevertJsonValue (JsonDeserializer deserializer, object value, Type targetType);
+	delegate void WriteJsonValue (JsonSerializer serializer, object value);
 	delegate object CreateObject ();
 	delegate object GenericSetter (object target, object value);
 	delegate object GenericGetter (object obj);
 
 	class ReflectionCache
-    {
-    	internal readonly string TypeName;
-    	internal readonly string AssemblyName;
+	{
+		internal readonly string TypeName;
+		internal readonly string AssemblyName;
+		internal readonly JsonDataType JsonDataType;
 
 		#region Definition for Generic or Array Types
 		internal readonly Type GenericDefinition;
@@ -37,53 +36,53 @@ namespace fastJSON
 
 		#region Enum Info
 		internal readonly bool IsFlaggedEnum;
-		internal readonly Dictionary<string, Enum> EnumNames; 
+		internal readonly Dictionary<string, Enum> EnumNames;
 		#endregion
 
-    	internal ReflectionCache (Type type, SerializationManager manager) {
-    		var controller = manager.ReflectionController;
-    		TypeName = type.FullName;
-    		AssemblyName = type.AssemblyQualifiedName;
-    		if (type.IsEnum) {
-    			IsFlaggedEnum = AttributeHelper.GetAttribute<FlagsAttribute> (type, false) != null;
-    			EnumNames = Reflection.GetEnumValues (type, controller, manager);
-    			return;
-    		}
+		internal ReflectionCache (Type type, SerializationManager manager) {
+			var controller = manager.ReflectionController;
+			TypeName = type.FullName;
+			AssemblyName = type.AssemblyQualifiedName;
+			JsonDataType = Reflection.GetJsonDataType (type);
+
+			if (type.IsEnum) {
+				IsFlaggedEnum = AttributeHelper.GetAttribute<FlagsAttribute> (type, false) != null;
+				EnumNames = Reflection.GetEnumValues (type, controller, manager);
+				return;
+			}
 
 			if (type.IsGenericType) {
 				ArgumentTypes = type.GetGenericArguments ();
 				GenericDefinition = type.GetGenericTypeDefinition ();
-				if (GenericDefinition.Equals (typeof(Dictionary<,>))) {
+				if (GenericDefinition.Equals (typeof (Dictionary<,>))) {
 					CommonType = ComplexType.Dictionary;
 				}
-				else if (GenericDefinition.Equals (typeof(List<>))) {
+				else if (GenericDefinition.Equals (typeof (List<>))) {
 					CommonType = ComplexType.List;
 				}
-				else if (GenericDefinition.Equals (typeof(Nullable<>))) {
+				else if (GenericDefinition.Equals (typeof (Nullable<>))) {
 					CommonType = ComplexType.Nullable;
 				}
-				if (ArgumentTypes.Length == 1 && ArgumentTypes[0] != typeof (object)) {
-					ItemSerializer = JSONSerializer.GetWriteJsonMethod (ArgumentTypes[0]);
-					ItemDeserializer = JSONDeserializer.GetReadJsonMethod (ArgumentTypes[0]);
+				if (ArgumentTypes.Length == 1 && typeof (object).Equals (ArgumentTypes[0]) == false) {
+					ItemSerializer = JsonSerializer.GetWriteJsonMethod (ArgumentTypes[0]);
+					ItemDeserializer = JsonDeserializer.GetReadJsonMethod (ArgumentTypes[0]);
 				}
 			}
 			else if (type.IsArray) {
 				ArgumentTypes = new Type[] { type.GetElementType () };
-				CommonType = ComplexType.Array;
-				ItemDeserializer = JSONDeserializer.GetReadJsonMethod (ArgumentTypes[0]);
+				CommonType = type.GetArrayRank () == 1 ? ComplexType.Array : ComplexType.MultiDimensionalArray;
+				var et = ArgumentTypes[0];
+				if (typeof (object).Equals (et) == false) {
+					ItemSerializer = JsonSerializer.GetWriteJsonMethod (et);
+					ItemDeserializer = JsonDeserializer.GetReadJsonMethod (et);
+				}
 			}
 			if (controller != null) {
-    			AlwaysDeserializable = controller.IsAlwaysDeserializable (type);
-    			Interceptor = controller.GetInterceptor (type);
-    		}
+				AlwaysDeserializable = controller.IsAlwaysDeserializable (type) || typeof (DatasetSchema).Equals (type);
+				Interceptor = controller.GetInterceptor (type);
+			}
 			if (CommonType != ComplexType.Array
 				&& CommonType != ComplexType.Nullable) {
-				//var skip = false;
-				//if (AlwaysDeserializable == false) {
-				//	if (GenericDefinition != null) {
-				//		skip = Reflection.ShouldSkipVisibilityCheck (ArgumentTypes, manager);
-				//	}
-				//}
 				var t = type;
 				if (type.IsNested == false && type.IsPublic == false) {
 					ConstructorInfo |= ConstructorTypes.NonPublic;
@@ -96,25 +95,28 @@ namespace fastJSON
 						t = t.DeclaringType;
 					}
 				}
-    			Constructor = Reflection.CreateConstructorMethod (type, type.IsVisible == false);
+				Constructor = Reflection.CreateConstructorMethod (type, type.IsVisible == false || typeof (DatasetSchema).Equals (type));
 				if (Constructor != null && Constructor.Method.IsPublic == false) {
 					ConstructorInfo |= ConstructorTypes.NonPublic;
 				}
 				if (Constructor == null) {
 					var c = type.GetConstructors (BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
 					if (c != null && c.Length > 0) {
-						ConstructorInfo |= ConstructorTypes.Parameterized;
+						ConstructorInfo |= ConstructorTypes.Parametric;
 					}
 				}
 			}
-    		if (typeof (IEnumerable).IsAssignableFrom (type)) {
-    			return;
-    		}
-    		Getters = Reflection.GetGetters (type, controller, manager);
-    		Properties = Reflection.GetProperties (type, controller, manager);
-    	}
+			if (typeof (IEnumerable).IsAssignableFrom (type)) {
+				return;
+			}
+			if (JsonDataType != JsonDataType.Undefined) {
+				return;
+			}
+			Getters = Reflection.GetGetters (type, controller);
+			Properties = Reflection.GetProperties (type, controller, manager);
+		}
 
-    	public object Instantiate () {
+		public object Instantiate () {
 			if (Constructor == null) {
 				return null;
 			}
@@ -122,12 +124,12 @@ namespace fastJSON
 				throw new JsonSerializationException ("The constructor of type \"" + TypeName + "\" from assembly \"" + AssemblyName + "\" is not publicly visible.");
 			}
 			try {
-    			return Constructor ();
+				return Constructor ();
 			}
 			catch (Exception ex) {
 				throw new JsonSerializationException (string.Format (@"Failed to fast create instance for type ""{0}"" from assembly ""{1}""", TypeName, AssemblyName), ex);
 			}
-    	}
+		}
 
 		internal Getters FindGetters (string memberName) {
 			foreach (var item in Getters) {
@@ -138,7 +140,7 @@ namespace fastJSON
 			return null;
 		}
 
-    }
+	}
 
 	/// <summary>
 	/// Contains information about a member, used in reflection phase before serialization.
@@ -195,9 +197,9 @@ namespace fastJSON
 		bool IMemberInfo.IsStatic { get { return IsStatic; } }
 
 		public Getters (MemberInfo memberInfo, GenericGetter getter) {
-			bool s;	// static
+			bool s; // static
 			bool ro; // read-only
-			Type t;	// member type
+			Type t; // member type
 			bool tp; // property
 			if (memberInfo is FieldInfo) {
 				var f = ((FieldInfo)memberInfo);
@@ -209,7 +211,7 @@ namespace fastJSON
 			else { // PropertyInfo
 				var p = ((PropertyInfo)memberInfo);
 				s = (p.GetGetMethod () ?? p.GetSetMethod ()).IsStatic;
-				ro = p.GetSetMethod () == null;	// p.CanWrite can return true if the setter is non-public
+				ro = p.GetSetMethod () == null; // p.CanWrite can return true if the setter is non-public
 				t = p.PropertyType;
 				tp = true;
 			}
@@ -219,9 +221,9 @@ namespace fastJSON
 			IsStatic = s;
 			IsProperty = tp;
 			IsReadOnly = ro;
-			IsCollection = typeof(ICollection).IsAssignableFrom (t) && t != typeof(byte[]);
+			IsCollection = typeof (ICollection).IsAssignableFrom (t) && typeof (byte[]).Equals (t) == false;
 			MemberType = t;
-			WriteValue = JSONSerializer.GetWriteJsonMethod (t);
+			WriteValue = JsonSerializer.GetWriteJsonMethod (t);
 		}
 
 	}
@@ -241,6 +243,7 @@ namespace fastJSON
 		TimeSpan,
 
 		Array,
+		GenericList,
 		ByteArray,
 		Dictionary,
 		StringKeyDictionary,
@@ -251,7 +254,8 @@ namespace fastJSON
 		DataSet,
 		DataTable,
 #endif
-		Custom
+		Custom,
+		Object
 	}
 
 	sealed class myPropInfo
@@ -259,7 +263,7 @@ namespace fastJSON
 		internal readonly string MemberName;
 		internal readonly Type MemberType; // pt
 		internal readonly JsonDataType JsonDataType;
-		internal readonly Type ElementType;	// bt
+		internal readonly Type ElementType; // bt
 		internal readonly Type ChangeType;
 		internal readonly Type[] GenericTypes;
 
@@ -280,47 +284,26 @@ namespace fastJSON
 			MemberType = type;
 		}
 		public myPropInfo (Type type, string name, bool customType) : this (type, name) {
-			JsonDataType dt = JsonDataType.Undefined;
+			JsonDataType dt = Reflection.GetJsonDataType (type);
 
-			if (type == typeof(int) || type == typeof(int?)) dt = JsonDataType.Int;
-			else if (type == typeof(long) || type == typeof(long?)) dt = JsonDataType.Long;
-			else if (type == typeof(float) || type == typeof(float?)) dt = JsonDataType.Single;
-			else if (type == typeof(double) || type == typeof(double?)) dt = JsonDataType.Double;
-			else if (type == typeof(string)) dt = JsonDataType.String;
-			else if (type == typeof(bool) || type == typeof(bool?)) dt = JsonDataType.Bool;
-			else if (type == typeof(DateTime) || type == typeof(DateTime?)) dt = JsonDataType.DateTime;
-			else if (type.IsEnum) dt = JsonDataType.Enum;
-			else if (type == typeof(Guid) || type == typeof(Guid?)) dt = JsonDataType.Guid;
-			else if (type == typeof(TimeSpan) || type == typeof(TimeSpan?)) dt = JsonDataType.TimeSpan;
-			else if (type == typeof(StringDictionary)) dt = JsonDataType.StringDictionary;
-			else if (type == typeof(NameValueCollection)) dt = JsonDataType.NameValue;
-			else if (type.IsArray) {
+			if (dt == JsonDataType.Array) {
 				ElementType = type.GetElementType ();
-				dt = type == typeof(byte[]) ? JsonDataType.ByteArray : JsonDataType.Array;
 			}
-#if !SILVERLIGHT
-			else if (type == typeof(Hashtable)) dt = JsonDataType.Hashtable;
-			else if (type == typeof(DataSet)) dt = JsonDataType.DataSet;
-			else if (type == typeof(DataTable)) dt = JsonDataType.DataTable;
-#endif
-			else if (typeof(IDictionary).IsAssignableFrom (type)) {
+			else if (dt == JsonDataType.Dictionary || dt == JsonDataType.StringKeyDictionary) {
 				GenericTypes = type.GetGenericArguments ();
-				if (GenericTypes.Length > 0 && GenericTypes[0] == typeof(string))
-					dt = JsonDataType.StringKeyDictionary;
-				else
-					dt = JsonDataType.Dictionary;
 			}
-			else if (customType)
+			else if (customType) {
 				dt = JsonDataType.Custom;
+			}
 
-			IsStruct |= (type.IsValueType && !type.IsPrimitive && !type.IsEnum && type != typeof(decimal));
+			IsStruct |= (type.IsValueType && !type.IsPrimitive && !type.IsEnum && typeof (decimal).Equals (type) == false);
 
 			IsClass = type.IsClass;
 			IsValueType = type.IsValueType;
 			if (type.IsGenericType) {
 				IsGenericType = true;
 				ElementType = type.GetGenericArguments ()[0];
-				IsNullable = type.GetGenericTypeDefinition ().Equals (typeof(Nullable<>));
+				IsNullable = type.GetGenericTypeDefinition ().Equals (typeof (Nullable<>));
 			}
 
 			ChangeType = IsNullable ? ElementType : type;
@@ -334,13 +317,14 @@ namespace fastJSON
 		// public, parameterless
 		Default = 0,
 		NonPublic = 1,
-		Parameterized = 2
+		Parametric = 2
 	}
 
 	enum ComplexType
 	{
 		General,
 		Array,
+		MultiDimensionalArray,
 		Dictionary,
 		List,
 		Nullable

@@ -60,6 +60,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DefineConstants>BONUSPACK</DefineConstants>
     <DocumentationFile>..\output\PowerJSON\fastJSON.XML</DocumentationFile>
+    <CodeAnalysisRuleSet>ExtendedDesignGuidelineRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(TargetFrameworkVersion.Replace(&quot;v&quot;,&quot;&quot;))' &gt;= '4.0' ">
     <DefineConstants>$(DefineConstants);NET_40_OR_GREATER</DefineConstants>

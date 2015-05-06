@@ -8,7 +8,7 @@ namespace fastJSON
 	/// Indicates whether a class or a struct could be deserialized, even if it is not a public one.
 	/// </summary>
 	[AttributeUsage (AttributeTargets.Class | AttributeTargets.Struct, Inherited=false)]
-	public class JsonSerializableAttribute : Attribute
+	public sealed class JsonSerializableAttribute : Attribute
 	{
 	}
 
@@ -16,12 +16,12 @@ namespace fastJSON
 	/// Indicates whether a field or property should be included in serialization. To control whether a field or property should be deserialized, use the <see cref="System.ComponentModel.ReadOnlyAttribute"/>.
 	/// </summary>
 	[AttributeUsage (AttributeTargets.Field | AttributeTargets.Property)]
-	public class JsonIncludeAttribute : Attribute
+	public sealed class JsonIncludeAttribute : Attribute
 	{
 		/// <summary>
-		/// Gets or sets whether the annotated field or property should be included in serialization disregarding whether it is read-only or not. The default value is true.
+		/// Gets whether the annotated field or property should be included in serialization disregarding whether it is read-only or not. The default value is true.
 		/// </summary>
-		public bool Include { get; set; }
+		public bool Include { get; private set; }
 		/// <summary>
 		/// Indicates a member should be included in serialization.
 		/// </summary>
@@ -36,20 +36,20 @@ namespace fastJSON
 	}
 
 	/// <summary>
-	/// Indicates the name and data type of a field or property.
+	/// Indicates the name and data type of a field or property. The same field or property with multiple <see cref="JsonFieldAttribute"/> can have various names mapped to various types.
 	/// </summary>
 	[AttributeUsage (AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = true)]
-	public class JsonFieldAttribute : Attribute
+	public sealed class JsonFieldAttribute : Attribute
 	{
 		/// <summary>
-		/// Gets or sets the name when the annotated field or property is serialized or deserialized. This overrides the <see cref="JSONParameters.NamingConvention"/> setting in <see cref="JSONParameters"/>.
+		/// Gets the name of the serialized field or property. The case of the serialized name defined in this attribute will not be changed by <see cref="JSONParameters.NamingConvention"/> setting in <see cref="JSONParameters"/>.
 		/// </summary>
-		public string Name { get; set; }
+		public string Name { get; private set; }
 
 		/// <summary>
-		/// The type of the field or property. The same field or property with multiple <see cref="JsonFieldAttribute"/> can have various names mapped to various types.
+		/// Gets the type of the field or property.
 		/// </summary>
-		public Type Type { get; set; }
+		public Type DataType { get; private set; }
 
 		/// <summary>
 		/// Specifies the name of the serialized field or property.
@@ -63,17 +63,17 @@ namespace fastJSON
 		/// Specifies the name of the serialized field or property which has a associated type.
 		/// </summary>
 		/// <param name="name">The name of the serialized field or property.</param>
-		/// <param name="type">The name is only used when the value is of this data type.</param>
-		public JsonFieldAttribute (string name, Type type) {
+		/// <param name="dataType">The name is only used when the value is of this data type.</param>
+		public JsonFieldAttribute (string name, Type dataType) {
 			Name = name;
-			Type = type;
+			DataType = dataType;
 		}
 	}
 
 	/// <summary>
 	/// This attribute is not supported yet. Do not use it at this moment.
 	/// </summary>
-	public class JsonFieldOrderAttribute : Attribute
+	internal sealed class JsonFieldOrderAttribute : Attribute
 	{
 		/// <summary>
 		/// Gets or sets the serialization order of the annotated field or property.
@@ -93,19 +93,19 @@ namespace fastJSON
 	/// Controls the serialized name of an Enum value.
 	/// </summary>
 	[AttributeUsage (AttributeTargets.Field)]
-	public class JsonEnumValueAttribute : Attribute
+	public sealed class JsonEnumValueAttribute : Attribute
 	{
 		/// <summary>
-		/// Gets or sets the literal name of the Enum value.
+		/// Gets the literal name of the Enum value.
 		/// </summary>
-		public string Name { get; set; }
+		public string Name { get; private set; }
 
 		/// <summary>
 		/// Specifies the serialized name of the annotated Enum value.
 		/// </summary>
 		/// <param name="name"></param>
 		public JsonEnumValueAttribute (string name) {
-			this.Name = name;
+			Name = name;
 		}
 	}
 
@@ -113,14 +113,13 @@ namespace fastJSON
 	/// Controls the object being serialized or deserialized.
 	/// </summary>
 	[AttributeUsage (AttributeTargets.Class | AttributeTargets.Struct)]
-	public class JsonInterceptorAttribute : Attribute
+	public sealed class JsonInterceptorAttribute : Attribute
 	{
 		/// <summary>
 		/// The type of interceptor. The instance of the type should implement <see cref="IJsonInterceptor"/>. During serialization and deserialization, an instance of <see cref="IJsonInterceptor"/> will be created to process values of the object being serialized or deserialized.
 		/// </summary>
 		public Type InterceptorType {
 			get { return Interceptor == null ? null : Interceptor.GetType (); }
-			set { Interceptor = value != null ? Activator.CreateInstance (value) as IJsonInterceptor : null; }
 		}
 
 		internal IJsonInterceptor Interceptor { get; private set; }
@@ -134,10 +133,56 @@ namespace fastJSON
 			if (interceptorType.IsInterface || typeof (IJsonInterceptor).IsAssignableFrom (interceptorType) == false) {
 				throw new JsonSerializationException (String.Concat ("The type ", interceptorType.FullName, " defined in ", typeof (JsonInterceptorAttribute).FullName, " does not implement interface ", typeof (IJsonInterceptor).FullName));
 			}
-			InterceptorType = interceptorType;
-		}
+			Interceptor = Activator.CreateInstance (interceptorType) as IJsonInterceptor;
+        }
 	}
 
+	/// <summary>
+	/// Represents a JSON name-value pair.
+	/// </summary>
+	public class JsonItem
+	{
+		internal bool _Renameable;
+		/// <summary>
+		/// Gets whether the <see cref="Name"/> property of this <see cref="JsonItem"/> instance can be changed.
+		/// </summary>
+		public bool Renameable { get { return _Renameable; } }
+
+		internal string _Name;
+		/// <summary>
+		/// The name of the item.
+		/// </summary>
+		public string Name {
+			get { return _Name; }
+			set {
+				if (_Renameable == false) {
+					throw new InvalidOperationException ("The name of this " + typeof (JsonItem).Name + " can not be altered.");
+				}
+				_Name = value;
+			}
+		}
+
+		internal object _Value;
+		/// <summary>
+		/// The value of the item.
+		/// </summary>
+		public object Value {
+			get { return _Value; }
+			set { _Value = value; }
+		}
+		/// <summary>
+		/// Creates an instance of <see cref="JsonItem"/>.
+		/// </summary>
+		/// <param name="name">The name of the item.</param>
+		/// <param name="value">The value of the item.</param>
+		public JsonItem (string name, object value) : this (name, value, false) { }
+
+		internal JsonItem (string name, object value, bool canRename) {
+			_Renameable = canRename;
+			_Name = name;
+			_Value = value;
+		}
+	}
 	/// <summary>
 	/// <para>An interface to intercept various aspects in JSON serialization and deserialization.</para>
 	/// <para>It is recommended to inherit from <see cref="JsonInterceptor&lt;T&gt;"/> for easier implementation when possible.</para>
@@ -148,52 +193,50 @@ namespace fastJSON
 		/// <summary>
 		/// This method is called before values are written out during serialization. If the method returns false, the object will not be serialized.
 		/// </summary>
-		/// <param name="obj">The object being serialized.</param>
+		/// <param name="data">The object being serialized.</param>
 		/// <returns>Whether the object should be serialized.</returns>
-		bool OnSerializing (object obj);
+		bool OnSerializing (object data);
 
 		/// <summary>
 		/// This method is called before the serialization is finished. Extra values can be returned and written to the serialized result.
 		/// </summary>
-		/// <param name="obj">The object being serialized.</param>
+		/// <param name="data">The object being serialized.</param>
 		/// <returns>Extra values to be serialized.</returns>
-		IEnumerable<KeyValuePair<string, object>> SerializeExtraValues (object obj);
+		IEnumerable<JsonItem> SerializeExtraValues (object data);
 
 		/// <summary>
 		/// This method is called after the object has been fully serialized.
 		/// </summary>
-		/// <param name="obj">The object being serialized.</param>
-		void OnSerialized (object obj);
+		/// <param name="data">The object being serialized.</param>
+		void OnSerialized (object data);
 
 		/// <summary>
 		/// This method is called before serializing a field or a property. If the method returns false, the member will not be serialized.
 		/// </summary>
-		/// <param name="obj">The container object.</param>
-		/// <param name="memberName">The name of the member.</param>
-		/// <param name="memberValue">The value of the member.</param>
+		/// <param name="data">The container object.</param>
+		/// <param name="item">The item to be serialized.</param>
 		/// <returns>Whether the member should be serialized.</returns>
-		bool OnSerializing (object obj, ref string memberName, ref object memberValue);
+		bool OnSerializing (object data, JsonItem item);
 
 		/// <summary>
 		/// This method is called between the object has been created and the values are filled during deserialization. This method provides an opportunity to initialize an object before deserialization.
 		/// </summary>
-		/// <param name="obj">The object being deserialized.</param>
-		void OnDeserializing (object obj);
+		/// <param name="data">The object being deserialized.</param>
+		void OnDeserializing (object data);
 
 		/// <summary>
 		/// This method is called after the object has been fully deserialized. Data validation could be done onto the serialized object.
 		/// </summary>
-		/// <param name="obj">The object created from deserialization.</param>
-		void OnDeserialized (object obj);
+		/// <param name="data">The object created from deserialization.</param>
+		void OnDeserialized (object data);
 
 		/// <summary>
 		/// This method is called before deserializing a field or a property. If the method returns false, the member will not be deserialized.
 		/// </summary>
-		/// <param name="obj">The container object.</param>
-		/// <param name="memberName">The name of the member.</param>
-		/// <param name="memberValue">The value of the member.</param>
+		/// <param name="data">The container object.</param>
+		/// <param name="item">The item to be deserialized.</param>
 		/// <returns>Whether the member should be deserialized.</returns>
-		bool OnDeserializing (object obj, string memberName, ref object memberValue);
+		bool OnDeserializing (object data, JsonItem item);
 	}
 
 	/// <summary>
@@ -206,93 +249,91 @@ namespace fastJSON
 		/// <summary>
 		/// This method is called before values are written out during serialization. If the method returns false, the object will not be serialized.
 		/// </summary>
-		/// <param name="obj">The object being serialized.</param>
+		/// <param name="data">The object being serialized.</param>
 		/// <returns>Whether the object should be serialized.</returns>
-		public virtual bool OnSerializing (T obj) { return true; }
+		public virtual bool OnSerializing (T data) { return true; }
 
 		/// <summary>
 		/// This method is called before the serialization is finished. Extra values can be returned and written to the serialized result.
 		/// </summary>
-		/// <param name="obj">The object being serialized.</param>
+		/// <param name="data">The object being serialized.</param>
 		/// <returns>Extra values to be serialized.</returns>
-		public virtual IEnumerable<KeyValuePair<string, object>> SerializeExtraValues (T obj) { return null; }
+		public virtual IEnumerable<JsonItem> SerializeExtraValues (T data) { return null; }
 
 		/// <summary>
 		/// This method is called after the object has been fully serialized.
 		/// </summary>
-		/// <param name="obj">The object being serialized.</param>
-		public virtual void OnSerialized (T obj) { }
+		/// <param name="data">The object being serialized.</param>
+		public virtual void OnSerialized (T data) { }
 
 		/// <summary>
 		/// This method is called between the object has been created and the values are filled during deserialization. This method provides an opportunity to initialize an object before deserialization.
 		/// </summary>
-		/// <param name="obj">The object being deserialized.</param>
-		public virtual void OnDeserializing (T obj) { }
+		/// <param name="data">The object being deserialized.</param>
+		public virtual void OnDeserializing (T data) { }
 
 		/// <summary>
 		/// This method is called after the object has been fully deserialized. Data validation could be done onto the serialized object.
 		/// </summary>
-		/// <param name="obj">The object created from deserialization.</param>
-		public virtual void OnDeserialized (T obj) { }
+		/// <param name="data">The object created from deserialization.</param>
+		public virtual void OnDeserialized (T data) { }
 
 		/// <summary>
 		/// This method is called before serializing a field or a property. If the method returns false, the member will not be serialized.
 		/// </summary>
-		/// <param name="obj">The container object.</param>
-		/// <param name="memberName">The name of the member.</param>
-		/// <param name="memberValue">The value of the member.</param>
+		/// <param name="data">The container object.</param>
+		/// <param name="item">The item being serialized.</param>
 		/// <returns>Whether the member should be serialized.</returns>
-		public virtual bool OnSerializing (T obj, ref string memberName, ref object memberValue) {
+		public virtual bool OnSerializing (T data, JsonItem item) {
 			return true;
 		}
 
 		/// <summary>
 		/// This method is called before deserializing a field or a property. If the method returns false, the member will not be deserialized.
 		/// </summary>
-		/// <param name="obj">The container object.</param>
-		/// <param name="memberName">The name of the member.</param>
-		/// <param name="memberValue">The value of the member.</param>
+		/// <param name="data">The container object.</param>
+		/// <param name="item">The item to be deserialized.</param>
 		/// <returns>Whether the member should be deserialized.</returns>
-		public virtual bool OnDeserializing (T obj, string memberName, ref object memberValue) {
+		public virtual bool OnDeserializing (T data, JsonItem item) {
 			return true;
 		}
 
-		bool IJsonInterceptor.OnSerializing (object obj) {
-			return (obj is T) && OnSerializing ((T)obj);
+		bool IJsonInterceptor.OnSerializing (object data) {
+			return (data is T) && OnSerializing ((T)data);
 		}
 
-		IEnumerable<KeyValuePair<string, object>> IJsonInterceptor.SerializeExtraValues (object obj) {
-			return (obj is T) ? SerializeExtraValues ((T)obj) : null;
+		IEnumerable<JsonItem> IJsonInterceptor.SerializeExtraValues (object data) {
+			return (data is T) ? SerializeExtraValues ((T)data) : null;
 		}
 
-		void IJsonInterceptor.OnSerialized (object obj) {
-			if (obj is T) {
-				OnSerialized ((T)obj);
+		void IJsonInterceptor.OnSerialized (object data) {
+			if (data is T) {
+				OnSerialized ((T)data);
 			}
 		}
 
-		void IJsonInterceptor.OnDeserializing (object obj) {
-			if (obj is T) {
-				OnDeserializing ((T)obj);
+		void IJsonInterceptor.OnDeserializing (object data) {
+			if (data is T) {
+				OnDeserializing ((T)data);
 			}
 		}
 
-		void IJsonInterceptor.OnDeserialized (object obj) {
-			if (obj is T) {
-				OnDeserialized ((T)obj);
+		void IJsonInterceptor.OnDeserialized (object data) {
+			if (data is T) {
+				OnDeserialized ((T)data);
 			}
 		}
 
-		bool IJsonInterceptor.OnSerializing (object obj, ref string memberName, ref object memberValue) {
-			if (obj is T) {
-				return OnSerializing ((T)obj, ref memberName, ref memberValue);
+		bool IJsonInterceptor.OnSerializing (object data, JsonItem item) {
+			if (data is T) {
+				return OnSerializing ((T)data, item);
 			}
 			return false;
 		}
 
-		bool IJsonInterceptor.OnDeserializing (object obj, string memberName, ref object memberValue) {
-			if (obj is T) {
-				return OnDeserializing ((T)obj, memberName, ref memberValue);
+		bool IJsonInterceptor.OnDeserializing (object data, JsonItem item) {
+			if (data is T) {
+				return OnDeserializing ((T)data, item);
 			}
 			return false;
 		}
@@ -302,7 +343,7 @@ namespace fastJSON
 	/// Controls data conversion in serialization and deserialization.
 	/// </summary>
 	[AttributeUsage (AttributeTargets.Field | AttributeTargets.Property)]
-	public class JsonConverterAttribute : Attribute
+	public sealed class JsonConverterAttribute : Attribute
 	{
 		/// <summary>
 		/// <para>The type of converter to convert string to object. The type should implement <see cref="IJsonConverter"/>.</para>
@@ -310,7 +351,6 @@ namespace fastJSON
 		/// </summary>
 		public Type ConverterType {
 			get { return Converter == null ? null : Converter.GetType (); }
-			set { Converter = value != null ? Activator.CreateInstance (value) as IJsonConverter : null; }
 		}
 
 		internal IJsonConverter Converter { get; private set; }
@@ -318,13 +358,13 @@ namespace fastJSON
 		/// <summary>
 		/// Marks the value of a field or a property to be converted by an <see cref="IJsonConverter"/>.
 		/// </summary>
-		/// <param name="converter">The type of the <see cref="IJsonConverter"/>.</param>
+		/// <param name="converterType">The type of the <see cref="IJsonConverter"/>.</param>
 		/// <exception cref="JsonSerializationException">Exception can be thrown if the type does not implements <see cref="IJsonConverter"/>.</exception>
-		public JsonConverterAttribute (Type converter) {
-			if (converter.IsInterface || typeof(IJsonConverter).IsAssignableFrom (converter) == false) {
-				throw new JsonSerializationException (String.Concat ("The type ", converter.FullName, " defined in ", typeof (JsonConverterAttribute).FullName, " does not implement interface ", typeof (IJsonConverter).FullName));
+		public JsonConverterAttribute (Type converterType) {
+			if (converterType.IsInterface || typeof (IJsonConverter).IsAssignableFrom (converterType) == false) {
+				throw new JsonSerializationException (String.Concat ("The type ", converterType.FullName, " defined in ", typeof (JsonConverterAttribute).FullName, " does not implement interface ", typeof (IJsonConverter).FullName));
 			}
-			ConverterType = converter;
+			Converter = Activator.CreateInstance (converterType) as IJsonConverter;
 		}
 	}
 
@@ -332,7 +372,7 @@ namespace fastJSON
 	/// Controls data conversion of <see cref="System.Collections.IEnumerable"/> items in serialization and deserialization.
 	/// </summary>
 	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
-	public class JsonItemConverterAttribute : Attribute
+	public sealed class JsonItemConverterAttribute : Attribute
 	{
 		/// <summary>
 		/// <para>The type of converter to convert string to object. The type should implement <see cref="IJsonConverter"/>.</para>
@@ -364,54 +404,49 @@ namespace fastJSON
 	/// <remarks>
 	/// <para>During deserialization, the JSON string is parsed and converted to primitive data. The data could be of the following six types returned from the JSON Parser: <see cref="Boolean"/>, <see cref="Int64"/>, <see cref="Double"/>, <see cref="String"/>, <see cref="List{Object}"/> and <see cref="Dictionary{String, Object}"/>.</para>
 	/// <para>The <see cref="DeserializationConvert"/> method should be able to process the above six types, as well as the null value, and convert the value to match the type of the member being deserialized.</para>
-	/// <para>If the <see cref="GetReversiveType"/> method returns a <see cref="Type"/>, the deserializer will firstly attempt to revert the primitive data to match the type, and then pass the reverted value to the "fieldValue" parameter of the <see cref="DeserializationConvert"/> method. By this means, the implementation of <see cref="DeserializationConvert"/> method does not have to cope with primitive data.</para>
-	/// <para>To implement the <see cref="GetReversiveType"/> method, keep in mind that the "fieldValue" is always primitive data.</para>
+	/// <para>If the <see cref="GetReversiveType"/> method returns a <see cref="Type"/>, the deserializer will firstly attempt to revert the primitive data to match the type, and then pass the reverted value to the <see cref="DeserializationConvert"/> method. By this means, the implementation of <see cref="DeserializationConvert"/> method does not have to cope with primitive data.</para>
+	/// <para>To implement the <see cref="GetReversiveType"/> method, keep in mind that the the <see name="JsonItem.Value"/> in the <see cref="JsonItem"/> instance will always be primitive data.</para>
 	/// </remarks>
 	/// <preliminary />
 	public interface IJsonConverter
 	{
 		/// <summary>
-		/// Returns the expected type from primitive data. If the returned type is not null, the deserializer will attempt to convert <paramref name="fieldValue"/> to match the returned type.
+		/// Returns the expected type from the primitive data in <paramref name="item" />. If the returned type is not null, the deserializer will attempt to convert the <see name="JsonItem.Value"/> of <paramref name="item" /> to match the returned type.
 		/// </summary>
-		/// <param name="fieldName">The name of the field or property.</param>
-		/// <param name="fieldValue">The primitive value of the field of property.</param>
+		/// <param name="item">The item to be deserialized.</param>
 		/// <returns>The expected data type.</returns>
-		Type GetReversiveType (string fieldName, object fieldValue);
+		Type GetReversiveType (JsonItem item);
 
 		/// <summary>
-		/// Converts fieldValue to a new value during serialization.
+		/// Converts the <paramref name="item" /> to a new value during serialization. Either <see name="JsonItem.Name"/> or <see name="JsonItem.Value"/> of the <paramref name="item" /> can be changed to another value.
 		/// </summary>
-		/// <param name="fieldName">The name of the field or property.</param>
-		/// <param name="fieldValue">The value of the field of property.</param>
-		/// <returns>The converted value.</returns>
-		object SerializationConvert (string fieldName, object fieldValue);
+		/// <param name="item">The item to be deserialized.</param>
+		void SerializationConvert (JsonItem item);
 
 		/// <summary>
-		/// <para>Converts fieldValue to a new value during deserialization. The type of the <paramref name="fieldValue"/> and the returned value can be different types, which enables adapting various data types from deserialization.</para>
-		/// <para>The field value could be one of six primitive value types. For further information, refer to <see cref="IJsonConverter"/>.</para>
+		/// <para>Converts the <see name="JsonItem.Value"/> of <paramref name="item" /> to a new value during deserialization. The <see name="JsonItem.Value"/> of <paramref name="item" /> can be changed to a different type. This enables adapting various data types from deserialization.</para>
+		/// <para>The <see name="JsonItem.Value"/> of <paramref name="item" /> could be one of six primitive value types. For further information, refer to <see cref="IJsonConverter"/>.</para>
 		/// </summary>
-		/// <param name="fieldName">The name of the field or property.</param>
-		/// <param name="fieldValue">The primitive value of the field of property.</param>
-		/// <returns>The converted value.</returns>
-		object DeserializationConvert (string fieldName, object fieldValue);
+		/// <param name="item">The item to be deserialized.</param>
+		void DeserializationConvert (JsonItem item);
 	}
 
 	/// <summary>
 	/// A helper converter which implements the <see cref="IJsonConverter"/> to convert between two specific types.
 	/// </summary>
-	/// <typeparam name="O">The original type of the data being serialized.</typeparam>
-	/// <typeparam name="S">The serialized type of the data.</typeparam>
+	/// <typeparam name="TOriginal">The original type of the data being serialized.</typeparam>
+	/// <typeparam name="TSerialized">The serialized type of the data.</typeparam>
 	/// <remarks>For further details about implementation, please refer to <seealso cref="IJsonConverter"/>.</remarks>
 	/// <preliminary />
-	public abstract class JsonConverter<O, S> : IJsonConverter
+	public abstract class JsonConverter<TOriginal, TSerialized> : IJsonConverter
 	{
 		Type _SerializedType;
 
 		/// <summary>
-		/// Creates an instance of <see cref="JsonConverter{O, S}"/>.
+		/// Creates an instance of <see cref="JsonConverter{TOriginal, TSerialized}"/>.
 		/// </summary>
 		protected JsonConverter () {
-			var s = typeof (S);
+			var s = typeof (TSerialized);
 			if (s == typeof (bool) || s == typeof (string)
 				|| s == typeof (double) || s == typeof (long)
 				|| s == typeof (List<object>)
@@ -423,56 +458,49 @@ namespace fastJSON
 		}
 
 		/// <summary>
-		/// Returns the expected type of <paramref name="fieldValue"/>. The implemenation returns <typeparamref name="S"/>.
+		/// Returns the expected type for <paramref name="item"/>. The implemenation returns <typeparamref name="TSerialized"/>.
 		/// </summary>
-		/// <param name="fieldName">The name of the annotated member.</param>
-		/// <param name="fieldValue">The value being serialized.</param>
-		/// <returns>The type of <typeparamref name="S"/>.</returns>
-		public virtual Type GetReversiveType (string fieldName, object fieldValue) {
+		/// <param name="item">The item to be deserialized.</param>
+		/// <returns>The type of <typeparamref name="TSerialized"/>.</returns>
+		public virtual Type GetReversiveType (JsonItem item) {
 			return _SerializedType;
 		}
 
 		/// <summary>
-		/// Converts the original value before serialization. If the serialized value is not the type of <typeparamref name="O"/>, the <paramref name="fieldValue"/> will be returned.
+		/// Converts the original value before serialization. If the serialized value is not the type of <typeparamref name="TOriginal"/>, the <paramref name="item"/> will be returned.
+		/// </summary>
+		/// <param name="item">The item to be deserialized.</param>
+		public void SerializationConvert (JsonItem item) {
+			if (item.Value is TOriginal) {
+				item.Value = Convert (item.Name, (TOriginal)item.Value);
+			}
+		}
+
+		/// <summary>
+		/// Reverts the serialized value to <typeparamref name="TOriginal"/>. If the serialized value is not the type of <typeparamref name="TSerialized"/>, nothing will be changed.
+		/// </summary>
+		/// <param name="item">The item to be deserialized.</param>
+		public void DeserializationConvert (JsonItem item) {
+			if (item.Value is TSerialized) {
+				item.Value = Revert (item.Name, (TSerialized)item.Value);
+			}
+		}
+
+		/// <summary>
+		/// Converts the original value to <typeparamref name="TSerialized"/> type before serialization.
 		/// </summary>
 		/// <param name="fieldName">The name of the annotated member.</param>
 		/// <param name="fieldValue">The value being serialized.</param>
 		/// <returns>The converted value.</returns>
-		public object SerializationConvert (string fieldName, object fieldValue) {
-			if (fieldValue is O) {
-				return Convert (fieldName, (O)fieldValue);
-			}
-			return fieldValue;
-		}
+		public abstract TSerialized Convert (string fieldName, TOriginal fieldValue);
 
 		/// <summary>
-		/// Reverts the serialized value back to the type of the original type. If the serialized value is not the type of <typeparamref name="S"/>, the <paramref name="fieldValue"/> will be returned.
+		/// Reverts the serialized value to the <typeparamref name="TOriginal"/> type.
 		/// </summary>
 		/// <param name="fieldName">The name of the annotated member.</param>
 		/// <param name="fieldValue">The serialized value.</param>
 		/// <returns>The reverted value which has the same type as the annotated member.</returns>
-		public object DeserializationConvert (string fieldName, object fieldValue) {
-			if (fieldValue is S) {
-				return Revert (fieldName, (S)fieldValue);
-			}
-			return fieldValue;
-		}
-
-		/// <summary>
-		/// Converts the original value before serialization.
-		/// </summary>
-		/// <param name="fieldName">The name of the annotated member.</param>
-		/// <param name="fieldValue">The value being serialized.</param>
-		/// <returns>The converted value.</returns>
-		public abstract S Convert (string fieldName, O fieldValue);
-
-		/// <summary>
-		/// Reverts the serialized value to the original value.
-		/// </summary>
-		/// <param name="fieldName">The name of the annotated member.</param>
-		/// <param name="fieldValue">The serialized value.</param>
-		/// <returns>The reverted value which has the same type as the annotated member.</returns>
-		public abstract O Revert (string fieldName, S fieldValue);
+		public abstract TOriginal Revert (string fieldName, TSerialized fieldValue);
 
 	}
 

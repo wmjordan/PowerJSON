@@ -1,24 +1,23 @@
-fastJSON
+About PowerJSON
 ========
 
-About fastJSON
----------------
+PowerJSON is a fork of the smallest, fastest polymorphic JSON serializer--fastJSON.
 
-The smallest, fastest polymorphic JSON serializer.
+Please read the article [about fastJSON](http://www.codeproject.com/Articles/159450/fastJSON) here.
 
-Please read the article here : [fastJSON](http://www.codeproject.com/Articles/159450/fastJSON)
-
-About this fork
+Features of PowerJSON
 ---------------
 
 ### New Features
 
 * Rename serialized members.
-* Polymorphic serialization.
+* Rename serialized Enum values.
+* Deserializing non-public members.
+* Polymorphic serialization without JSON extensions.
 * Write out additional key-value pairs in the serialized JSON.
 * Conditional serialization.
-* Invasiveless control of serialization.
-* A complete documentation.
+* Noninvasive control of serialization.
+* A comprehensive documentation.
 
 ### New Classes and Interfaces
 
@@ -61,7 +60,7 @@ This fork also fixed some issues in the original fastJSON project:
 * Serializing `TimeSpan` type could cause application stack overflow. (2015-4-2)
 * Read-only `static` fields were serialized regardless `ShowReadOnlyProperties` was turned off. (2015-4-7)
 * `ShowReadOnlyProperties` was not in effect for the same type after change. (2015-4-7)
-* Deserialization on ``Dictionary<N, List<V>>` type could fail. (2015-4-9)
+* Deserialization on `Dictionary<N, List<V>>` type could fail. (2015-4-9)
 * "Release" compiled edition did not support `dynamic` types.
 * Multi-demensional arrays could not be deserialized. (2015-4-25)
 * List<T[]> list could not be deserialized. (2015-4-27)

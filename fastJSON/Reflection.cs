@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.Data;
 using System.Reflection;
 using System.Reflection.Emit;
 
@@ -10,6 +12,7 @@ namespace fastJSON
 	{
 		// Singleton pattern 4 from : http://csharpindepth.com/articles/general/singleton.aspx
 		static readonly Reflection instance = new Reflection();
+		static readonly SafeDictionary<Type, JsonDataType> _jsonTypeCache = InitBuiltInTypes ();
 
 		// Explicit static constructor to tell C# compiler
 		// not to mark type as beforefieldinit
@@ -21,25 +24,82 @@ namespace fastJSON
 		}
 		public static Reflection Instance { get { return instance; } }
 
-		SafeDictionary<string, Type> _typecache = new SafeDictionary<string, Type>();
-		
-		#region [   MEMBER GET SET   ]
-		internal static bool ShouldSkipVisibilityCheck (Type[] argumentTypes, SerializationManager manager) {
-			ReflectionCache c;
-			foreach (var t in argumentTypes) {
-				c = manager.GetDefinition (t);
-				if (c.AlwaysDeserializable) {
-					return true;
-				}
+		readonly SafeDictionary<string, Type> _typecache = new SafeDictionary<string, Type>();
+		#region Built-in Deserializable Types
+		static SafeDictionary<Type, JsonDataType> InitBuiltInTypes () {
+			var d = new Dictionary<Type, JsonDataType> {
+				{ typeof(object), JsonDataType.Object },
+				{ typeof(int), JsonDataType.Int },
+				{ typeof(int?), JsonDataType.Int },
+				{ typeof(long), JsonDataType.Long },
+				{ typeof(long?), JsonDataType.Long },
+				{ typeof(float), JsonDataType.Single },
+				{ typeof(float?), JsonDataType.Single },
+				{ typeof(double), JsonDataType.Double },
+				{ typeof(double?), JsonDataType.Double },
+				{ typeof(bool), JsonDataType.Bool },
+				{ typeof(bool?), JsonDataType.Bool },
+				{ typeof(string), JsonDataType.String },
+				{ typeof(DateTime), JsonDataType.DateTime },
+				{ typeof(DateTime?), JsonDataType.DateTime },
+				{ typeof(Guid), JsonDataType.Guid },
+				{ typeof(Guid?), JsonDataType.Guid },
+				{ typeof(TimeSpan), JsonDataType.TimeSpan },
+				{ typeof(TimeSpan?), JsonDataType.TimeSpan },
+				{ typeof(StringDictionary), JsonDataType.StringDictionary },
+				{ typeof(NameValueCollection), JsonDataType.NameValue },
+#if !SILVERLIGHT
+				{ typeof(Hashtable), JsonDataType.Hashtable },
+				{ typeof(DataSet), JsonDataType.DataSet },
+				{ typeof(DataTable), JsonDataType.DataTable },
+#endif
+				{ typeof(byte[]), JsonDataType.ByteArray }
+			};
+			return new SafeDictionary<Type, JsonDataType> (d);
+		}
+		internal static JsonDataType GetJsonDataType (Type type) {
+			JsonDataType t;
+			if (_jsonTypeCache.TryGetValue (type, out t)) {
+				return t;
+			}
+			t = DetermineExtraDataType (type);
+			_jsonTypeCache.Add (type, t);
+			return t;
+		}
 
-				if (!t.IsGenericType && !t.IsArray)
-					continue;
-				if (ShouldSkipVisibilityCheck (c.ArgumentTypes, manager)) {
-					return true;
+		private static JsonDataType DetermineExtraDataType (Type type) {
+			if (type.IsEnum) {
+				return JsonDataType.Enum;
+			}
+			if (type.IsArray) {
+				return JsonDataType.Array;
+			}
+			if (type.IsGenericType) {
+				var g = type.GetGenericTypeDefinition ();
+				if (typeof (List<>).Equals (g)) {
+					return JsonDataType.GenericList;
 				}
 			}
-			return false;
+			if (typeof (IDictionary).IsAssignableFrom (type)) {
+				var gt = type.GetGenericArguments ();
+				if (gt.Length > 0 && typeof (string).Equals (gt[0])) {
+					return JsonDataType.StringKeyDictionary;
+				}
+				return JsonDataType.Dictionary;
+			}
+			if (typeof (DataSet).IsAssignableFrom (type)) {
+				return JsonDataType.DataSet;
+			}
+			if (typeof (DataTable).IsAssignableFrom (type)) {
+				return JsonDataType.DataTable;
+			}
+			if (typeof (NameValueCollection).IsAssignableFrom (type)) {
+				return JsonDataType.NameValue;
+			}
+			return JsonDataType.Undefined;
 		}
+		#endregion
+		#region [   MEMBER GET SET   ]
 		internal static CreateObject CreateConstructorMethod (Type objtype, bool skipVisibility) {
 			CreateObject c;
 			var n = objtype.Name + ".ctor";
@@ -69,7 +129,7 @@ namespace fastJSON
 			return c;
 		}
 
-		internal static Getters[] GetGetters (Type type, IReflectionController controller, SerializationManager manager) {
+		internal static Getters[] GetGetters (Type type, IReflectionController controller) {
 			var pl = type.GetProperties (BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
 			var fl = type.GetFields (BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static);
 			var getters = new Dictionary<string, Getters> (pl.Length + fl.Length);
@@ -83,12 +143,6 @@ namespace fastJSON
 
 			foreach (var m in fl) {
 				if (m.IsLiteral == false) {
-					// shares the definition from declaring type (base type)
-					//if (m.DeclaringType != type) {
-					//	var g = manager.GetDefinition (m.DeclaringType).FindGetters (m.Name);
-					//	getters.Add (m.Name, g);
-					//	continue;
-					//}
 					AddGetter (getters, m, CreateGetField (type, m), controller);
 				}
 			}

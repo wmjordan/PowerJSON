@@ -28,14 +28,14 @@ namespace fastJSON
             Null
         }
 
-        readonly string json;
-        readonly StringBuilder s = new StringBuilder();
-        Token lookAheadToken = Token.None;
-        int index;
+        readonly string _json;
+        readonly StringBuilder _sb = new StringBuilder();
+        Token _lookAheadToken = Token.None;
+        int _index;
 
         internal JsonParser(string json)
         {
-            this.json = json;
+           _json = json;
         }
 
         public object Decode()
@@ -43,9 +43,9 @@ namespace fastJSON
             return ParseValue();
         }
 
-        private Dictionary<string, object> ParseObject()
+        private JsonDict ParseObject()
         {
-            Dictionary<string, object> table = new Dictionary<string, object>();
+            var table = new JsonDict ();
 
             ConsumeToken(); // {
 
@@ -70,12 +70,27 @@ namespace fastJSON
                             // :
                             if (NextToken() != Token.Colon)
                             {
-								throw new JsonSerializationException ("Expected colon at index " + index);
+								throw new JsonSerializationException ("Expected colon at index " + _index);
                             }
 
                             // value
                             object value = ParseValue();
 
+							if (name.Length == 0) {
+								// ignores unnamed item
+								continue;
+							}
+							if (name[0] == '$') {
+								switch (name) {
+									case JsonDict.ExtTypes: table.Types = (JsonDict)value; continue;
+									case JsonDict.ExtType: table.Type = (string)value; continue;
+									case JsonDict.ExtRefIndex: table.RefIndex = (int)(long)value; continue;
+									case JsonDict.ExtMap: table.Map = (JsonDict)value; continue;
+									case JsonDict.ExtSchema: table.Schema = value; continue;
+									default:
+										break;
+								}
+							}
                             table[name] = value;
                         }
                         break;
@@ -83,9 +98,9 @@ namespace fastJSON
             }
         }
 
-        private List<object> ParseArray()
+        private JsonArray ParseArray()
         {
-            List<object> array = new List<object>();
+            var array = new JsonArray();
             ConsumeToken(); // [
 
             while (true)
@@ -136,94 +151,92 @@ namespace fastJSON
                     return null;
             }
 
-			throw new JsonSerializationException ("Unrecognized token at index " + index);
+			throw new JsonSerializationException ("Unrecognized token at index " + _index);
         }
 
         private string ParseString()
         {
             ConsumeToken(); // "
 
-            s.Length = 0;
+            _sb.Length = 0;
 
             int runIndex = -1;
 
-            while (index < json.Length)
+            while (_index < _json.Length)
             {
-                var c = json[index++];
+                var c = _json[_index++];
 
                 if (c == '"')
                 {
                     if (runIndex != -1)
                     {
-                        if (s.Length == 0)
-                            return json.Substring(runIndex, index - runIndex - 1);
+                        if (_sb.Length == 0)
+                            return _json.Substring(runIndex, _index - runIndex - 1);
 
-                        s.Append(json, runIndex, index - runIndex - 1);
+                        _sb.Append(_json, runIndex, _index - runIndex - 1);
                     }
-                    return s.ToString();
+                    return _sb.ToString();
                 }
 
                 if (c != '\\')
                 {
                     if (runIndex == -1)
-                        runIndex = index - 1;
+                        runIndex = _index - 1;
 
                     continue;
                 }
 
-                if (index == json.Length) break;
+                if (_index == _json.Length) break;
 
                 if (runIndex != -1)
                 {
-                    s.Append(json, runIndex, index - runIndex - 1);
+                    _sb.Append(_json, runIndex, _index - runIndex - 1);
                     runIndex = -1;
                 }
 
-                switch (json[index++])
+                switch (_json[_index++])
                 {
                     case '"':
-                        s.Append('"');
+                        _sb.Append('"');
                         break;
 
                     case '\\':
-                        s.Append('\\');
+                        _sb.Append('\\');
                         break;
 
                     case '/':
-                        s.Append('/');
+                        _sb.Append('/');
                         break;
 
                     case 'b':
-                        s.Append('\b');
+                        _sb.Append('\b');
                         break;
 
                     case 'f':
-                        s.Append('\f');
+                        _sb.Append('\f');
                         break;
 
                     case 'n':
-                        s.Append('\n');
+                        _sb.Append('\n');
                         break;
 
                     case 'r':
-                        s.Append('\r');
+                        _sb.Append('\r');
                         break;
 
                     case 't':
-                        s.Append('\t');
+                        _sb.Append('\t');
                         break;
 
                     case 'u':
                         {
-                            int remainingLength = json.Length - index;
+                            int remainingLength = _json.Length - _index;
                             if (remainingLength < 4) break;
 
                             // parse the 32 bit hex into an integer codepoint
-                            uint codePoint = ParseUnicode(json[index], json[index + 1], json[index + 2], json[index + 3]);
-                            s.Append((char)codePoint);
-
                             // skip 4 chars
-                            index += 4;
+                            _sb.Append(ParseUnicode (_json[_index], _json[++_index], _json[++_index], _json[++_index]));
+                            ++_index;
                         }
                         break;
                 }
@@ -232,26 +245,23 @@ namespace fastJSON
 			throw new JsonSerializationException ("Unexpectedly reached end of string");
         }
 
-		private static uint ParseSingleChar (char c1, uint multipliyer)
+		private static int ParseSingleChar (char c1)
         {
-            uint p1 = 0;
             if (c1 >= '0' && c1 <= '9')
-                p1 = (uint)(c1 - '0') * multipliyer;
+                return (c1 - '0');
             else if (c1 >= 'A' && c1 <= 'F')
-                p1 = (uint)((c1 - 'A') + 10) * multipliyer;
+                return ((c1 - 'A') + 10);
             else if (c1 >= 'a' && c1 <= 'f')
-                p1 = (uint)((c1 - 'a') + 10) * multipliyer;
-            return p1;
+                return  ((c1 - 'a') + 10);
+            return 0;
         }
 
-		private static uint ParseUnicode (char c1, char c2, char c3, char c4)
+		private static char ParseUnicode (char c1, char c2, char c3, char c4)
         {
-            uint p1 = ParseSingleChar(c1, 0x1000);
-            uint p2 = ParseSingleChar(c2, 0x100);
-            uint p3 = ParseSingleChar(c3, 0x10);
-            uint p4 = ParseSingleChar(c4, 1);
-
-            return p1 + p2 + p3 + p4;
+            return (char)((ParseSingleChar(c1) << 12)
+				+ (ParseSingleChar(c2) << 8)
+				+ (ParseSingleChar(c3) << 4)
+				+ ParseSingleChar(c4));
         }
 
 		private static long CreateLong (string s, int index, int count) {
@@ -265,7 +275,7 @@ namespace fastJSON
 				else if (cc == '+')
 					neg = false;
 				else {
-					num *= 10;
+					num = (num << 3) + (num << 1); // num *= 10
 					num += (cc - '0');
 				}
 			}
@@ -279,19 +289,19 @@ namespace fastJSON
             ConsumeToken();
 
             // Need to start back one place because the first digit is also a token and would have been consumed
-            var startIndex = index - 1;
+            var startIndex = _index - 1;
             bool dec = false;
             do
             {
-                if (index == json.Length)
+                if (_index == _json.Length)
                     break;
-                var c = json[index];
+                var c = _json[_index];
 
                 if ((c >= '0' && c <= '9') || c == '.' || c == '-' || c == '+' || c == 'e' || c == 'E')
                 {
                     if (c == '.' || c == 'e' || c == 'E')
                         dec = true;
-                    if (++index == json.Length)
+                    if (++_index == _json.Length)
                         break;//throw new Exception("Unexpected end of string whilst parsing number");
                     continue;
                 }
@@ -300,29 +310,29 @@ namespace fastJSON
 
 			if (dec)
 			{
-				string s = json.Substring(startIndex, index - startIndex);
+				string s = _json.Substring(startIndex, _index - startIndex);
 				return double.Parse(s, NumberFormatInfo.InvariantInfo);
 			}
-			return CreateLong(json, startIndex, index - startIndex);
+			return CreateLong(_json, startIndex, _index - startIndex);
         }
 
         private Token LookAhead()
         {
-            if (lookAheadToken != Token.None) return lookAheadToken;
+            if (_lookAheadToken != Token.None) return _lookAheadToken;
 
-            return lookAheadToken = NextTokenCore();
+            return _lookAheadToken = NextTokenCore();
         }
 
         private void ConsumeToken()
         {
-            lookAheadToken = Token.None;
+            _lookAheadToken = Token.None;
         }
 
         private Token NextToken()
         {
-            var result = lookAheadToken != Token.None ? lookAheadToken : NextTokenCore();
+            var result = _lookAheadToken != Token.None ? _lookAheadToken : NextTokenCore();
 
-            lookAheadToken = Token.None;
+            _lookAheadToken = Token.None;
 
             return result;
         }
@@ -332,24 +342,24 @@ namespace fastJSON
             char c;
 
             // Skip past whitespace
-            while (index < json.Length)
+            while (_index < _json.Length)
             {
-                c = json[index];
+                c = _json[_index];
 
                 if (c > ' ') break;
                 if (c != ' ' && c != '\t' && c != '\n' && c != '\r') break;
 
-				++index;
+				++_index;
             }
 
-            if (index == json.Length)
+            if (_index == _json.Length)
             {
 				throw new JsonSerializationException ("Reached end of string unexpectedly");
             }
 
-            c = json[index];
+            c = _json[_index];
 
-            index++;
+            _index++;
 
             switch (c)
             {
@@ -390,40 +400,55 @@ namespace fastJSON
                     return Token.Colon;
 
                 case 'f':
-                    if (json.Length - index >= 4 &&
-                        json[index + 0] == 'a' &&
-                        json[index + 1] == 'l' &&
-                        json[index + 2] == 's' &&
-                        json[index + 3] == 'e')
+                    if (_json.Length - _index >= 4 &&
+                        _json[_index + 0] == 'a' &&
+                        _json[_index + 1] == 'l' &&
+                        _json[_index + 2] == 's' &&
+                        _json[_index + 3] == 'e')
                     {
-                        index += 4;
+                        _index += 4;
                         return Token.False;
                     }
                     break;
 
                 case 't':
-                    if (json.Length - index >= 3 &&
-                        json[index + 0] == 'r' &&
-                        json[index + 1] == 'u' &&
-                        json[index + 2] == 'e')
+                    if (_json.Length - _index >= 3 &&
+                        _json[_index + 0] == 'r' &&
+                        _json[_index + 1] == 'u' &&
+                        _json[_index + 2] == 'e')
                     {
-                        index += 3;
+                        _index += 3;
                         return Token.True;
                     }
                     break;
 
                 case 'n':
-                    if (json.Length - index >= 3 &&
-                        json[index + 0] == 'u' &&
-                        json[index + 1] == 'l' &&
-                        json[index + 2] == 'l')
+                    if (_json.Length - _index >= 3 &&
+                        _json[_index + 0] == 'u' &&
+                        _json[_index + 1] == 'l' &&
+                        _json[_index + 2] == 'l')
                     {
-                        index += 3;
+                        _index += 3;
                         return Token.Null;
                     }
                     break;
             }
-			throw new JsonSerializationException ("Could not find token at index " + --index);
+			throw new JsonSerializationException ("Could not find token at index " + --_index);
         }
     }
+
+	class JsonArray : List<object> { }
+	class JsonDict : Dictionary<string, object> {
+		internal const string ExtRefIndex = "$i";
+		internal const string ExtTypes = "$types";
+		internal const string ExtType = "$type";
+		internal const string ExtMap = "$map";
+		internal const string ExtSchema = "$schema";
+
+		internal int RefIndex;
+		internal JsonDict Types;
+		internal string Type;
+		internal JsonDict Map;
+		internal object Schema;
+	}
 }

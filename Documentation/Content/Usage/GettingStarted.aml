@@ -94,7 +94,7 @@
 			</content>
 		</section>
 		<section address="tweaking">
-			<title>Start Tweaking the Serialization Result</title>
+			<title>Tweaking the Serialization Result</title>
 			<content>
 				<procedure>
 					<title>Removing Extensions</title>
@@ -109,16 +109,16 @@ Culture=neutral, PublicKeyToken=null":"1"},"$type":"1",
 									<linkText>JSON specification</linkText>
 									<linkUri>http://json.org/</linkUri>
 									<linkTarget>_blank</linkTarget>
-								</externalLink>, you might expect to see a cleaner result, like the following code shows.</para>
+								</externalLink>, you might expect to see a neater result, like the following code shows.</para>
 								<code>{"MyProperty":"hello world."}</code>
 								<para>
-									The reason for the extra part like <codeInline>"$types":{"consoletest.MyModel, consoletest, Version=1.0.5593.40826, Culture=neutral, PublicKeyToken=null":"1"},"$type":"1"</codeInline> is to support polymorphic serialization and circular reference detection. Those added <codeInline>$types</codeInline> and <codeInline>$type</codeInline> fields are called <newTerm>JSON Extensions</newTerm>.
+									The reason for the extra part like <codeInline>"$types":{"consoletest.MyModel, consoletest, Version=1.0.5593.40826, Culture=neutral, PublicKeyToken=null":"1"},"$type":"1"</codeInline> is to support <newTerm>polymorphic serialization</newTerm> and <newTerm>circular reference detection</newTerm>. Those added <codeInline>$types</codeInline> and <codeInline>$type</codeInline> fields are called <newTerm>JSON Extensions</newTerm>.
 								</para>
 							</content>
 						</step>
 						<step>
 							<content>
-								<para>You may not need those features at this moment, or the application which consume that JSON text does not support JSON Extensions. You have a reason to disable them.</para>
+								<para>You may not need those features at this moment, or the application which consumes that JSON text does not support JSON Extensions. You have a reason to disable them.</para>
 							</content>
 						</step>
 						<step>

@@ -2,8 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
 using fastJSON;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -228,8 +226,8 @@ namespace UnitTests
 			[JsonField ("my_property")]
 			public int MyProperty { get; set; }
 
-			[JsonField ("string", typeof (String))]
-			[JsonField ("number", typeof (Int32))]
+			[JsonField ("string", typeof (string))]
+			[JsonField ("number", typeof (int))]
 			[JsonField ("dateTime", typeof (DateTime))]
 			[JsonField ("internalClass", typeof (PrivateClass))]
 			[JsonField ("variant")]
@@ -329,13 +327,13 @@ namespace UnitTests
 				obj.Value = 2;
 				Console.WriteLine ("serialized.");
 			}
-			public override bool OnSerializing (InterceptorTestSample obj, ref string memberName, ref object memberValue) {
-				Console.WriteLine ("serializing " + memberName);
-				if (memberName == "Text") {
+			public override bool OnSerializing (InterceptorTestSample obj, JsonItem item) {
+				Console.WriteLine ("serializing " + item.Name);
+				if (item.Name == "Text") {
 					obj.Timestamp = DateTime.Now;
-					memberValue = "Changed at " + obj.Timestamp.ToString ();
+					item.Value = "Changed at " + obj.Timestamp.ToString ();
 				}
-				else if (memberName == "HideWhenToggleTrue" && obj.Toggle) {
+				else if (item.Name == "HideWhenToggleTrue" && obj.Toggle) {
 					return false;
 				}
 				return true;
@@ -348,10 +346,10 @@ namespace UnitTests
 				obj.Value = 4;
 				Console.WriteLine ("deserialized.");
 			}
-			public override bool OnDeserializing (InterceptorTestSample obj, string memberName, ref object memberValue) {
-				Console.WriteLine ("deserializing " + memberName);
-				if (memberName == "Text") {
-					memberValue = "1";
+			public override bool OnDeserializing (InterceptorTestSample obj, JsonItem item) {
+				Console.WriteLine ("deserializing " + item.Name);
+				if (item.Name == "Text") {
+					item.Value = "1";
 				}
 				return true;
 			}
@@ -380,24 +378,20 @@ namespace UnitTests
 		#region JsonConverterAttribute
 		class FakeEncryptionConverter : IJsonConverter
 		{
-
-			public object SerializationConvert (string fieldName, object fieldValue) {
-				var s = fieldValue as string;
-				if (s != null) {
-					return "Encrypted: " + s; // returns an encrypted string
-				}
-				return fieldValue;
-			}
-			public object DeserializationConvert (string fieldName, object fieldValue) {
-				var s = fieldValue as string;
-				if (s != null && s.StartsWith ("Encrypted: ")) {
-					return s.Substring ("Encrypted: ".Length);
-				}
-				return fieldValue;
-			}
-
-			public Type GetReversiveType (string fieldName, object fieldValue) {
+			public Type GetReversiveType (JsonItem item) {
 				return null;
+			}
+			public void SerializationConvert (JsonItem item) {
+				var s = item.Value as string;
+				if (s != null) {
+					item.Value = "Encrypted: " + s; // returns an encrypted string
+				}
+			}
+			public void DeserializationConvert (JsonItem item) {
+				var s = item.Value as string;
+				if (s != null && s.StartsWith ("Encrypted: ")) {
+					item.Value = s.Substring ("Encrypted: ".Length);
+				}
 			}
 		}
 		public class JsonConverterTestSample
@@ -456,24 +450,22 @@ namespace UnitTests
 		}
 		class Int32ArrayConverter : IJsonConverter
 		{
-			public Type GetReversiveType (string fieldName, object fieldValue) {
+			public Type GetReversiveType (JsonItem item) {
 				return null;
 			}
 
-			public object DeserializationConvert (string fieldName, object fieldValue) {
-				var s = fieldValue as string;
+			public void DeserializationConvert (JsonItem item) {
+				var s = item.Value as string;
 				if (s != null) {
-					return Array.ConvertAll (s.Split (','), Int32.Parse);
+					item.Value = Array.ConvertAll (s.Split (','), Int32.Parse);
 				}
-				return fieldValue;
 			}
 
-			public object SerializationConvert (string fieldName, object fieldValue) {
-				var l = fieldValue as int[];
+			public void SerializationConvert (JsonItem item) {
+				var l = item.Value as int[];
 				if (l != null) {
-					return String.Join (",", Array.ConvertAll (l, Convert.ToString));
+					item.Value = String.Join (",", Array.ConvertAll (l, Convert.ToString));
 				}
-				return fieldValue;
 			}
 		}
 		class PersonInfoConverter : JsonConverter<string, PersonInfo>
@@ -521,8 +513,8 @@ namespace UnitTests
 		}
 		class NamedClassConverter : JsonConverter<IName, IName>
 		{
-			public override Type GetReversiveType (string fieldName, object fieldValue) {
-				var d = fieldValue as Dictionary<string, object>;
+			public override Type GetReversiveType (JsonItem item) {
+				var d = item.Value as Dictionary<string, object>;
 				if (d == null) {
 					return null;
 				}
@@ -597,7 +589,7 @@ namespace UnitTests
 
 			o = JSON.ToObject<CustomConverterType> ("{\"Id\":\"id123\", \"intArray1\": [ 1, 2, 3 ] }");
 			Assert.AreEqual ("id123", o.Id);
-			CollectionAssert.AreEqual ((ICollection)new int[] { 1, 2, 3 }, (ICollection)o.Variable1);
+			CollectionAssert.AreEqual (new int[] { 1, 2, 3 }, (ICollection)o.Variable1);
 		}
 
 		#endregion
@@ -734,14 +726,14 @@ namespace UnitTests
 		#region SerializationManager
 		public class WebExceptionJsonInterceptor : JsonInterceptor<System.Net.WebException>
 		{
-			public override IEnumerable<KeyValuePair<string, object>> SerializeExtraValues (System.Net.WebException obj) {
-				return new KeyValuePair<string, object>[] {
-					new KeyValuePair<string, object> ("exceptionTime", DateTime.Now),
-					new KeyValuePair<string, object> ("machine", Environment.MachineName)
+			public override IEnumerable<JsonItem> SerializeExtraValues (System.Net.WebException obj) {
+				return new JsonItem[] {
+					new JsonItem ("exceptionTime", DateTime.Now),
+					new JsonItem ("machine", Environment.MachineName)
 				};
 			}
-			public override bool OnSerializing (System.Net.WebException obj, ref string memberName, ref object memberValue) {
-				switch (memberName) {
+			public override bool OnSerializing (System.Net.WebException obj, JsonItem item) {
+				switch (item.Name) {
 					case "Response":
 					case "Status":
 					case "Message":
@@ -760,8 +752,8 @@ namespace UnitTests
 				NamingConvention = NamingConvention.CamelCase
 			};
 			SerializationManager manager = SerializationManager.Instance;
-			manager.RegisterTypeInterceptor<System.Net.WebException> (new WebExceptionJsonInterceptor ());
-			manager.RegisterMemberName<System.Net.WebException> ("Status", "httpstatus");
+			manager.OverrideInterceptor<System.Net.WebException> (new WebExceptionJsonInterceptor ());
+			manager.OverrideMemberName<System.Net.WebException> ("Status", "httpstatus");
 			try {
 				var c = System.Net.WebRequest.Create ("http://inexistent-domain.com");
 				using (var r = c.GetResponse ()) {
@@ -776,14 +768,14 @@ namespace UnitTests
 				StringAssert.Contains (s, @"""exceptionTime"":");
 				StringAssert.Contains (s, @"""machine"":""" + Environment.MachineName + "\"");
 
-				manager.RegisterReflectionOverride<System.Net.WebException> (new ReflectionOverride () {
+				manager.Override<System.Net.WebException> (new TypeOverride () {
 					MemberOverrides = { new MemberOverride ("Status", "code") }
 				});
 				s = JSON.ToJSON (ex, p);
 				Console.WriteLine (s);
 				StringAssert.Contains (s, @"""code"":");
 
-				manager.RegisterReflectionOverride<System.Net.WebException> (new ReflectionOverride () {
+				manager.Override<System.Net.WebException> (new TypeOverride () {
 					MemberOverrides = { new MemberOverride ("TargetSite") { Serializable = TriState.False } }
 				}, true);
 				s = JSON.ToJSON (ex, p);
@@ -814,7 +806,7 @@ namespace UnitTests
 		[TestMethod]
 		public void SerializationOverrideTest () {
 			var m = SerializationManager.Instance;
-			m.RegisterReflectionOverride<PolymorphicSample> (new ReflectionOverride ()
+			m.Override<PolymorphicSample> (new TypeOverride ()
 			{
 				MemberOverrides = {
 					new MemberOverride ("A") {
@@ -828,7 +820,7 @@ namespace UnitTests
 					new MemberOverride ("inexistent", "shouldBeIgnored")
 				}
 			});
-			m.RegisterEnumValueNames<OverrideEnumSample> (new Dictionary<string, string> {
+			m.OverrideEnumValueNames<OverrideEnumSample> (new Dictionary<string, string> {
 				{ "Field1", "a" }, { "Field2", "b" }, { "Field3", "c" }
 			});
 			var d = new PolymorphicSample ()
@@ -866,7 +858,7 @@ namespace UnitTests
 		[ExpectedException (typeof(InvalidCastException))]
 		public void InvalidPolymorphicOverride () {
 			var m = SerializationManager.Instance;
-			m.RegisterReflectionOverride<PolymorphicSample> (new ReflectionOverride () {
+			m.Override<PolymorphicSample> (new TypeOverride () {
 				MemberOverrides = {
 					new MemberOverride ("A") {
 						TypedNames = {

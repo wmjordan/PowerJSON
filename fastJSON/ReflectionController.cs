@@ -32,7 +32,7 @@ namespace fastJSON
 		/// <summary>
 		/// Ignore attributes to check for (default : XmlIgnoreAttribute).
 		/// </summary>
-		public List<Type> IgnoreAttributes { get; private set; }
+		public IList<Type> IgnoreAttributes { get; private set; }
 
 		/// <summary>
 		/// Creates an instance of <see cref="FastJsonReflectionController"/>. For backward compatibility, <see cref="System.Xml.Serialization.XmlIgnoreAttribute"/> is added into <see cref="IgnoreAttributes"/>.
@@ -119,7 +119,7 @@ namespace fastJSON
 		/// </summary>
 		/// <param name="member">The <see cref="MemberInfo"/> of the field or property.</param>
 		/// <returns>The dictionary contains types and their corresponding names.</returns>
-		/// <exception cref="InvalidCastException">The <see cref="JsonFieldAttribute.Type"/> type does not derive from the member type.</exception>
+		/// <exception cref="InvalidCastException">The <see cref="JsonFieldAttribute.DataType"/> type does not derive from the member type.</exception>
 		public virtual SerializedNames GetSerializedNames (MemberInfo member) {
 			var tn = new SerializedNames ();
 			var jf = AttributeHelper.GetAttributes<JsonFieldAttribute> (member, true);
@@ -130,14 +130,14 @@ namespace fastJSON
 				if (String.IsNullOrEmpty (item.Name)) {
 					continue;
 				}
-				if (item.Type == null) {
+				if (item.DataType == null) {
 					tn.DefaultName = item.Name;
 				}
 				else {
-					if (t.IsAssignableFrom (item.Type) == false) {
-						throw new InvalidCastException ("The override type (" + item.Type.FullName + ") does not derive from the member type (" + t.FullName + ")");
+					if (t.IsAssignableFrom (item.DataType) == false) {
+						throw new InvalidCastException ("The override type (" + item.DataType.FullName + ") does not derive from the member type (" + t.FullName + ")");
 					}
-					tn.Add (item.Type, item.Name);
+					tn.Add (item.DataType, item.Name);
 				}
 			}
 			return tn;

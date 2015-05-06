@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace fastJSON
 {
@@ -76,7 +77,7 @@ namespace fastJSON
 		/// Ignores attributes to check for (default : XmlIgnoreAttribute)
 		/// </summary>
 		[Obsolete ("This property is provided for backward compatibility. It returns the FastJsonReflectionController.IgnoreAttributes from the controller instance in SerializationManager.Instance, which is used by JSON.ToJSON and JSON.ToObject methods without SerializationManager parameters. For other method overloads in JSON class with the SerializationManager parameter, this setting will not work.")]
-		public List<Type> IgnoreAttributes { get { return (SerializationManager.Instance.ReflectionController as FastJsonReflectionController).IgnoreAttributes; } }
+		public IList<Type> IgnoreAttributes { get { return (SerializationManager.Instance.ReflectionController as FastJsonReflectionController).IgnoreAttributes; } }
 
 		/// <summary>
 		/// If you have parametric and no default constructor for you classes (default = False)
@@ -136,7 +137,7 @@ namespace fastJSON
 	}
 
 	/// <summary>
-	/// Control the letter case of serialized field names.
+	/// Controls the letter case of serialized field names.
 	/// </summary>
 	public enum NamingConvention
 	{
@@ -161,7 +162,7 @@ namespace fastJSON
 	abstract class NamingStrategy
 	{
 		internal abstract NamingConvention Convention { get; }
-		internal abstract string Rename (string name);
+		internal abstract void WriteName (StringBuilder output, string name);
 
 		internal static readonly NamingStrategy Default = new DefaultNaming ();
 		internal static readonly NamingStrategy LowerCase = new LowerCaseNaming ();
@@ -174,7 +175,7 @@ namespace fastJSON
 				case NamingConvention.LowerCase: return LowerCase;
 				case NamingConvention.CamelCase: return CamelCase;
 				case NamingConvention.UpperCase: return UpperCase;
-				default: throw new NotSupportedException ("case " + convention.ToString () + " is not supported.");
+				default: throw new NotSupportedException ("NamingConvention " + convention.ToString () + " is not supported.");
 			}
 		}
 
@@ -183,8 +184,10 @@ namespace fastJSON
 			internal override NamingConvention Convention {
 				get { return NamingConvention.Default; }
 			}
-			internal override string Rename (string name) {
-				return name;
+			internal override void WriteName (StringBuilder output, string name) {
+				output.Append ('\"');
+				output.Append (name);
+				output.Append ("\":");
 			}
 		}
 		class LowerCaseNaming : NamingStrategy
@@ -192,8 +195,10 @@ namespace fastJSON
 			internal override NamingConvention Convention {
 				get { return NamingConvention.LowerCase; }
 			}
-			internal override string Rename (string name) {
-				return name.ToLowerInvariant ();
+			internal override void WriteName (StringBuilder output, string name) {
+				output.Append ('\"');
+				output.Append (name.ToLowerInvariant ());
+				output.Append ("\":");
 			}
 		}
 		class UpperCaseNaming : NamingStrategy
@@ -201,8 +206,10 @@ namespace fastJSON
 			internal override NamingConvention Convention {
 				get { return NamingConvention.UpperCase; }
 			}
-			internal override string Rename (string name) {
-				return name.ToUpperInvariant ();
+			internal override void WriteName (StringBuilder output, string name) {
+				output.Append ('\"');
+				output.Append (name.ToUpperInvariant ());
+				output.Append ("\":");
 			}
 		}
 		class CamelCaseNaming : NamingStrategy
@@ -210,16 +217,22 @@ namespace fastJSON
 			internal override NamingConvention Convention {
 				get { return NamingConvention.CamelCase; }
 			}
-			internal override string Rename (string name) {
+			internal override void WriteName (StringBuilder output, string name) {
+				output.Append ('\"');
 				var l = name.Length;
 				if (l > 0) {
 					var c = name[0];
 					if (c > 'A' - 1 && c < 'Z' + 1) {
-						c = Char.ToLowerInvariant (c);
-						return l > 1 ? String.Concat (c, name.Substring (1)) : c.ToString ();
+						output.Append ((char)(c - ('A' - 'a')));
+						if (l > 1) {
+							output.Append (name, 1, l - 1);
+						}
+					}
+					else {
+						output.Append (name);
 					}
 				}
-				return name;
+				output.Append ("\":");
 			}
 		}
 	}

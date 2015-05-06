@@ -54,7 +54,7 @@ namespace MsUnitTest
 
 	#endregion
 
-	#region Invasiveless Control
+	#region Noninvasive Control
 	internal class DemoClass
 	{
 		public string MyProperty { get; set; }
@@ -112,28 +112,30 @@ namespace MsUnitTest
 			Assert.IsFalse (s.Contains ("\"number\":"));
 		}
 		[TestMethod]
-		public void InvasivelessTest () {
-			JSON.Manager.RegisterReflectionOverride<DemoClass> (new ReflectionOverride () {
+		public void NoninvasiveTest () {
+			#region Noninvasive Control Code
+			JSON.Manager.Override<DemoClass> (new TypeOverride () {
 				Deserializable = TriState.True,
 				MemberOverrides = new List<MemberOverride> {
-				new MemberOverride ("MyProperty", "myProperty"),
-				new MemberOverride ("MyEnumProperty", "myEnum"),
-				new MemberOverride ("Number") { DefaultValue = 0 },
-				new MemberOverride ("Identifier", "variant") {
-					TypedNames = new Dictionary<Type,string> () {
-						{ typeof(ClassA), "a" },
-						{ typeof(ClassB), "b" }
+					new MemberOverride ("MyProperty", "myProperty"),
+					new MemberOverride ("MyEnumProperty", "myEnum"),
+					new MemberOverride ("Number") { DefaultValue = 0 },
+					new MemberOverride ("Identifier", "variant") {
+						TypedNames = new Dictionary<Type,string> () {
+							{ typeof(ClassA), "a" },
+							{ typeof(ClassB), "b" }
+						}
+					},
+					new MemberOverride ("InternalValue") {
+						ReadOnly = TriState.False,
+						Serializable = TriState.False
 					}
-				},
-				new MemberOverride ("InternalValue") {
-					ReadOnly = TriState.False,
-					Serializable = TriState.False
 				}
-			}
 			});
-			JSON.Manager.RegisterEnumValueNames<MyEnum> (new Dictionary<string, string> {
+			JSON.Manager.OverrideEnumValueNames<MyEnum> (new Dictionary<string, string> {
 				{ "Vip", "VIP" }
-			});
+			}); 
+			#endregion
 			var d = new DemoClass () {
 				MyProperty = "p",
 				Number = 1,

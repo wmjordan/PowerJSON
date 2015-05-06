@@ -8,21 +8,52 @@ using System.Collections.Specialized;
 
 namespace fastJSON
 {
-	internal class JSONDeserializer
+	internal class JsonDeserializer
 	{
+		static readonly RevertJsonValue[] _revertMethods = RegisterMethods ();
+
 		readonly JSONParameters _params;
 		readonly SerializationManager _manager;
 		readonly Dictionary<object, int> _circobj = new Dictionary<object, int> ();
 		readonly Dictionary<int, object> _cirrev = new Dictionary<int, object> ();
 		bool _usingglobals = false;
+		JsonDict globaltypes;
 
-		public JSONDeserializer (JSONParameters param, SerializationManager manager) {
+		private static RevertJsonValue[] RegisterMethods () {
+			var r = new RevertJsonValue[Enum.GetNames (typeof (JsonDataType)).Length];
+			r[(int)JsonDataType.Array] = RevertArray;
+			r[(int)JsonDataType.Bool] = RevertPrimitive;
+			r[(int)JsonDataType.ByteArray] = RevertByteArray;
+			r[(int)JsonDataType.Custom] = RevertCustom;
+			r[(int)JsonDataType.DataSet] = RevertDataSet;
+			r[(int)JsonDataType.DataTable] = RevertDataTable;
+			r[(int)JsonDataType.DateTime] = RevertDateTime;
+			r[(int)JsonDataType.Dictionary] = RevertDictionary;
+			r[(int)JsonDataType.Double] = RevertPrimitive;
+			r[(int)JsonDataType.Enum] = RevertEnum;
+			r[(int)JsonDataType.GenericList] = RevertGenericList;
+			r[(int)JsonDataType.Guid] = RevertGuid;
+			r[(int)JsonDataType.Hashtable] = RevertHashTable;
+			r[(int)JsonDataType.Int] = RevertInt32;
+			r[(int)JsonDataType.Long] = RevertPrimitive;
+			r[(int)JsonDataType.NameValue] = RevertNameValueCollection;
+			r[(int)JsonDataType.Object] = RevertPrimitive;
+			r[(int)JsonDataType.Single] = RevertSingle;
+			r[(int)JsonDataType.String] = RevertPrimitive;
+			r[(int)JsonDataType.StringDictionary] = RevertStringDictionary;
+			r[(int)JsonDataType.StringKeyDictionary] = RevertStringKeyDictionary;
+			r[(int)JsonDataType.TimeSpan] = RevertTimeSpan;
+			r[(int)JsonDataType.Undefined] = RevertObject;
+			return r;
+		}
+
+		public JsonDeserializer (JSONParameters param, SerializationManager manager) {
 			_params = param;
 			_manager = manager;
 		}
 
 		public T ToObject<T>(string json) {
-			Type t = typeof(T);
+			Type t = typeof (T);
 			var o = ToObject (json, t);
 
 			if (t.IsArray) {
@@ -51,90 +82,73 @@ namespace fastJSON
 				c = _manager.GetDefinition (type);
 				if (c.CommonType == ComplexType.Dictionary
 					|| c.CommonType == ComplexType.List) {
-					_params.UsingGlobalTypes = false;
+					_usingglobals = false;
 				}
 			}
-			_usingglobals = _params.UsingGlobalTypes;
+			else {
+				_usingglobals = _params.UsingGlobalTypes;
+			}
 
 			object o = new JsonParser (json).Decode ();
 			if (o == null)
 				return null;
-#if !SILVERLIGHT
-			if (type != null && type == typeof(DataSet))
-				return CreateDataset (o as Dictionary<string, object>, null);
-
-			if (type != null && type == typeof(DataTable))
-				return CreateDataTable (o as Dictionary<string, object>, null);
-#endif
-			if (o is IDictionary) {
-				if (type != null && c.CommonType == ComplexType.Dictionary)	// deserialize a dictionary
-					return RootDictionary (o, type);
-				else // deserialize an object
-					return ParseDictionary (o as Dictionary<string, object>, null, type, null);
-			}
-
-			if (o is List<object>) {
+			var d = o as JsonDict;
+			if (d != null) {
 				if (type != null) {
-					if (c.CommonType == ComplexType.Dictionary)	// k/v format
+#if !SILVERLIGHT
+					if (c.JsonDataType == JsonDataType.DataSet)
+						return CreateDataSet (d);
+
+					if (c.JsonDataType == JsonDataType.DataTable)
+						return CreateDataTable (d);
+#endif
+					if (c.CommonType == ComplexType.Dictionary) // deserialize a dictionary
+						return RootDictionary (o, type);
+				}
+				// deserialize an object
+				return ParseDictionary (d, type, null);
+			}
+			var a = o as JsonArray;
+			if (a != null) {
+				if (type != null) {
+					if (c.CommonType == ComplexType.Dictionary) // k/v format
 						return RootDictionary (o, type);
 
 					if (c.CommonType == ComplexType.List) // deserialize to generic list
 						return RootList (o, type);
 
-					if (type == typeof(Hashtable))
-						return RootHashTable ((List<object>)o);
+					if (c.JsonDataType == JsonDataType.Hashtable)
+						return RootHashTable (a);
 
-					if (type.IsArray) {
-						return CreateArray ((List<object>)o, type, null);
+					if (c.CommonType == ComplexType.Array) {
+						return CreateArray (a, type);
 					}
 				}
-				return (o as List<object>).ToArray ();
+				return a.ToArray ();
 			}
 
-			if (type != null && o.GetType () != type)
+			if (type != null && o.GetType ().Equals (type) == false)
 				return ChangeType (o, type);
 
 			return o;
 		}
 
 		internal static RevertJsonValue GetReadJsonMethod (Type type) {
-			return type == typeof(int) ? RevertInt32
-				: type == typeof(long) ? RevertPrimitive
-				: type == typeof(string) ? RevertPrimitive
-				: type == typeof(bool) ? RevertPrimitive
-				: type == typeof(double) ? RevertPrimitive
-				: type == typeof(float) ? RevertSingle
-				: type == typeof(byte) ? RevertByte
-				: (RevertJsonValue)null;
+			return type != null ? GetRevertMethod (Reflection.GetJsonDataType (type)) : RevertPrimitive;
 		}
-
-		#region RevertJsonValue delegate methods
-		static object RevertPrimitive (JSONDeserializer deserializer, object value) {
-			return value;
-		}
-		static object RevertInt32 (JSONDeserializer deserializer, object value) {
-			return (int)(long)value;
-		}
-		static object RevertByte (JSONDeserializer deserializer, object value) {
-			return (byte)(long)value;
-		}
-		static object RevertSingle (JSONDeserializer deserializer, object value) {
-			return (float)(double)value;
-		}
-		#endregion
 
 		#region [   p r i v a t e   m e t h o d s   ]
-		private object RootHashTable (List<object> o) {
+		private object RootHashTable (JsonArray o) {
 			Hashtable h = new Hashtable ();
 
-			foreach (Dictionary<string, object> values in o) {
+			foreach (JsonDict values in o) {
 				object key = values["k"];
 				object val = values["v"];
-				if (key is Dictionary<string, object>)
-					key = ParseDictionary ((Dictionary<string, object>)key, null, typeof(object), null);
+				if (key is JsonDict)
+					key = ParseDictionary ((JsonDict)key, typeof (object), null);
 
-				if (val is Dictionary<string, object>)
-					val = ParseDictionary ((Dictionary<string, object>)val, null, typeof(object), null);
+				if (val is JsonDict)
+					val = ParseDictionary ((JsonDict)val, typeof (object), null);
 
 				h.Add (key, val);
 			}
@@ -144,19 +158,20 @@ namespace fastJSON
 
 		private object RootList (object parse, Type type) {
 			var c = _manager.GetDefinition (type);
-			Type[] gtypes = c.ArgumentTypes;
+			var et = c.ArgumentTypes[0];
+			var m = GetRevertMethod (Reflection.GetJsonDataType (et));
 			IList o = (IList)c.Instantiate ();
 			foreach (var k in (IList)parse) {
 				_usingglobals = false;
-				object v = k;
-				if (k is Dictionary<string, object>)
-					v = ParseDictionary (k as Dictionary<string, object>, null, gtypes[0], null);
-				// support List<array>
-				else if (k is List<object>) {
-					v = CreateArray ((List<object>)k, gtypes[0], null);
-				}
-				else
-					v = ChangeType (k, gtypes[0]);
+				object v = m (this, k, et);
+				//if (k is JsonDict)
+				//	v = ParseDictionary ((JsonDict)k, et, null);
+				//// support List<array>
+				//else if (k is JsonArray) {
+				//	v = CreateArray ((JsonArray)k, et);
+				//}
+				//else
+				//	v = ChangeType (k, et);
 
 				o.Add (v);
 			}
@@ -172,80 +187,59 @@ namespace fastJSON
 				t1 = gtypes[0];
 				t2 = gtypes[1];
 			}
-			if (parse is Dictionary<string, object>) {
+			var mk = GetReadJsonMethod (t1);
+			var m = GetReadJsonMethod (t2);
+			var d = parse as JsonDict;
+			if (d != null) {
 				IDictionary o = (IDictionary)c.Instantiate ();
 
-				foreach (var kv in (Dictionary<string, object>)parse) {
-					object k = ChangeType (kv.Key, t1);
-					object v = kv.Value;
-					o.Add (k, ConvertObjectType (v, t2));
+				foreach (var kv in d) {
+					o.Add (mk (this, kv.Key, t1), m (this, kv.Value, t2));
 				}
 
 				return o;
 			}
-			if (parse is List<object>)
-				return CreateDictionary (parse as List<object>, type, gtypes, null);
+			var a = parse as JsonArray;
+			if (a != null)
+				return CreateDictionary (a, type);
 
 			return null;
 		}
 
-		/// <summary>
-		/// Converts parsed object to <paramref name="targetType"/>.
-		/// </summary>
-		/// <param name="source">The object created from <see cref="JsonParser"/>.</param>
-		/// <param name="targetType">The type to convert to.</param>
-		/// <returns>An object having <paramref name="targetType"/>.</returns>
-		private object ConvertObjectType (object source, Type targetType) {
-			if (source is Dictionary<string, object>)
-				return ParseDictionary (source as Dictionary<string, object>, null, targetType, null);
-
-			var c = _manager.GetDefinition (targetType);
-			if (c.CommonType == ComplexType.Array) {
-				return CreateArray ((List<object>)source, targetType, null);
-			}
-			if (c.CommonType == ComplexType.List) {
-				return CreateGenericList ((List<object>)source, targetType, null);
-			}
-			// NOTE: replaced by the above three lines, t1: see RootDictionary
-			//else if (v is IList)
-			//	return CreateGenericList ((List<object>)v, t2, t1, null);
-			return ChangeType (source, targetType);
-		}
-
-		internal object ParseDictionary (Dictionary<string, object> data, Dictionary<string, object> globaltypes, Type type, object input) {
-			object tn = "";
-			if (type == typeof(NameValueCollection))
+		internal object ParseDictionary (JsonDict data, Type type, object input) {
+			if (typeof (NameValueCollection).Equals (type))
 				return CreateNameValueCollection (data);
-			if (type == typeof(StringDictionary))
+			if (typeof (StringDictionary).Equals (type))
 				return CreateStringDictionary (data);
 
-			if (data.TryGetValue ("$i", out tn)) {
+			if (data.RefIndex > 0) {
 				object v = null;
-				_cirrev.TryGetValue ((int)(long)tn, out v);
+				_cirrev.TryGetValue (data.RefIndex, out v);
 				return v;
 			}
 
-			if (data.TryGetValue ("$types", out tn)) {
+			if (data.Types != null && data.Types.Count > 0) {
 				_usingglobals = true;
-				globaltypes = new Dictionary<string, object> ();
-				foreach (var kv in (Dictionary<string, object>)tn) {
+				globaltypes = new JsonDict ();
+				foreach (var kv in data.Types) {
 					globaltypes.Add ((string)kv.Value, kv.Key);
 				}
 			}
 
-			bool found = data.TryGetValue ("$type", out tn);
+			var tn = data.Type;
+			bool found = (tn != null && tn.Length > 0);
 #if !SILVERLIGHT
-			if (found == false && type == typeof(object)) {
-				return data;	// CreateDataset(data, globaltypes);
+			if (found == false && typeof (object).Equals (type)) {
+				return data;    // CreateDataset(data, globaltypes);
 			}
 #endif
 			if (found) {
 				if (_usingglobals) {
 					object tname = "";
-					if (globaltypes != null && globaltypes.TryGetValue ((string)tn, out tname))
-						tn = tname;
+					if (globaltypes != null && globaltypes.TryGetValue (data.Type, out tname))
+						tn = (string)tname;
 				}
-				type = Reflection.Instance.GetTypeFromCache ((string)tn);
+				type = Reflection.Instance.GetTypeFromCache (tn);
 			}
 
 			if (type == null)
@@ -271,37 +265,42 @@ namespace fastJSON
 			}
 
 			Dictionary<string, myPropInfo> props = def.Properties;
+			if (data.Map != null) {
+				ProcessMap (o, props, data.Map);
+			}
 			foreach (string n in data.Keys) {
-				if (n == "$map") {
-					ProcessMap (o, props, (Dictionary<string, object>)data[n]);
-					continue;
-				}
+				//if (n == "$map") {
+				//	ProcessMap (o, props, (JsonDict)data[n]);
+				//	continue;
+				//}
 				myPropInfo pi;
 				if (props.TryGetValue (n, out pi) == false || pi.CanWrite == false)
 					continue;
 				object v = data[n];
-				object cv = v;
+				var ji = new JsonItem (n, v, false);
 				bool converted = false;
 				// convert IEnumerable item
 				if (v is IList && pi.ItemConverter != null) {
 					var vl = v as IList;
 					var l = vl.Count;
+					var ai = new JsonItem (n, null);
 					for (int i = 0; i < l; i++) {
 						var vi = vl[i];
-						var xv = pi.ItemConverter.DeserializationConvert (n, vi);
-						if (Equals (vi, xv) == false) {
-							vl[i] = xv;
+						ai._Value = vi;
+						pi.ItemConverter.DeserializationConvert (ai);
+						if (ReferenceEquals (vi, ai._Value) == false) {
+							vl[i] = ai._Value;
 							converted = true;
 						}
 					}
 					if (converted) {
 						if (pi.JsonDataType == JsonDataType.Array) {
-							cv = Array.CreateInstance (pi.ElementType, l);
-							vl.CopyTo ((Array)cv, 0);
+							ji._Value = Array.CreateInstance (pi.ElementType, l);
+							vl.CopyTo ((Array)ji._Value, 0);
 						}
 						else {
-							cv = _manager.GetDefinition (pi.MemberType).Instantiate ();
-							var gl = cv as IList;
+							ji._Value = _manager.GetDefinition (pi.MemberType).Instantiate ();
+							var gl = ji._Value as IList;
 							for (int i = 0; i < l; i++) {
 								gl.Add (vl[i]);
 							}
@@ -311,88 +310,92 @@ namespace fastJSON
 				// convert member data and type
 				if (pi.Converter != null) {
 					var c = pi.Converter;
-					var rt = c.GetReversiveType (n, v);
+					var rt = c.GetReversiveType (ji);
 					var xv = v;
-					if (v != null && rt != null && rt != typeof(object)) {
-						if (v is Dictionary<string, object>) {
-							xv = ParseDictionary ((Dictionary<string, object>)xv, globaltypes, rt, pi.Getter (o));
+					if (v != null && rt != null && typeof (object).Equals (rt) == false && pi.MemberType.Equals (xv.GetType ()) == false) {
+						var jt = Reflection.GetJsonDataType (rt);
+						if (jt != JsonDataType.Undefined) {
+							var m = GetReadJsonMethod (rt);
+							xv = m (this, v, rt);
 						}
-						else if (v is List<object>) {
-							if (rt.IsSubclassOf (typeof(Array))) {
-								xv = CreateArray ((List<object>)xv, rt, globaltypes);
-							}
-							else {
-								xv = CreateGenericList ((List<object>)xv, rt, globaltypes);
-							}
-						}
-						else if (pi.MemberType.Equals (xv.GetType ()) == false) {
-							xv = ChangeType (xv, rt);
+						else if (v is JsonDict) {
+							xv = ParseDictionary ((JsonDict)xv, rt, pi.Getter (o));
 						}
 					}
-					cv = pi.Converter.DeserializationConvert (n, xv);
+					ji._Value = xv;
+					c.DeserializationConvert (ji);
 				}
 
+				object oset = null;
 				// use the converted value
-				if (ReferenceEquals (cv, v) == false || converted) {
-					if (cv != null || pi.IsClass || pi.IsNullable) {
-						if (si != null && si.OnDeserializing (o, n, ref cv) == false) {
-							continue;
-						}
-						o = pi.Setter (o, cv);
+				if (converted || ReferenceEquals (ji._Value, v) == false) {
+					if (ji._Value != null || pi.IsClass || pi.IsNullable) {
+						oset = ji._Value;
+						goto SET_VALUE;
 					}
 					continue;
 				}
 				// process null value
 				if (v == null) {
-					if (si != null && si.OnDeserializing (o, n, ref v) == false) {
+					var i = new JsonItem (n, null);
+					if (si != null && si.OnDeserializing (o, i) == false) {
 						continue;
 					}
-					if (pi.IsClass || pi.IsNullable) {
-						o = pi.Setter (o, v);
+					if (i.Value != null || pi.IsClass || pi.IsNullable) {
+						o = pi.Setter (o, i.Value);
 					}
 					continue;
 				}
 				// set member value
-				object oset = null;
-
 				switch (pi.JsonDataType) {
 					case JsonDataType.Undefined: goto default;
-					case JsonDataType.Int: oset = (int)((long)v); break;
+					case JsonDataType.Int: oset = (int)(long)v; break;
 					case JsonDataType.String:
 					case JsonDataType.Bool:
 					case JsonDataType.Long:
 					case JsonDataType.Double: oset = v; break;
-					case JsonDataType.Single: oset = (float)((double)v); break;
-					case JsonDataType.DateTime: oset = CreateDateTime ((string)v); break;
-					case JsonDataType.Enum: oset = CreateEnum (pi.MemberType, v); break;
-					case JsonDataType.Guid: oset = CreateGuid ((string)v); break;
-					case JsonDataType.TimeSpan: oset = CreateTimeSpan ((string)v); break;
+					case JsonDataType.Single: oset = (float)(double)v; break;
+					case JsonDataType.DateTime: oset = CreateDateTime (this, v); break;
+					case JsonDataType.Enum: oset = CreateEnum (v, pi.MemberType); break;
+					case JsonDataType.Guid: oset = CreateGuid (v); break;
+					case JsonDataType.TimeSpan: oset = CreateTimeSpan (v); break;
 
+					case JsonDataType.GenericList:
+						oset = CreateGenericList ((JsonArray)v, pi.MemberType);
+						break;
 					case JsonDataType.Array:
 						if (!pi.IsValueType)
-							oset = CreateArray ((List<object>)v, pi.MemberType, globaltypes);
+							oset = CreateArray ((JsonArray)v, pi.MemberType);
 						// what about 'else'?
 						break;
 					case JsonDataType.ByteArray: oset = Convert.FromBase64String ((string)v); break;
 #if !SILVERLIGHT
-					case JsonDataType.DataSet: oset = CreateDataset ((Dictionary<string, object>)v, globaltypes); break;
-					case JsonDataType.DataTable: oset = CreateDataTable ((Dictionary<string, object>)v, globaltypes); break;
+					case JsonDataType.DataSet: oset = CreateDataSet ((JsonDict)v); break;
+					case JsonDataType.DataTable: oset = CreateDataTable ((JsonDict)v); break;
 					case JsonDataType.Hashtable: // same case as Dictionary
 #endif
-					case JsonDataType.Dictionary: oset = CreateDictionary ((List<object>)v, pi.MemberType, pi.GenericTypes, globaltypes); break;
-					case JsonDataType.StringKeyDictionary: oset = CreateStringKeyDictionary ((Dictionary<string, object>)v, pi.MemberType, pi.GenericTypes, globaltypes); break;
-					case JsonDataType.NameValue: oset = CreateNameValueCollection ((Dictionary<string, object>)v); break;
-					case JsonDataType.StringDictionary: oset = CreateStringDictionary ((Dictionary<string, object>)v); break;
-					case JsonDataType.Custom: oset = _manager.CreateCustom ((string)v, pi.MemberType); break;
+					case JsonDataType.Dictionary:
+						oset = CreateDictionary ((JsonArray)v, pi.MemberType);
+						break;
+					case JsonDataType.StringKeyDictionary:
+						oset = CreateStringKeyDictionary ((JsonDict)v, pi.MemberType);
+						break;
+					case JsonDataType.NameValue:
+						oset = CreateNameValueCollection ((JsonDict)v);
+						break;
+					case JsonDataType.StringDictionary:
+						oset = CreateStringDictionary ((JsonDict)v);
+						break;
+					case JsonDataType.Custom:
+						oset = _manager.CreateCustom ((string)v, pi.MemberType);
+						break;
+					case JsonDataType.Object: oset = v; break;
 					default:
-						if (pi.IsGenericType && pi.IsValueType == false && v is List<object>)
-							oset = CreateGenericList ((List<object>)v, pi.MemberType, globaltypes);
+						if ((pi.IsClass || pi.IsStruct) && v is JsonDict)
+							oset = ParseDictionary ((JsonDict)v, pi.MemberType, pi.Getter (o));
 
-						else if ((pi.IsClass || pi.IsStruct) && v is Dictionary<string, object>)
-							oset = ParseDictionary ((Dictionary<string, object>)v, globaltypes, pi.MemberType, pi.Getter (o));
-
-						else if (v is List<object>)
-							oset = CreateArray ((List<object>)v, typeof(object[]), globaltypes);
+						else if (v is JsonArray)
+							oset = CreateArray ((JsonArray)v, typeof (object[]));
 
 						else if (pi.IsValueType)
 							oset = ChangeType (v, pi.ChangeType);
@@ -402,9 +405,13 @@ namespace fastJSON
 
 						break;
 				}
-
-				if (si != null && si.OnDeserializing (o, n, ref oset) == false) {
-					continue;
+				SET_VALUE:
+				if (si != null) {
+					ji.Value = oset;
+					if (si.OnDeserializing (o, ji) == false) {
+						continue;
+					}
+					oset = ji.Value;
 				}
 				o = pi.Setter (o, oset);
 			}
@@ -414,7 +421,7 @@ namespace fastJSON
 			return o;
 		}
 
-		private StringDictionary CreateStringDictionary (Dictionary<string, object> d) {
+		private static StringDictionary CreateStringDictionary (JsonDict d) {
 			StringDictionary nv = new StringDictionary ();
 
 			foreach (var o in d)
@@ -423,7 +430,7 @@ namespace fastJSON
 			return nv;
 		}
 
-		private NameValueCollection CreateNameValueCollection (Dictionary<string, object> d) {
+		private static NameValueCollection CreateNameValueCollection (JsonDict d) {
 			NameValueCollection nv = new NameValueCollection ();
 
 			foreach (var o in d) {
@@ -451,37 +458,37 @@ namespace fastJSON
 			return nv;
 		}
 
-		private void ProcessMap (object obj, Dictionary<string, myPropInfo> props, Dictionary<string, object> dic) {
+		private static void ProcessMap (object obj, Dictionary<string, myPropInfo> props, JsonDict dic) {
 			foreach (KeyValuePair<string, object> kv in dic) {
 				myPropInfo p = props[kv.Key];
 				object o = p.Getter (obj);
 				Type t = Type.GetType ((string)kv.Value);
-				if (t == typeof(Guid))
-					p.Setter (obj, CreateGuid ((string)o));
+				if (typeof (Guid).Equals (t))
+					p.Setter (obj, CreateGuid (o));
 			}
 		}
 
 		private object ChangeType (object value, Type conversionType) {
-			if (conversionType == typeof(int))
+			if (typeof (int).Equals (conversionType))
 				return (int)((long)value);
 
-			if (conversionType == typeof(long))
-				return (long)value;
-
-			if (conversionType == typeof(string))
+			if (typeof (long).Equals (conversionType))
 				return value;
 
-			if (conversionType == typeof(double)) {
-				return (double)value;
+			if (typeof (string).Equals (conversionType))
+				return value;
+
+			if (typeof (double).Equals (conversionType)) {
+				return value;
 			}
-			if (conversionType == typeof(float)) {
+			if (typeof (float).Equals (conversionType)) {
 				return (float)(double)value;
 			}
 			if (conversionType.IsEnum)
-				return CreateEnum (conversionType, value);
+				return CreateEnum (value, conversionType);
 
-			if (conversionType == typeof(DateTime))
-				return CreateDateTime ((string)value);
+			if (typeof (DateTime).Equals (conversionType))
+				return CreateDateTime (this, value);
 
 			if (_manager.IsTypeRegistered (conversionType))
 				return _manager.CreateCustom ((string)value, conversionType);
@@ -498,13 +505,13 @@ namespace fastJSON
 			}
 
 			// 8-30-2014 - James Brooks - Nullable Guid is a special case so it was moved after the "IsNullable" check.
-			if (conversionType == typeof(Guid))
-				return CreateGuid ((string)value);
+			if (typeof (Guid).Equals (conversionType))
+				return CreateGuid (value);
 
 			return Convert.ChangeType (value, conversionType, CultureInfo.InvariantCulture);
 		}
 
-		private object CreateEnum (Type enumType, object value) {
+		private object CreateEnum (object value, Type enumType) {
 			var s = value as string;
 			if (s != null) {
 				return _manager.GetEnumValue (enumType, s);
@@ -514,69 +521,7 @@ namespace fastJSON
 			}
 		}
 
-		private static Guid CreateGuid (string s) {
-			if (s.Length > 30)
-				return new Guid (s);
-			else
-				return new Guid (Convert.FromBase64String (s));
-		}
-
-		private DateTime CreateDateTime (string value) {
-			bool utc = false;
-			//                   0123456789012345678 9012 9/3
-			// datetime format = yyyy-MM-ddTHH:mm:ss .nnn  Z
-			int year;
-			int month;
-			int day;
-			int hour;
-			int min;
-			int sec;
-			int ms = 0;
-
-			year = CreateInteger (value, 0, 4);
-			month = CreateInteger (value, 5, 2);
-			day = CreateInteger (value, 8, 2);
-			hour = CreateInteger (value, 11, 2);
-			min = CreateInteger (value, 14, 2);
-			sec = CreateInteger (value, 17, 2);
-			if (value.Length > 21 && value[19] == '.')
-				ms = CreateInteger (value, 20, 3);
-
-			if (value[value.Length - 1] == 'Z')
-				utc = true;
-
-			if (_params.UseUTCDateTime == false || utc == false)
-				return new DateTime (year, month, day, hour, min, sec, ms);
-			else
-				return new DateTime (year, month, day, hour, min, sec, ms, DateTimeKind.Utc).ToLocalTime ();
-		}
-
-		private static int CreateInteger (string s, int index, int count) {
-			int num = 0;
-			bool neg = false;
-			for (int x = 0; x < count; x++, index++) {
-				char cc = s[index];
-
-				if (cc == '-')
-					neg = true;
-				else if (cc == '+')
-					neg = false;
-				else {
-					num *= 10;
-					num += (cc - '0');
-				}
-			}
-			if (neg) num = -num;
-
-			return num;
-		}
-
-		private object CreateTimeSpan (string value) {
-			// TODO: Optimize TimeSpan
-			return TimeSpan.Parse (value);
-		}
-
-		private object CreateArray (List<object> data, Type arrayType, Dictionary<string, object> globalTypes) {
+		private object CreateArray (JsonArray data, Type arrayType) {
 			var l = data.Count;
 			var c = _manager.GetDefinition (arrayType);
 			Type et = c.ArgumentTypes[0];
@@ -588,7 +533,7 @@ namespace fastJSON
 					if (ob == null) {
 						continue;
 					}
-					col.SetValue (r (this, ob), i);
+					col.SetValue (r (this, ob, et), i);
 				}
 				return col;
 			}
@@ -600,10 +545,10 @@ namespace fastJSON
 					continue;
 				}
 				if (ob is IDictionary)
-					col.SetValue (ParseDictionary ((Dictionary<string, object>)ob, globalTypes, et, null), i);
-				// support multi-dimensional array
+					col.SetValue (ParseDictionary ((JsonDict)ob, et, null), i);
+				// support jagged array
 				else if (ob is ICollection) {
-					col.SetValue (CreateArray ((List<object>)ob, et, globalTypes), i);
+					col.SetValue (CreateArray ((JsonArray)ob, et), i);
 				}
 				else
 					col.SetValue (ChangeType (ob, et), i);
@@ -612,16 +557,17 @@ namespace fastJSON
 			return col;
 		}
 
-		private object CreateGenericList (List<object> data, Type listType, Dictionary<string, object> globalTypes) {
+		private object CreateGenericList (JsonArray data, Type listType) {
 			var c = _manager.GetDefinition (listType);
 			IList col = (IList)c.Instantiate ();
+			Type et = c.ArgumentTypes[0];
 			var r = c.ItemDeserializer;
 			if (r != null) {
 				foreach (var item in data) {
 					if (item == null) {
 						continue;
 					}
-					col.Add (r (this, item));
+					col.Add (r (this, item, et));
 				}
 				return col;
 			}
@@ -629,95 +575,80 @@ namespace fastJSON
 			// create an array of objects
 			foreach (object ob in data) {
 				if (ob is IDictionary)
-					col.Add (ParseDictionary ((Dictionary<string, object>)ob, globalTypes, c.ArgumentTypes[0], null));
+					col.Add (ParseDictionary ((JsonDict)ob, et, null));
 
-				else if (ob is List<object>) {
-					if (c.ArgumentTypes[0].IsGenericType)
+				else if (ob is JsonArray) {
+					if (et.IsGenericType)
 						col.Add (ob);//).ToArray());
 					else
-						col.Add (((List<object>)ob).ToArray ());
+						col.Add (((JsonArray)ob).ToArray ());
 				}
 				else
-					col.Add (ChangeType (ob, c.ArgumentTypes[0]));
+					col.Add (ChangeType (ob, et));
 			}
 			return col;
 		}
 
-		private object CreateStringKeyDictionary (Dictionary<string, object> reader, Type pt, Type[] types, Dictionary<string, object> globalTypes) {
-			var col = (IDictionary)_manager.GetDefinition (pt).Instantiate ();
-			Type t1 = null;
-			Type t2 = null;
-			if (types != null) {
-				t1 = types[0];
-				t2 = types[1];
-			}
-
+		private object CreateStringKeyDictionary (JsonDict reader, Type pt) {
+			var c = _manager.GetDefinition (pt);
+			var types = c.ArgumentTypes;
+			var col = (IDictionary)c.Instantiate ();
+			//Type t1 = null; // not used
+			Type et = types != null ? types[1] : null;
+			var m = GetReadJsonMethod (et);
 			foreach (KeyValuePair<string, object> values in reader) {
-				var key = values.Key;
-				object val = null;
-
-				if (values.Value is Dictionary<string, object>)
-					val = ParseDictionary ((Dictionary<string, object>)values.Value, globalTypes, t2, null);
-
-				else if (types != null && t2.IsArray)
-					val = CreateArray ((List<object>)values.Value, t2, globalTypes);
-
-				else if (values.Value is IList)
-					val = CreateGenericList ((List<object>)values.Value, t2, globalTypes);
-
-				else
-					val = ChangeType (values.Value, t2);
-
-				col.Add (key, val);
+				col.Add (values.Key, m (this, values.Value, et));
 			}
-
 			return col;
 		}
 
-		private object CreateDictionary (List<object> reader, Type pt, Type[] types, Dictionary<string, object> globalTypes) {
-			IDictionary col = (IDictionary)_manager.GetDefinition (pt).Instantiate ();
+		private object CreateDictionary (JsonArray reader, Type pt) {
+			var c = _manager.GetDefinition (pt);
+			var types = c.ArgumentTypes;
+			IDictionary col = (IDictionary)c.Instantiate ();
 			Type t1 = null;
 			Type t2 = null;
 			if (types != null) {
 				t1 = types[0];
 				t2 = types[1];
 			}
-
-			foreach (Dictionary<string, object> values in reader) {
+			var mk = GetReadJsonMethod (t1);
+			var mv = GetReadJsonMethod (t2);
+			foreach (JsonDict values in reader) {
 				object key = values["k"];
 				object val = values["v"];
 
-				if (key is Dictionary<string, object>)
-					key = ParseDictionary ((Dictionary<string, object>)key, globalTypes, t1, null);
-				else
-					key = ChangeType (key, t1);
+				//if (key is JsonDict)
+				//	key = ParseDictionary ((JsonDict)key, t1, null);
+				//else
+				//	key = ChangeType (key, t1);
 
-				if (val is Dictionary<string, object>)
-					val = ParseDictionary ((Dictionary<string, object>)val, globalTypes, t2, null);
-				else
-					val = ChangeType (val, t2);
+				//if (val is JsonDict)
+				//	val = ParseDictionary ((JsonDict)val, t2, null);
+				//else
+				//	val = ChangeType (val, t2);
 
-				col.Add (key, val);
+				col.Add (mk (this, key, t1), mv (this, val, t2));
 			}
 
 			return col;
 		}
 
 #if !SILVERLIGHT
-		private DataSet CreateDataset (Dictionary<string, object> reader, Dictionary<string, object> globalTypes) {
+		private DataSet CreateDataSet (JsonDict reader) {
 			DataSet ds = new DataSet ();
 			ds.EnforceConstraints = false;
 			ds.BeginInit ();
 
 			// read dataset schema here
-			var schema = reader["$schema"];
+			var schema = reader.Schema;
 
 			if (schema is string) {
 				TextReader tr = new StringReader ((string)schema);
 				ds.ReadXmlSchema (tr);
 			}
 			else {
-				DatasetSchema ms = (DatasetSchema)ParseDictionary ((Dictionary<string, object>)schema, globalTypes, typeof(DatasetSchema), null);
+				DatasetSchema ms = (DatasetSchema)ParseDictionary ((JsonDict)schema, typeof (DatasetSchema), null);
 				ds.DataSetName = ms.Name;
 				for (int i = 0; i < ms.Info.Count; i += 3) {
 					if (ds.Tables.Contains (ms.Info[i]) == false)
@@ -727,9 +658,9 @@ namespace fastJSON
 			}
 
 			foreach (KeyValuePair<string, object> pair in reader) {
-				if (pair.Key == "$type" || pair.Key == "$schema") continue;
+				//if (pair.Key == "$type" || pair.Key == "$schema") continue;
 
-				List<object> rows = (List<object>)pair.Value;
+				JsonArray rows = (JsonArray)pair.Value;
 				if (rows == null) continue;
 
 				DataTable dt = ds.Tables[pair.Key];
@@ -741,32 +672,36 @@ namespace fastJSON
 			return ds;
 		}
 
-		private void ReadDataTable (List<object> rows, DataTable dt) {
+		private void ReadDataTable (JsonArray rows, DataTable dt) {
 			dt.BeginInit ();
 			dt.BeginLoadData ();
 			List<int> guidcols = new List<int> ();
 			List<int> datecol = new List<int> ();
 
 			foreach (DataColumn c in dt.Columns) {
-				if (c.DataType == typeof(Guid) || c.DataType == typeof(Guid?))
+				if (typeof (Guid).Equals (c.DataType) || typeof (Guid?).Equals (c.DataType))
 					guidcols.Add (c.Ordinal);
-				if (_params.UseUTCDateTime && (c.DataType == typeof(DateTime) || c.DataType == typeof(DateTime?)))
+				if (_params.UseUTCDateTime && (typeof (DateTime).Equals (c.DataType) || typeof (DateTime?).Equals (c.DataType)))
 					datecol.Add (c.Ordinal);
 			}
+			var gc = guidcols.Count > 0;
+			var dc = datecol.Count > 0;
 
-			foreach (List<object> row in rows) {
+			foreach (JsonArray row in rows) {
 				object[] v = new object[row.Count];
 				row.CopyTo (v, 0);
-				foreach (int i in guidcols) {
-					string s = (string)v[i];
-					if (s != null && s.Length < 36)
-						v[i] = new Guid (Convert.FromBase64String (s));
-				}
-				if (_params.UseUTCDateTime) {
-					foreach (int i in datecol) {
+				if (gc) {
+					foreach (int i in guidcols) {
 						string s = (string)v[i];
+						if (s != null && s.Length < 36)
+							v[i] = new Guid (Convert.FromBase64String (s));
+					}
+				}
+				if (dc && _params.UseUTCDateTime) {
+					foreach (int i in datecol) {
+						var s = v[i];
 						if (s != null)
-							v[i] = CreateDateTime (s);
+							v[i] = CreateDateTime (this, s);
 					}
 				}
 				dt.Rows.Add (v);
@@ -776,18 +711,18 @@ namespace fastJSON
 			dt.EndInit ();
 		}
 
-		DataTable CreateDataTable (Dictionary<string, object> reader, Dictionary<string, object> globalTypes) {
+		DataTable CreateDataTable (JsonDict reader) {
 			var dt = new DataTable ();
 
 			// read dataset schema here
-			var schema = reader["$schema"];
+			var schema = reader.Schema;
 
 			if (schema is string) {
 				TextReader tr = new StringReader ((string)schema);
 				dt.ReadXmlSchema (tr);
 			}
 			else {
-				var ms = (DatasetSchema)ParseDictionary ((Dictionary<string, object>)schema, globalTypes, typeof(DatasetSchema), null);
+				var ms = (DatasetSchema)ParseDictionary ((JsonDict)schema, typeof (DatasetSchema), null);
 				dt.TableName = ms.Info[0];
 				for (int i = 0; i < ms.Info.Count; i += 3) {
 					dt.Columns.Add (ms.Info[i + 1], Type.GetType (ms.Info[i + 2]));
@@ -795,10 +730,10 @@ namespace fastJSON
 			}
 
 			foreach (var pair in reader) {
-				if (pair.Key == "$type" || pair.Key == "$schema")
-					continue;
+				//if (pair.Key == "$type" || pair.Key == "$schema")
+				//	continue;
 
-				var rows = (List<object>)pair.Value;
+				var rows = (JsonArray)pair.Value;
 				if (rows == null)
 					continue;
 
@@ -811,6 +746,124 @@ namespace fastJSON
 			return dt;
 		}
 #endif
+		#endregion
+
+		internal static RevertJsonValue GetRevertMethod (JsonDataType type) {
+			return _revertMethods[(int)type];
+		}
+		#region RevertJsonValue delegate methods
+		internal static object RevertPrimitive (JsonDeserializer deserializer, object value, Type type) {
+			return value;
+		}
+		internal static object RevertInt32 (JsonDeserializer deserializer, object value, Type type) {
+			return (int)(long)value;
+		}
+		internal static object RevertByte (JsonDeserializer deserializer, object value, Type type) {
+			return (byte)(long)value;
+		}
+		internal static object RevertSingle (JsonDeserializer deserializer, object value, Type type) {
+			return (float)(double)value;
+		}
+		internal static object RevertGuid (JsonDeserializer deserializer, object value, Type type) {
+			return CreateGuid (value);
+		}
+		private static object CreateGuid (object value) {
+			var s = (string)value;
+			return s.Length > 30 ? new Guid (s) : new Guid (Convert.FromBase64String (s));
+		}
+		internal static object RevertTimeSpan (JsonDeserializer deserializer, object value, Type type) {
+			return CreateTimeSpan (value);
+		}
+		private static object CreateTimeSpan (object value) {
+			// TODO: Optimize TimeSpan
+			return TimeSpan.Parse ((string)value);
+		}
+		internal static object RevertByteArray (JsonDeserializer deserializer, object value, Type type) {
+			return Convert.FromBase64String ((string)value);
+        }
+		internal static object RevertDateTime (JsonDeserializer deserializer, object value, Type type) {
+			return CreateDateTime (deserializer, value);
+		}
+		internal static object CreateDateTime (JsonDeserializer deserializer, object value) {
+			string t = (string)value;
+			//                   0123456789012345678 9012 9/3
+			// datetime format = yyyy-MM-ddTHH:mm:ss .nnn  Z
+			int year = CreateInteger (t, 0, 4);
+			int month = CreateInteger (t, 5, 2);
+			int day = CreateInteger (t, 8, 2);
+			int hour = CreateInteger (t, 11, 2);
+			int min = CreateInteger (t, 14, 2);
+			int sec = CreateInteger (t, 17, 2);
+			int ms = (t.Length > 21 && t[19] == '.') ? CreateInteger (t, 20, 3) : 0;
+			bool utc = (t[t.Length - 1] == 'Z');
+
+			if (deserializer._params.UseUTCDateTime == false || utc == false)
+				return new DateTime (year, month, day, hour, min, sec, ms);
+			else
+				return new DateTime (year, month, day, hour, min, sec, ms, DateTimeKind.Utc).ToLocalTime ();
+		}
+		private static int CreateInteger (string s, int index, int count) {
+			int num = 0;
+			bool neg = false;
+			for (int x = 0; x < count; x++, index++) {
+				char cc = s[index];
+
+				if (cc == '-')
+					neg = true;
+				else if (cc == '+')
+					neg = false;
+				else {
+					num = (num << 3) + (num << 1); // num *= 10;
+					num += (cc - '0');
+				}
+			}
+			if (neg) num = -num;
+
+			return num;
+		}
+
+		internal static object RevertObject (JsonDeserializer deserializer, object value, Type type) {
+			if (value == null) return null;
+			return deserializer.ParseDictionary ((JsonDict)value, type, null);
+		}
+		internal static object RevertArray (JsonDeserializer deserializer, object value, Type type) {
+			if (value == null) return null;
+			return deserializer.CreateArray ((JsonArray)value, type);
+		}
+		internal static object RevertGenericList (JsonDeserializer deserializer, object value, Type type) {
+			if (value == null) return null;
+			return deserializer.CreateGenericList ((JsonArray)value, type);
+		}
+		internal static object RevertDataSet (JsonDeserializer deserializer, object value, Type type) {
+			return deserializer.CreateDataSet ((JsonDict)value);
+		}
+		internal static object RevertDataTable (JsonDeserializer deserializer, object value, Type type) {
+			return deserializer.CreateDataTable ((JsonDict)value);
+		}
+		internal static object RevertHashTable (JsonDeserializer deserializer, object value, Type type) {
+			return deserializer.RootHashTable ((JsonArray)value);
+		}
+		internal static object RevertDictionary (JsonDeserializer deserializer, object value, Type type) {
+			return deserializer.CreateDictionary ((JsonArray)value, type);
+		}
+		internal static object RevertNameValueCollection (JsonDeserializer deserializer, object value, Type type) {
+			return CreateNameValueCollection ((JsonDict)value);
+		}
+		internal static object RevertStringDictionary (JsonDeserializer deserializer, object value, Type type) {
+			return CreateStringDictionary ((JsonDict)value);
+		}
+		internal static object RevertStringKeyDictionary (JsonDeserializer deserializer, object value, Type type) {
+			return deserializer.CreateStringKeyDictionary ((JsonDict)value, type);
+		}
+		internal static object RevertEnum (JsonDeserializer deserializer, object value, Type type) {
+			return deserializer.CreateEnum (value, type);
+		}
+		internal static object RevertCustom (JsonDeserializer deserializer, object value, Type type) {
+			return deserializer._manager.CreateCustom ((string)value, type);
+		}
+		internal static object ChangeType (JsonDeserializer deserializer, object value, Type type) {
+			return deserializer.ChangeType (value, type);
+		}
 		#endregion
 	}
 }
