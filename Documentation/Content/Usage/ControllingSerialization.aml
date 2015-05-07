@@ -1,0 +1,218 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<topic id="cdb88b9f-5c60-4e72-8a96-009906d6d990" revisionNumber="1">
+	<developerConceptualDocument
+	  xmlns="http://ddue.schemas.microsoft.com/authoring/2003/5"
+	  xmlns:xlink="http://www.w3.org/1999/xlink">
+
+		<!--
+    <summary>
+      <para>Optional summary abstract</para>
+    </summary>
+    -->
+
+		<introduction>
+			<!-- Uncomment this to generate an outline of the section and sub-section
+           titles.  Specify a numeric value as the inner text to limit it to
+           a specific number of sub-topics when creating the outline.  Specify
+           zero (0) to limit it to top-level sections only.  -->
+			<!-- <autoOutline /> -->
+
+			<para>
+				In the last chapter, we introduced the basic of JSON serialization and deserialization with the <codeEntityReference>T:fastJSON.JSON</codeEntityReference> class, and tweaking the result of serialization with settings in <codeEntityReference>T:fastJSON.JSONParameters</codeEntityReference> . In this chapter, we will discuss further on controlling the serialization result with <newTerm>PowerJSON</newTerm>.
+			</para>
+		</introduction>
+
+		<!-- Add one or more top-level section elements.  These are collapsible.
+         If using <autoOutline />, add an address attribute to identify it
+         and specify a title so that it can be jumped to with a hyperlink. -->
+		<section address="Section1">
+			<title>A Sample Class</title>
+			<content>
+				<!-- Uncomment this to create a sub-section outline
+        <autoOutline /> -->
+				<para>One of the most common issues of JSON serialization is the naming of JSON structures and our .NET types.</para>
+				<para>Given that we have a class like the following:</para>
+				<code language="c#" source="..\MsUnitTest\SerializationControlTest.cs" region="Demo Class" />
+				<code language="c#" source="..\MsUnitTest\SerializationControlTest.cs" region="Misc Types" />
+				<para>And we want to fulfill the following requirements:</para>
+				<list class="bullet">
+					<listItem>
+						<para>
+							<codeInline>DemoClass</codeInline> is an <languageKeyword>internal</languageKeyword> class, which, by default, is NOT serializable, but we want to make it deserializable.
+						</para>
+					</listItem>
+					<listItem>
+						<para>All properties should have camel-case serialized names.</para>
+					</listItem>
+					<listItem>
+						<para>
+							<codeInline>MyProperty</codeInline> is serialized to the name "prop".
+						</para>
+					</listItem>
+					<listItem>
+						<para>
+							<codeInline>MyEnumProperty</codeInline> is serialized to have a name "enum".
+						</para>
+					</listItem>
+					<listItem>
+						<para>
+							<codeInline>Number</codeInline> should not be serialized if its value is 0.
+						</para>
+					</listItem>
+					<listItem>
+						<para>
+							<codeInline>Identifier</codeInline> can be of type <codeInline>ClassA</codeInline> or <codeInline>ClassB</codeInline>, and have a serialized name as "a" or "b", respectively. If <codeInline>Identifier</codeInline> is not of the above two types, its serialized name should be "variant".
+						</para>
+					</listItem>
+					<listItem>
+						<para>
+							<codeInline>InternalValue</codeInline> should not be serialized or deserialized.
+						</para>
+					</listItem>
+					<listItem>
+						<para>
+							The name of the <codeInline>Vip</codeInline> field in <codeInline>MyEnum</codeInline> type should be serialized as "VIP".
+						</para>
+					</listItem>
+				</list>
+				<para>The above requirements could not be fulfilled with fastJSON, but with PowerJSON, it is possible, and there are two ways.</para>
+				<list class="ordered">
+					<listItem>
+						<para>
+							<newTerm>Invasive Mode</newTerm>: Add Custom Attributes to the data model, i.e., <codeInline>DemoClass</codeInline> here, to control the serialization.
+						</para>
+					</listItem>
+					<listItem>
+						<para>
+							<newTerm>Noninvasive Mode</newTerm>: Don't modify the data model. Programmatically change the serialization result.
+						</para>
+					</listItem>
+				</list>
+			</content>
+			<sections>
+				<section address="CustomAttributes">
+					<title>Controlling Serialization with Custom Attributes</title>
+					<content>
+						<para>
+							The first approach is to add <newTerm>custom attributes</newTerm> to the <languageKeyword>class</languageKeyword>es or <languageKeyword>struct</languageKeyword>s we want to take control.
+						</para>
+						<para>
+							Since this approach requires modification of source code, it is called <newTerm>Invasive Mode</newTerm>.
+						</para>
+						<para>The following code shows how to use custom attributes to control the serialization result.</para>
+						<code language="c#" source="..\MsUnitTest\SerializationControlTest.cs" region="Annotated Demo Class" />
+						<para>The above example demonstrates the usage of custom attributes. Here's a list of the basic custom attributes.</para>
+						<list class="bullet">
+							<listItem>
+								<para>
+									<codeEntityReference>T:fastJSON.JsonSerializableAttribute</codeEntityReference> - Marks a non-public <codeInline>class</codeInline> or <codeInline>struct</codeInline> is deserializable.
+								</para>
+							</listItem>
+							<listItem>
+								<para>
+									<codeEntityReference>T:fastJSON.JsonIncludeAttribute</codeEntityReference> - Specifically denotes whether a <codeInline>field</codeInline> or a <codeInline>property</codeInline> is serializable.
+								</para>
+							</listItem>
+							<listItem>
+								<para>
+									<codeEntityReference>T:fastJSON.JsonFieldAttribute</codeEntityReference> - Controls how a <codeInline>field</codeInline> or a <codeInline>property</codeInline> is serialized or deserialized. Serialized name (AKA, JSON alias, or renaming) and polymorphic types can be assigned by this attribute.
+								</para>
+							</listItem>
+							<listItem>
+								<para>
+									<codeEntityReference>T:fastJSON.JsonEnumValueAttribute</codeEntityReference> - Renames serialized <codeInline>enum</codeInline> values (also decodes them in deserialization).
+								</para>
+							</listItem>
+						</list>
+						<para>Some system built-in attributes are also supported.</para>
+						<list class="bullet">
+							<listItem>
+								<para>
+									<codeEntityReference qualifyHint="true">T:System.ComponentModel.ReadOnlyAttribute</codeEntityReference> - Marks a <codeInline>field</codeInline> or a <codeInline>property</codeInline> is read-only, thus excluding it from deserialization.
+								</para>
+							</listItem>
+							<listItem>
+								<para>
+									<codeEntityReference qualifyHint="true">T:System.ComponentModel.DefaultValueAttribute</codeEntityReference> - Hides a <codeInline>field</codeInline> or a <codeInline>property</codeInline> when its value equals the value in the attribute.
+								</para>
+							</listItem>
+						</list>
+					</content>
+				</section>
+				<section address="NoninvasiveControl">
+					<title>Controlling Serialization with SerializationManager</title>
+					<content>
+						<para>There are some disadvantages of custom attributes, listed below.</para>
+						<list class="bullet">
+							<listItem>
+								<para>Issue 1: Custom attributes require modifications on source code, but sometimes it is impossible, e.g. we want to control the serialization result of a type in the .NET Framework.</para>
+							</listItem>
+							<listItem>
+								<para>
+									Issue 2: They invade the data models and make them rely on <newTerm>PowerJSON</newTerm>.
+								</para>
+							</listItem>
+							<listItem>
+								<para>Issue 3: They may conflict, typically when the same data model is required to be serialized to various forms.</para>
+							</listItem>
+						</list>
+						<para>
+							To surmount the above issues, PowerJSON has introduced a <newTerm>Noninvasive Mode</newTerm> of serialization control. The noninvasive mode make no modification on the data models, yet provides no less power than using Custom Attributes.
+						</para>
+						<para>
+							The noninvasive mode is majorly implemented with the following classes: <codeEntityReference>T:fastJSON.SerializationManager</codeEntityReference>, <codeEntityReference>T:fastJSON.TypeOverride</codeEntityReference> and <codeEntityReference>T:fastJSON.MemberOverride</codeEntityReference>.
+						</para>
+						<para>
+							The <codeInline>SerializationManager</codeInline> has a replacable instance in the <codeEntityReference>T:fastJSON.JSON</codeEntityReference> class. Calling its <codeEntityReference>M:fastJSON.SerializationManager.Override``1(fastJSON.TypeOverride)</codeEntityReference> method will inject information on how to alter the result of serialization or deserialization.
+						</para>
+						<para>
+							The following code gives a usage example of <codeInline>SerializationManager</codeInline>.
+						</para>
+						<code source="..\MsUnitTest\SerializationControlTest.cs" region="Noninvasive Control Code" />
+						<para>
+							With the <codeInline>SerializationManager</codeInline>, serialization can be controlled from external code. Issue 1 and Issue 2 is resolved. To solve Issue 3, let's take a look at the following code first.
+						</para>
+					</content>
+				</section>
+			</sections>
+		</section>
+
+		<relatedTopics>
+			<!-- One or more of the following:
+           - A local link
+           - An external link
+           - A code entity reference
+
+      <link xlink:href="Other Topic's ID"/>
+      <link xlink:href="Other Topic's ID">Link inner text</link>
+
+      <externalLink>
+          <linkText>Link text</linkText>
+          <linkAlternateText>Optional alternate link text</linkAlternateText>
+          <linkUri>URI</linkUri>
+      </externalLink>
+
+      <codeEntityReference>API member ID</codeEntityReference>
+
+      Examples:
+
+      <link xlink:href="00e97994-e9e6-46e0-b420-5be86b2f8270" />
+      <link xlink:href="00e97994-e9e6-46e0-b420-5be86b2f8278">Some other topic</link>
+
+      <externalLink>
+          <linkText>SHFB on GitHub</linkText>
+          <linkAlternateText>Go to GitHub</linkAlternateText>
+          <linkUri>https://GitHub.com/EWSoftware/SHFB</linkUri>
+      </externalLink>
+
+      <codeEntityReference>T:TestDoc.TestClass</codeEntityReference>
+      <codeEntityReference>P:TestDoc.TestClass.SomeProperty</codeEntityReference>
+      <codeEntityReference>M:TestDoc.TestClass.#ctor</codeEntityReference>
+      <codeEntityReference>M:TestDoc.TestClass.#ctor(System.String,System.Int32)</codeEntityReference>
+      <codeEntityReference>M:TestDoc.TestClass.ToString</codeEntityReference>
+      <codeEntityReference>M:TestDoc.TestClass.FirstMethod</codeEntityReference>
+      <codeEntityReference>M:TestDoc.TestClass.SecondMethod(System.Int32,System.String)</codeEntityReference>
+      -->
+		</relatedTopics>
+	</developerConceptualDocument>
+</topic>

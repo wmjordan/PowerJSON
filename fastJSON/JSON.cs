@@ -80,12 +80,12 @@ namespace fastJSON
 		/// <returns>The serialized JSON string.</returns>
 		public static string ToJSON(object obj, JSONParameters param, SerializationManager manager)
 		{
-			param.FixValues();
+			//param.FixValues();
 
 			if (obj == null)
 				return "null";
 
-			ReflectionCache c = manager.GetDefinition (obj.GetType ());
+			ReflectionCache c = manager.GetReflectionCache (obj.GetType ());
 
 			if (c.CommonType == ComplexType.Dictionary || c.CommonType == ComplexType.List) {
 				param.UsingGlobalTypes = false;
@@ -192,10 +192,10 @@ namespace fastJSON
 		}
 
 		/// <summary>
-		/// Fills a given object with the JSON representation with the default <see cref="Parameters"/>.
+		/// Fills <paramref name="input" /> with the JSON representation with the default <see cref="Parameters"/>.
 		/// </summary>
 		/// <param name="input">The object to contain the result of the deserialization.</param>
-		/// <param name="json">The JSON string to be deserialized.</param>
+		/// <param name="json">The JSON representation string to be deserialized.</param>
 		/// <returns>The <paramref name="input" /> object containing deserialized properties and fields from the JSON string.</returns>
 		public static object FillObject(object input, string json)
 		{

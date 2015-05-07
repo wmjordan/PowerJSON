@@ -14,7 +14,7 @@ namespace fastJSON
 	internal sealed class JsonSerializer
 	{
 		StringBuilder _output = new StringBuilder ();
-		StringBuilder _before = new StringBuilder ();
+		int _before;
 		readonly int _MAX_DEPTH = 20;
 		int _current_depth = 0;
 		readonly Dictionary<string, int> _globalTypes = new Dictionary<string, int> ();
@@ -33,25 +33,22 @@ namespace fastJSON
 		internal string ConvertToJSON (object obj) {
 			WriteValue (obj);
 
-			if (_params.UsingGlobalTypes && _globalTypes != null && _globalTypes.Count > 0) {
-				var sb = _before;
+			if (_params.UseExtensions && _params.UsingGlobalTypes && _globalTypes != null && _globalTypes.Count > 0) {
+				var sb = new StringBuilder ();
 				sb.Append ("\"" + JsonDict.ExtTypes + "\":{");
 				var pendingSeparator = false;
 				foreach (var kv in _globalTypes) {
-					if (pendingSeparator) sb.Append (',');
-					pendingSeparator = true;
-					sb.Append ('\"');
+					sb.Append (pendingSeparator ? ",\"" : "\"");
 					sb.Append (kv.Key);
 					sb.Append ("\":\"");
-					sb.Append (kv.Value);
+					sb.Append (Int32ToString (kv.Value));
 					sb.Append ('\"');
+					pendingSeparator = true;
 				}
 				sb.Append ("},");
-				sb.Append (_output.ToString ());
-				return sb.ToString ();
+				_output.Insert (_before, sb.ToString ());
 			}
-			else
-				return _output.ToString ();
+			return _output.ToString ();
 		}
 
 		private void WriteValue (object obj) {
@@ -267,7 +264,7 @@ namespace fastJSON
 			if (_cirobj.TryGetValue (obj, out ci) == false)
 				_cirobj.Add (obj, _cirobj.Count + 1);
 			else {
-				if (_current_depth > 0 && _params.InlineCircularReferences == false) {
+				if (_current_depth > 0 && _params.UseExtensions && _params.InlineCircularReferences == false) {
 					//_circular = true;
 					_output.Append ("{\"" + JsonDict.ExtRefIndex + "\":");
 					_output.Append (Int32ToString (ci));
@@ -275,18 +272,17 @@ namespace fastJSON
 					return;
 				}
 			}
-			var def = _manager.GetDefinition (obj.GetType ());
+			var def = _manager.GetReflectionCache (obj.GetType ());
 			var si = def.Interceptor;
 			if (si != null && si.OnSerializing (obj) == false) {
 				return;
 			}
-			if (_params.UsingGlobalTypes == false)
+			if (_params.UseExtensions == false || _params.UsingGlobalTypes == false)
 				_output.Append ('{');
 			else {
 				if (_TypesWritten == false) {
 					_output.Append ('{');
-					_before = _output;
-					_output = new StringBuilder ();
+					_before = _output.Length;
 				}
 				else
 					_output.Append ('{');
@@ -316,7 +312,8 @@ namespace fastJSON
 
 			var g = def.Getters;
 			var c = g.Length;
-			var rp = _params.ShowReadOnlyProperties;
+			var rp = _params.ShowReadOnlyProperties || _params.EnableAnonymousTypes;
+			var rf = _params.ShowReadOnlyFields || _params.EnableAnonymousTypes;
 			for (int ii = 0; ii < c; ii++) {
 				var p = g[ii];
 				if (p.Serializable == TriState.False) {
@@ -324,7 +321,7 @@ namespace fastJSON
 				}
 				if (p.Serializable == TriState.Default) {
 					if (p.IsStatic && _params.SerializeStaticMembers == false
-						|| p.IsReadOnly && (p.IsProperty && rp == false || p.IsProperty == false && _params.ShowReadOnlyFields == false)) {
+						|| p.IsReadOnly && (p.IsProperty && rp == false || p.IsProperty == false && rf == false)) {
 						continue;
 					}
 				}
@@ -404,12 +401,12 @@ namespace fastJSON
 				}
 				si.OnSerialized (obj);
 			}
-			_output.Append ('}');
-			_current_depth--;
-		}
+		_current_depth--;
+		_output.Append ('}');
+	}
 
 
-		private void WritePairFast (string name, string value) {
+	private void WritePairFast (string name, string value) {
 			WriteStringFast (name);
 
 			_output.Append (':');
@@ -446,7 +443,7 @@ namespace fastJSON
 					goto EXIT;
 				}
 
-				var d = serializer._manager.GetDefinition (list.GetType ());
+				var d = serializer._manager.GetReflectionCache (list.GetType ());
 				if (d.CommonType == ComplexType.MultiDimensionalArray) {
 					var md = array as Array;
 					WriteMultiDimensionalArray (serializer._output, md);

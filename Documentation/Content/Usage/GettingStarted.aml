@@ -29,14 +29,14 @@
 		<prerequisites>
 			<content>
 				<para>
-					If fastJSON is new to you, it is recommended that you <externalLink>
+					If <newTerm>fastJSON</newTerm> is new to you, it is recommended that you <externalLink>
 						<linkText>read this article</linkText>
 						<linkUri>http://www.codeproject.com/Articles/159450/fastJSON</linkUri>
 						<linkTarget>_blank</linkTarget>
 					</externalLink> before you begin.
 				</para>
 				<para>
-					<newTerm>PowerJSON</newTerm> is forked from <newTerm>fastJSON</newTerm> and almost fully compatible with it.
+					<newTerm>PowerJSON</newTerm> is forked from <newTerm>fastJSON</newTerm> and almost fully compatible with it. Therefore, the assembly file name of PowerJSON is fastJSON.dll and the type library uses <literal>fastJSON</literal> as the namespace.
 				</para>
 			</content>
 		</prerequisites>
@@ -45,7 +45,7 @@
 			<title>Serialization and Deserialization</title>
 			<content>
 				<procedure>
-					<title>Step by Step Guide</title>
+					<title>Converting Between JSONs and Objects</title>
 					<steps class="ordered">
 						<step>
 							<content>

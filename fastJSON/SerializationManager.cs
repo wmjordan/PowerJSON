@@ -23,7 +23,7 @@ namespace fastJSON
 		internal readonly SafeDictionary<Type, Deserialize> _customDeserializer = new SafeDictionary<Type, Deserialize> ();
 
 		/// <summary>
-		/// Returns the <see cref="IReflectionController"/> currently used by the <see cref="SerializationManager"/>. The instance could be casted to concrete type for more functionalities.
+		/// Returns the <see cref="IReflectionController"/> currently used by the <see cref="SerializationManager"/>.
 		/// </summary>
 		public IReflectionController ReflectionController { get { return _controller; } }
 
@@ -31,6 +31,14 @@ namespace fastJSON
 		/// Gets the singleton instance.
 		/// </summary>
 		public static readonly SerializationManager Instance = new SerializationManager (new FastJsonReflectionController ());
+
+		/// <summary>
+		/// Creates a new instance of <see cref="SerializationManager"/>.
+		/// </summary>
+		/// <remarks>The <see cref="ReflectionController"/> will be initialized to a new instance of <see cref="FastJsonReflectionController"/>.</remarks>
+		public SerializationManager () {
+			_controller = new FastJsonReflectionController ();
+		}
 
 		/// <summary>
 		/// Creates a new instance of <see cref="SerializationManager"/> with a specific <see cref="IReflectionController"/>.
@@ -82,7 +90,7 @@ namespace fastJSON
 		} 
 		#endregion
 
-		internal ReflectionCache GetDefinition (Type type) {
+		internal ReflectionCache GetReflectionCache (Type type) {
 			ReflectionCache c;
 			if (_reflections.TryGetValue (type, out c)) {
 				return c;
@@ -96,11 +104,11 @@ namespace fastJSON
 				return t;
 			}
 			var et = value.GetType ();
-			var f = GetDefinition (et);
+			var c = GetReflectionCache (et);
 			if (EnumValueCache.TryGetValue (value, out t)) {
 				return t;
 			}
-			if (f.IsFlaggedEnum) {
+			if (c.IsFlaggedEnum) {
 				var vs = Enum.GetValues (et);
 				var iv = (ulong)Convert.ToInt64 (value);
 				var ov = iv;
@@ -108,7 +116,7 @@ namespace fastJSON
 					return "0"; // should not be here
 				}
 				var sl = new List<string> ();
-				var vm = f.EnumNames;
+				var vm = c.EnumNames;
 				for (int i = vs.Length - 1; i > 0; i--) {
 					var ev = (ulong)Convert.ToInt64 (vs.GetValue (i));
 					if (ev == 0) {
@@ -125,22 +133,22 @@ namespace fastJSON
 				sl.Reverse ();
 				t = String.Join (",", sl.ToArray ());
 				EnumValueCache.Add (value, t);
-				GetDefinition (et).EnumNames[t] = value;
+				GetReflectionCache (et).EnumNames[t] = value;
 			}
 			return t;
 		}
 
 		internal Enum GetEnumValue (Type type, string name) {
-			var def = GetDefinition (type);
+			var c = GetReflectionCache (type);
 			Enum e;
-			if (def.EnumNames.TryGetValue (name, out e)) {
+			if (c.EnumNames.TryGetValue (name, out e)) {
 				return e;
 			}
-			if (def.IsFlaggedEnum) {
+			if (c.IsFlaggedEnum) {
 				ulong v = 0;
 				var s = name.Split (__enumSeperatorCharArray);
 				foreach (var item in s) {
-					if (def.EnumNames.TryGetValue (item, out e) == false) {
+					if (c.EnumNames.TryGetValue (item, out e) == false) {
 						throw new KeyNotFoundException ("Key \"" + item + "\" not found for type " + type.FullName);
 					}
 					v |= Convert.ToUInt64 (e);
@@ -183,7 +191,7 @@ namespace fastJSON
 		/// <para>If a class has its subclasses, the override will not be applied to its subclasses.</para>
 		/// </remarks>
 		public void Override (Type type, TypeOverride overrideInfo, bool purgeExisting) {
-			var c = purgeExisting ? new ReflectionCache (type, this) : GetDefinition (type);
+			var c = purgeExisting ? new ReflectionCache (type, this) : GetReflectionCache (type);
 			if (overrideInfo.OverrideInterceptor) {
 				c.Interceptor = overrideInfo.Interceptor;
 			}
@@ -267,8 +275,8 @@ namespace fastJSON
 					if (mo.OverrideItemConverter) {
 						mp.ItemConverter = mo.ItemConverter;
 					}
-					if (mo.ReadOnly != TriState.Default) {
-						mp.CanWrite = mo.ReadOnly == TriState.False;
+					if (mo.Deserializable != TriState.Default) {
+						mp.CanWrite = mo.Deserializable == TriState.True;
 					}
 				}
 			}
@@ -364,7 +372,7 @@ namespace fastJSON
 		/// <remarks>If the member has already gotten an <see cref="IJsonConverter"/>, the new <paramref name="converter"/> will replace it. If the new converter is null, existing converter will be removed from the type.</remarks>
 		/// <exception cref="MissingMemberException">No field or property matches <paramref name="memberName"/> in <paramref name="type"/>.</exception>
 		public void OverrideMemberConverter (Type type, string memberName, IJsonConverter converter) {
-			var c = GetDefinition (type);
+			var c = GetReflectionCache (type);
 			string n = null;
 			var g = c.FindGetters (memberName);
 			if (g == null) {
@@ -394,7 +402,7 @@ namespace fastJSON
 		/// <param name="nameMapper">The Enum value mapper. The key of the dictionary is the original name of the enum value to be overridden, the value is the new serialized name to be specified to the value.</param>
 		/// <exception cref="InvalidOperationException"><paramref name="type"/> is not an Enum type.</exception>
 		public void OverrideEnumValueNames (Type type, IDictionary<string, string> nameMapper) {
-			var d = GetDefinition (type);
+			var d = GetReflectionCache (type);
 			if (d.EnumNames == null) {
 				throw new InvalidOperationException (type.Name + " is not an Enum type.");
 			}
@@ -510,9 +518,9 @@ namespace fastJSON
 		public TriState Serializable { get; set; }
 
 		/// <summary>
-		/// Denotes whether the member is never deserialized (<see cref="TriState.True"/>), deserializable (<see cref="TriState.False"/>) or compliant to the existing behavior (<see cref="TriState.Default"/>).
+		/// Denotes whether the member can be deserialized (<see cref="TriState.True"/>), never deserialized (<see cref="TriState.False"/>) or compliant to the existing behavior (<see cref="TriState.Default"/>).
 		/// </summary>
-		public TriState ReadOnly { get; set; }
+		public TriState Deserializable { get; set; }
 
 		internal bool OverrideDefaultValue;
 		object _DefaultValue;

@@ -117,22 +117,23 @@ namespace fastJSON
 	
 		NamingStrategy _strategy = NamingStrategy.Default;
 		internal NamingStrategy NamingStrategy { get { return _strategy; } }
-		
+
 		/// <summary>
 		/// Fixes conflicting parameters.
 		/// </summary>
 		/// <remarks>This method is automatically called before serialization.</remarks>
+		[Obsolete ("This method is deprecated and the parameter conflict is automatically handled.")]
 		public void FixValues()
 		{
-			if (UseExtensions == false)
-			{
-				UsingGlobalTypes = false;
-				InlineCircularReferences = true;
-			}
-			if (EnableAnonymousTypes) {
-				ShowReadOnlyProperties = true;
-				ShowReadOnlyFields = true;
-			}
+			//if (UseExtensions == false)
+			//{
+			//	UsingGlobalTypes = false;
+			//	InlineCircularReferences = true;
+			//}
+			//if (EnableAnonymousTypes) {
+			//	ShowReadOnlyProperties = true;
+			//	ShowReadOnlyFields = true;
+			//}
 		}
 	}
 

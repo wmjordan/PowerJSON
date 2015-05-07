@@ -30,6 +30,8 @@ namespace fastJSON
 		internal readonly CreateObject Constructor;
 		internal readonly Getters[] Getters;
 		internal readonly Dictionary<string, myPropInfo> Properties;
+		internal readonly WriteJsonValue SerializeMethod;
+		internal readonly RevertJsonValue DeserializeMethod;
 		internal bool AlwaysDeserializable;
 		internal IJsonInterceptor Interceptor;
 		#endregion
@@ -50,6 +52,9 @@ namespace fastJSON
 				EnumNames = Reflection.GetEnumValues (type, controller, manager);
 				return;
 			}
+
+			SerializeMethod = JsonSerializer.GetWriteJsonMethod (type);
+			DeserializeMethod = JsonDeserializer.GetReadJsonMethod (type);
 
 			if (type.IsGenericType) {
 				ArgumentTypes = type.GetGenericArguments ();
@@ -220,7 +225,7 @@ namespace fastJSON
 			SerializedName = MemberName;
 			IsStatic = s;
 			IsProperty = tp;
-			IsReadOnly = ro;
+			IsReadOnly = ro && typeof(IList).IsAssignableFrom (t) == false;
 			IsCollection = typeof (ICollection).IsAssignableFrom (t) && typeof (byte[]).Equals (t) == false;
 			MemberType = t;
 			WriteValue = JsonSerializer.GetWriteJsonMethod (t);
@@ -255,6 +260,7 @@ namespace fastJSON
 		DataTable,
 #endif
 		Custom,
+		Primitive,
 		Object
 	}
 

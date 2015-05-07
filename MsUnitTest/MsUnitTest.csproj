@@ -56,7 +56,7 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
-    <Compile Include="CustomAttributeUsage.cs" />
+    <Compile Include="SerializationControlTest.cs" />
     <Compile Include="SerializationAttributeTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="BonusPackTests.cs" />

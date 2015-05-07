@@ -84,6 +84,7 @@ PowerJSON is a fork of fastJSON, arming at a more powerful control over JSON ser
     <Folder Include="Media" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Content\Usage\ControllingSerialization.aml" />
     <None Include="Content\Usage\GettingStarted.aml" />
     <None Include="Content\VersionHistory\v2.1.11.aml" />
     <None Include="Content\VersionHistory\VersionHistory.aml" />

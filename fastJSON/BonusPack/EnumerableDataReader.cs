@@ -94,7 +94,7 @@ namespace fastJSON.BonusPack
 				throw new NotSupportedException (t.FullName + " is not supported.");
 			}
 			_enumerator = collection.GetEnumerator ();
-			var p = SerializationManager.Instance.GetDefinition (t).Getters;
+			var p = SerializationManager.Instance.GetReflectionCache (t).Getters;
 			_fieldCount = p.Length;
 			_memberNames = new string[_fieldCount];
 			_accessors = new Getters[_fieldCount];
@@ -140,7 +140,7 @@ namespace fastJSON.BonusPack
 				row["ColumnName"] = GetName (i);
 				row["ColumnOrdinal"] = i;
 				Type type = GetFieldType (i);
-				var c = SerializationManager.Instance.GetDefinition (type);
+				var c = SerializationManager.Instance.GetReflectionCache (type);
 				if (c.CommonType == ComplexType.Nullable) {
 					type = c.ArgumentTypes[0];
 				}

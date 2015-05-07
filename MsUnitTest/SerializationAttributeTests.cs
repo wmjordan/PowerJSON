@@ -67,8 +67,8 @@ namespace UnitTests
 
 			var l = new List<PrivateClass> () { new PrivateClass () { Field = 1 } };
 			var sl = JSON.ToJSON (l, _JP);
-			var pl = JSON.ToObject<List<PrivateClass>> (sl);
 			Console.WriteLine (sl);
+			var pl = JSON.ToObject<List<PrivateClass>> (sl);
 			Assert.AreEqual (l[0].Field, pl[0].Field);
 
 			var a = new PrivateClass[] { new PrivateClass () { Field = 1 } };
@@ -81,8 +81,8 @@ namespace UnitTests
 				{ "test", l }
 			};
 			var sd = JSON.ToJSON (d, _JP);
-			var pd = JSON.ToObject<Dictionary<string, List<PrivateClass>>> (sd);
 			Console.WriteLine (sd);
+			var pd = JSON.ToObject<Dictionary<string, List<PrivateClass>>> (sd);
 			Assert.AreEqual (l[0].Field, d["test"][0].Field);
 		}
 

@@ -295,11 +295,11 @@ namespace consoletest
                 string jsonText = null;
 
 				stopwatch.Restart();
-                jsonText = fastJSON.JSON.ToJSON(c);
+                jsonText = fastJSON.JSON.ToJSON(c, new fastJSON.JSONParameters () { SerializeNullValues = false });
                 //Console.WriteLine(" size = " + jsonText.Length);
                 for (int i = 0; i < count; i++)
                 {
-                    deserializedStore = (colclass)fastJSON.JSON.ToObject(jsonText);
+                    deserializedStore = fastJSON.JSON.ToObject<colclass>(jsonText);
                 }
 				stopwatch.Stop();
 				Console.Write("\t" + stopwatch.ElapsedMilliseconds);
@@ -307,10 +307,9 @@ namespace consoletest
 			Console.WriteLine ();
 		}
 
-        private static void fastjson_serialize()
-        {
-            Console.Write("fastjson serialize");
-            colclass c = CreateObject();
+		private static void fastjson_serialize () {
+			Console.Write ("fastjson serialize");
+			colclass c = CreateObject ();
 			fastJSON.JSON.ToJSON (c);
 			var stopwatch = new Stopwatch();
             for (int pp = 0; pp < tcount; pp++)
@@ -327,7 +326,8 @@ namespace consoletest
 			Console.WriteLine ();
         }
 
-        private static void bin_deserialize()
+
+		private static void bin_deserialize()
         {
             Console.Write("bin deserialize");
             colclass c = CreateObject();
@@ -375,8 +375,8 @@ namespace consoletest
             }
         }
 
-        #region [   other tests  ]
-        /*
+		#region [   other tests  ]
+		/*
 		private static void systemweb_serialize()
 		{
 			Console.WriteLine();
@@ -400,23 +400,24 @@ namespace consoletest
 			}
 		}
 
-//		private static void stack_serialize()
-//		{
-//			Console.WriteLine();
-//			Console.Write("stack serialize");
-//			colclass c = CreateObject();
-//			for (int pp = 0; pp < 5; pp++)
-//			{
-//				DateTime st = DateTime.Now;
-//				string jsonText = null;
-//
-//				for (int i = 0; i < count; i++)
-//				{
-//					jsonText = ServiceStack.Text.JsonSerializer.SerializeToString(c);
-//				}
-//				Console.Write("\t" + DateTime.Now.Subtract(st).TotalMilliseconds );
-//			}
-//		}		
+		private static void stack_serialize () {
+			Console.Write ("servicestack serialize");
+			colclass c = CreateObject ();
+			ServiceStack.Text.JsConfig.Reset ();
+			ServiceStack.Text.JsConfig<baseclass>.IncludeTypeInfo = true;
+			Console.WriteLine (ServiceStack.Text.JsonSerializer.SerializeToString (c));
+			var stopwatch = new Stopwatch ();
+			for (int pp = 0; pp < tcount; pp++) {
+				string jsonText = null;
+				stopwatch.Restart ();
+				for (int i = 0; i < count; i++) {
+					jsonText = ServiceStack.Text.JsonSerializer.SerializeToString (c);
+				}
+				stopwatch.Stop ();
+				Console.Write ("\t" + stopwatch.ElapsedMilliseconds);
+			}
+			Console.WriteLine ();
+		}
 
 		private static void systemweb_deserialize()
 //		{
@@ -483,24 +484,25 @@ namespace consoletest
 			}
 		}
 
-		private static void stack_deserialize()
-		{
-			Console.WriteLine();
-			Console.Write("stack deserialize");
-			for (int pp = 0; pp < 5; pp++)
-			{
-				DateTime st = DateTime.Now;
-				colclass c;
-				colclass deserializedStore = null;
+		private static void stack_deserialize () {
+			Console.Write ("servicestack deserialize");
+			colclass c = CreateObject ();
+
+			var stopwatch = new Stopwatch ();
+			for (int pp = 0; pp < tcount; pp++) {
+				colclass deserializedStore;
 				string jsonText = null;
-				c = Tests.mytests.CreateObject();
-				jsonText = ServiceStack.Text.JsonSerializer.SerializeToString(c);
-				for (int i = 0; i < count; i++)
-				{
-					deserializedStore = ServiceStack.Text.JsonSerializer.DeserializeFromString<colclass>(jsonText);
+
+				stopwatch.Restart ();
+				jsonText = ServiceStack.Text.JsonSerializer.SerializeToString (c);
+				//Console.WriteLine(" size = " + jsonText.Length);
+				for (int i = 0; i < count; i++) {
+					deserializedStore = ServiceStack.Text.JsonSerializer.DeserializeFromString<colclass> (jsonText);
 				}
-				Console.Write("\t" + DateTime.Now.Subtract(st).TotalMilliseconds );
+				stopwatch.Stop ();
+				Console.Write ("\t" + stopwatch.ElapsedMilliseconds);
 			}
+			Console.WriteLine ();
 		}
 
 		private static void jsonnet_deserialize()
@@ -586,6 +588,6 @@ namespace consoletest
 
 		
 		 */
-        #endregion
-    }
+		#endregion
+	}
 }

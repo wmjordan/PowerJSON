@@ -699,8 +699,10 @@ namespace UnitTests
 			};
 			s = JSON.ToJSON (new object[] { }, p);
 			Assert.AreEqual ("[]", s);
+			Assert.AreEqual (0, JSON.ToObject<object[]> (s).Length);
 			s = JSON.ToJSON (new List<int> (), p);
 			Assert.AreEqual ("[]", s);
+			CollectionAssert.AreEqual (new List<int> (), JSON.ToObject<List<int>> (s));
 			var arr = new ZeroCollectionClass () {
 				Array = new int[0],
 				List = new List<int> (),
@@ -716,9 +718,16 @@ namespace UnitTests
 			Assert.IsFalse (s.Contains ("\"Array2\":"));
 			Assert.IsTrue (s.Contains ("\"Array3\":"));
 			Assert.IsFalse (s.Contains ("\"Dict\":"));
+			s = JSON.ToJSON (arr);
+			Console.WriteLine (s);
+			Assert.IsTrue (s.Contains ("\"Array\":"));
+			Assert.IsTrue (s.Contains ("\"List\":"));
+			Assert.IsTrue (s.Contains ("\"Array2\":"));
+			Assert.IsTrue (s.Contains ("\"Array3\":"));
+			Assert.IsTrue (s.Contains ("\"Dict\":"));
 		}
 
-        [TestMethod]
+		[TestMethod]
         public void BigNumber()
         {
             double d = 4.16366160299608e18;
@@ -965,6 +974,11 @@ namespace UnitTests
             var s = JSON.ToJSON(zero);
             var o = JSON.ToObject<sbyte>(s);
             Assert.IsTrue(Equals (o, zero));
+
+			char c = 'c';
+			s = JSON.ToJSON (c);
+			var o2 = JSON.ToObject<char> (s);
+			Assert.AreEqual (c, o2);
         }
 
 
@@ -1140,7 +1154,7 @@ namespace UnitTests
             h.Add("dsds", new class1());
 
             string s = JSON.ToNiceJSON(h, new JSONParameters());
-
+			Console.WriteLine (s);
             var o = JSON.ToObject<Hashtable>(s);
             Assert.AreEqual(typeof(Hashtable), o.GetType());
             Assert.AreEqual(typeof(class1), o["dsds"].GetType());
@@ -1152,14 +1166,11 @@ namespace UnitTests
             public string myConcreteType { get; set; }
             public abstractClass()
             {
-
             }
 
             public abstractClass(string type) // : base(type)
             {
-
                 this.myConcreteType = type;
-
             }
         }
 
@@ -1204,9 +1215,11 @@ namespace UnitTests
             Console.WriteLine(JSON.Beautify(st));
             var tableDst = JSON.ToObject<Dictionary<string, object>>(st);
             Console.WriteLine(JSON.Beautify(JSON.ToJSON(tableDst)));
-        }
+            var o2 = JSON.ToObject<Dictionary<string, Dictionary<string, int>>>(st);
+            Console.WriteLine(JSON.Beautify(JSON.ToJSON(o2)));
+		}
 
-        public class ignorecase
+		public class ignorecase
         {
             public string Name;
             public int Age;
@@ -1273,7 +1286,6 @@ namespace UnitTests
             string s = JSON.ToJSON(new constch());
             var o = JSON.ToObject(s);
         }
-
 
         public enum enumt
         {
@@ -1815,5 +1827,28 @@ namespace UnitTests
             Console.WriteLine(s);
             Assert.AreEqual("{\"b\":0}", s);
         }
+
+		public class LazyList
+		{
+			List<int> _LazyGeneric;
+			public List<int> LazyGeneric {
+				get {
+					if (_LazyGeneric == null) { _LazyGeneric = new List<int> (); }
+					return _LazyGeneric;
+				}
+			}
+		}
+
+		[TestMethod]
+		public void LazyListTest () {
+			var l = new LazyList ();
+			l.LazyGeneric.Add (1);
+			l.LazyGeneric.Add (2);
+			var s = JSON.ToJSON (l);
+			Console.WriteLine (s);
+
+			var o = JSON.ToObject<LazyList> (s);
+			CollectionAssert.AreEqual (l.LazyGeneric, o.LazyGeneric);
+		}
     }
 }

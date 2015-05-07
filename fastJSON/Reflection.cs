@@ -13,14 +13,12 @@ namespace fastJSON
 		// Singleton pattern 4 from : http://csharpindepth.com/articles/general/singleton.aspx
 		static readonly Reflection instance = new Reflection();
 		static readonly SafeDictionary<Type, JsonDataType> _jsonTypeCache = InitBuiltInTypes ();
-
+		static readonly Dictionary<Type, OpCode> _revertTypeCodes = InitRevertTypeCodes ();
 		// Explicit static constructor to tell C# compiler
 		// not to mark type as beforefieldinit
-		static Reflection()
-		{
+		static Reflection () {
 		}
-		Reflection()
-		{
+		Reflection () {
 		}
 		public static Reflection Instance { get { return instance; } }
 
@@ -30,22 +28,14 @@ namespace fastJSON
 			var d = new Dictionary<Type, JsonDataType> {
 				{ typeof(object), JsonDataType.Object },
 				{ typeof(int), JsonDataType.Int },
-				{ typeof(int?), JsonDataType.Int },
 				{ typeof(long), JsonDataType.Long },
-				{ typeof(long?), JsonDataType.Long },
 				{ typeof(float), JsonDataType.Single },
-				{ typeof(float?), JsonDataType.Single },
 				{ typeof(double), JsonDataType.Double },
-				{ typeof(double?), JsonDataType.Double },
 				{ typeof(bool), JsonDataType.Bool },
-				{ typeof(bool?), JsonDataType.Bool },
 				{ typeof(string), JsonDataType.String },
 				{ typeof(DateTime), JsonDataType.DateTime },
-				{ typeof(DateTime?), JsonDataType.DateTime },
 				{ typeof(Guid), JsonDataType.Guid },
-				{ typeof(Guid?), JsonDataType.Guid },
 				{ typeof(TimeSpan), JsonDataType.TimeSpan },
-				{ typeof(TimeSpan?), JsonDataType.TimeSpan },
 				{ typeof(StringDictionary), JsonDataType.StringDictionary },
 				{ typeof(NameValueCollection), JsonDataType.NameValue },
 #if !SILVERLIGHT
@@ -53,14 +43,49 @@ namespace fastJSON
 				{ typeof(DataSet), JsonDataType.DataSet },
 				{ typeof(DataTable), JsonDataType.DataTable },
 #endif
-				{ typeof(byte[]), JsonDataType.ByteArray }
+				{ typeof(byte[]), JsonDataType.ByteArray },
+
+				{ typeof(byte), JsonDataType.Primitive },
+				{ typeof(sbyte), JsonDataType.Primitive },
+				{ typeof(char), JsonDataType.Primitive },
+				{ typeof(short), JsonDataType.Primitive },
+				{ typeof(ushort), JsonDataType.Primitive },
+				{ typeof(uint), JsonDataType.Primitive },
+				{ typeof(ulong), JsonDataType.Primitive },
+				{ typeof(decimal), JsonDataType.Primitive }
 			};
 			return new SafeDictionary<Type, JsonDataType> (d);
 		}
-		internal static JsonDataType GetJsonDataType (Type type) {
+		static Dictionary<Type, OpCode> InitRevertTypeCodes () {
+			var d = new Dictionary<Type, OpCode> {
+				{ typeof(byte), OpCodes.Conv_U1  },
+				{ typeof(sbyte), OpCodes.Conv_I1  },
+				{ typeof(short), OpCodes.Conv_I2  },
+				{ typeof(ushort), OpCodes.Conv_U2  },
+				{ typeof(int), OpCodes.Conv_I4  },
+				{ typeof(uint), OpCodes.Conv_U4  },
+				{ typeof(long), OpCodes.Conv_I8  },
+				{ typeof(ulong), OpCodes.Conv_U8  },
+				{ typeof(char), OpCodes.Conv_U2  },
+				{ typeof(float), OpCodes.Conv_R4 },
+				{ typeof(double), OpCodes.Conv_R8 }
+			};
+			return d;
+		}
+        internal static JsonDataType GetJsonDataType (Type type) {
 			JsonDataType t;
 			if (_jsonTypeCache.TryGetValue (type, out t)) {
 				return t;
+			}
+			if (type.IsGenericType) {
+				var g = type.GetGenericTypeDefinition ();
+				if (typeof(Nullable<>).Equals (g)) {
+					var it = type.GetGenericArguments ()[0];
+					if (_jsonTypeCache.TryGetValue (it, out t)) {
+						_jsonTypeCache.Add (type, t);
+						return t;
+					}
+				}
 			}
 			t = DetermineExtraDataType (type);
 			_jsonTypeCache.Add (type, t);
@@ -347,7 +372,9 @@ namespace fastJSON
 				}
 				var d = new myPropInfo (p.PropertyType, p.Name, custType);
 				d.Setter = CreateSetMethod (type, p);
-				if (d.Setter != null)
+				if (d.Setter != null
+					// supports read-only IList
+					|| typeof(IList).IsAssignableFrom (p.PropertyType) && (d.JsonDataType == JsonDataType.GenericList || d.JsonDataType == JsonDataType.Undefined))
 					d.CanWrite = true;
 				d.Getter = CreateGetProperty (type, p);
 				AddMyPropInfo (sd, d, p, controller, manager);
@@ -360,7 +387,7 @@ namespace fastJSON
 				var d = new myPropInfo (f.FieldType, f.Name, custType);
 				//if (f.IsInitOnly == false) {
 				d.Setter = CreateSetField (type, f);
-				if (d.Setter != null)
+				if (d.Setter != null || typeof (IList).IsAssignableFrom (f.FieldType) && (d.JsonDataType == JsonDataType.GenericList || d.JsonDataType == JsonDataType.Undefined))
 					d.CanWrite = true;
 				//}
 				d.Getter = CreateGetField (type, f);
