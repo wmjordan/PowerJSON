@@ -59,7 +59,10 @@
 								<para>Rename <codeInline>Enum</codeInline> values in serialized JSON.</para>
 							</listItem>
 							<listItem>
-								<para>Deserializing non-public members.</para>
+								<para>Deserializing non-public types.</para>
+							</listItem>
+							<listItem>
+								<para>Deserializing read-only <codeEntityReference>T:System.Collections.IList</codeEntityReference> typed members.</para>
 							</listItem>
 							<listItem>
 								<para>Polymorphic serialization without JSON extensions, e.g., serializing properties of an <codeInline>abstract</codeInline>, <codeInline>interface</codeInline> or even <codeInline>object</codeInline> type.</para>
@@ -76,12 +79,12 @@
 						</list>
 					</content>
 				</section>
-				<section address="S11">
+				<!--<section address="S11">
 					<title>Controlling Serialization with Custom Attributes</title>
 					<content>
 						<para>PowerJSON has introduced quite a few custom attributes to further control the serialized result or better adapt from external JSON sources.</para>
 						<para>Here's a typical example of custom attributes.</para>
-						<code language="c#" source="..\MsUnitTest\CustomAttributeUsage.cs" region="Basic Custom Attributes" />
+						<code language="c#" source="..\MsUnitTest\SerializationControlTest.cs" region="Basic Custom Attributes" />
 						<para>The above example demonstrates the usage of custom attributes. Here's a list of the basic custom attributes.</para>
 						<list class="bullet">
 							<listItem>
@@ -147,9 +150,9 @@
 						</para>
 						<para>The <codeInline>SerializationManager</codeInline> has a replacable instance in the <codeEntityReference>T:fastJSON.JSON</codeEntityReference> class. Calling its <codeEntityReference>M:fastJSON.SerializationManager.Override``1(fastJSON.TypeOverride)</codeEntityReference> method will inject information on how to alter the result of serialization or deserialization.</para>
 						<para>The following example has the same effect as the one of the Custom Attributes above. The data model has no attributes.</para>
-						<code language="c#" source="..\MsUnitTest\CustomAttributeUsage.cs" region="Noninvasive Control" />
+						<code language="c#" source="..\MsUnitTest\SerializationControlTest.cs" region="Noninvasive Control" />
 						<para>The serialization is controlled from external code.</para>
-						<code source="..\MsUnitTest\CustomAttributeUsage.cs" region="Noninvasive Control Code" />
+						<code source="..\MsUnitTest\SerializationControlTest.cs" region="Noninvasive Control Code" />
 					</content>
 				</section>
 				<section address="S12">
@@ -173,7 +176,7 @@
 						</list>
 						<para>Chapters later will discuss more on the above classes and interfaces.</para>
 					</content>
-				</section>
+				</section>-->
 			</sections>
 		</section>
 

@@ -421,6 +421,14 @@ namespace fastJSON
 
 			WriteValue (value);
 		}
+		static void WriteMultiDimensionalArray (JsonSerializer serializer, object value) {
+			var a = value as Array;
+			if (a == null) {
+				serializer._output.Append ("null");
+				return;
+			}
+			WriteMultiDimensionalArray (serializer._output, a);
+		}
 
 		static void WriteArray (JsonSerializer serializer, object value) {
 			IEnumerable array = value as IEnumerable;
@@ -444,11 +452,6 @@ namespace fastJSON
 				}
 
 				var d = serializer._manager.GetReflectionCache (list.GetType ());
-				if (d.CommonType == ComplexType.MultiDimensionalArray) {
-					var md = array as Array;
-					WriteMultiDimensionalArray (serializer._output, md);
-					goto EXIT;
-				}
 				var w = d.ItemSerializer;
 				if (w != null) {
 					w (serializer, list[0]);
@@ -750,12 +753,34 @@ namespace fastJSON
 			while (--i > 0) {
 				chs[i] = (char)('0' + (value % 10L));
 				value /= 10L;
-				if (value == 0) {
+				if (value == 0L) {
 					break;
 				}
 			}
 			if (n) {
 				chs[--i] = '-';
+			}
+			return new string (chs, i, d - i);
+		}
+		static string UInt64ToString (ulong value) {
+			var d = 20;
+			if (value < 10UL) {
+				d = 2;
+			}
+			else if (value < 1000UL) {
+				d = 4;
+			}
+			else if (value < 1000000UL) {
+				d = 7;
+			}
+			var chs = new char[d];
+			var i = d;
+			while (--i > 0) {
+				chs[i] = (char)('0' + (value % 10UL));
+				value /= 10UL;
+				if (value == 0UL) {
+					break;
+				}
 			}
 			return new string (chs, i, d - i);
 		}
@@ -803,7 +828,14 @@ namespace fastJSON
 					: typeof(DateTime).Equals (type) ? WriteDateTime
 					: typeof(TimeSpan).Equals (type) ? WriteTimeSpan
 					: typeof(Guid).Equals (type) ? WriteGuid
+					: typeof(sbyte).Equals (type) ? WriteSByte
+					: typeof(short).Equals (type) ? WriteInt16
+					: typeof(ushort).Equals (type) ? WriteUInt16
+					: typeof(uint).Equals (type) ? WriteUInt32
+					: typeof(ulong).Equals (type) ? WriteUInt64
+					: typeof(char).Equals (type) ? WriteChar
 					: type.IsSubclassOf (typeof(Enum)) ? WriteEnum
+					: type.IsSubclassOf (typeof(Array)) && type.GetArrayRank () > 1 ? WriteMultiDimensionalArray
 					: type.IsSubclassOf (typeof(Array)) && typeof(byte[]).Equals (type) == false ? WriteArray
 					: (WriteJsonValue)null;
 		}
@@ -811,11 +843,26 @@ namespace fastJSON
 		static void WriteByte (JsonSerializer serializer, object value) {
 			serializer._output.Append (Int32ToString ((byte)value));
 		}
+		static void WriteSByte (JsonSerializer serializer, object value) {
+			serializer._output.Append (Int32ToString ((sbyte)value));
+		}
+		static void WriteInt16 (JsonSerializer serializer, object value) {
+			serializer._output.Append (Int32ToString ((short)value));
+		}
+		static void WriteUInt16 (JsonSerializer serializer, object value) {
+			serializer._output.Append (Int32ToString ((ushort)value));
+		}
 		static void WriteInt32 (JsonSerializer serializer, object value) {
 			serializer._output.Append (Int32ToString ((int)value));
 		}
+		static void WriteUInt32 (JsonSerializer serializer, object value) {
+			serializer._output.Append (Int64ToString ((uint)value));
+		}
 		static void WriteInt64 (JsonSerializer serializer, object value) {
 			serializer._output.Append (Int64ToString ((long)value));
+		}
+		static void WriteUInt64 (JsonSerializer serializer, object value) {
+			serializer._output.Append (UInt64ToString ((ulong)value));
 		}
 		static void WriteSingle (JsonSerializer serializer, object value) {
 			serializer._output.Append (((float)value).ToString (NumberFormatInfo.InvariantInfo));
@@ -828,6 +875,9 @@ namespace fastJSON
 		}
 		static void WriteBoolean (JsonSerializer serializer, object value) {
 			serializer._output.Append ((bool)value ? "true" : "false");
+		}
+		static void WriteChar (JsonSerializer serializer, object value) {
+			WriteString (serializer, ((char)value).ToString ());
 		}
 
 		static void WriteDateTime (JsonSerializer serializer, object value) {

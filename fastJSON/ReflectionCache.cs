@@ -68,7 +68,7 @@ namespace fastJSON
 				else if (GenericDefinition.Equals (typeof (Nullable<>))) {
 					CommonType = ComplexType.Nullable;
 				}
-				if (ArgumentTypes.Length == 1 && typeof (object).Equals (ArgumentTypes[0]) == false) {
+				if (ArgumentTypes.Length == 1) {
 					ItemSerializer = JsonSerializer.GetWriteJsonMethod (ArgumentTypes[0]);
 					ItemDeserializer = JsonDeserializer.GetReadJsonMethod (ArgumentTypes[0]);
 				}
@@ -77,10 +77,11 @@ namespace fastJSON
 				ArgumentTypes = new Type[] { type.GetElementType () };
 				CommonType = type.GetArrayRank () == 1 ? ComplexType.Array : ComplexType.MultiDimensionalArray;
 				var et = ArgumentTypes[0];
-				if (typeof (object).Equals (et) == false) {
-					ItemSerializer = JsonSerializer.GetWriteJsonMethod (et);
-					ItemDeserializer = JsonDeserializer.GetReadJsonMethod (et);
-				}
+				ItemSerializer = JsonSerializer.GetWriteJsonMethod (et);
+				ItemDeserializer = JsonDeserializer.GetReadJsonMethod (et);
+			}
+			else if (JsonDataType == JsonDataType.List) {
+				ItemDeserializer = JsonDeserializer.GetReadJsonMethod (typeof(object));
 			}
 			if (controller != null) {
 				AlwaysDeserializable = controller.IsAlwaysDeserializable (type) || typeof (DatasetSchema).Equals (type);
@@ -248,8 +249,9 @@ namespace fastJSON
 		TimeSpan,
 
 		Array,
-		GenericList,
+		List,
 		ByteArray,
+		MultiDimensionalArray,
 		Dictionary,
 		StringKeyDictionary,
 		NameValue,
@@ -292,7 +294,7 @@ namespace fastJSON
 		public myPropInfo (Type type, string name, bool customType) : this (type, name) {
 			JsonDataType dt = Reflection.GetJsonDataType (type);
 
-			if (dt == JsonDataType.Array) {
+			if (dt == JsonDataType.Array || dt == JsonDataType.MultiDimensionalArray) {
 				ElementType = type.GetElementType ();
 			}
 			else if (dt == JsonDataType.Dictionary || dt == JsonDataType.StringKeyDictionary) {

@@ -97,20 +97,31 @@ namespace fastJSON
 				return JsonDataType.Enum;
 			}
 			if (type.IsArray) {
-				return JsonDataType.Array;
+				return type.GetArrayRank () == 1 ? JsonDataType.Array : JsonDataType.MultiDimensionalArray;
 			}
 			if (type.IsGenericType) {
-				var g = type.GetGenericTypeDefinition ();
-				if (typeof (List<>).Equals (g)) {
-					return JsonDataType.GenericList;
+				foreach (var item in type.GetInterfaces ()) {
+					if (item.IsGenericType == false) {
+						continue;
+					}
+					var g = item.GetGenericTypeDefinition ();
+					if (typeof(IList<>).Equals (g)) {
+						return JsonDataType.List;
+					}
+					if (typeof(IDictionary<,>).Equals (g)) {
+						var gt = item.GetGenericArguments ();
+						if (gt.Length > 0 && typeof (string).Equals (gt[0])) {
+							return JsonDataType.StringKeyDictionary;
+						}
+						return JsonDataType.Dictionary;
+					}
 				}
 			}
 			if (typeof (IDictionary).IsAssignableFrom (type)) {
-				var gt = type.GetGenericArguments ();
-				if (gt.Length > 0 && typeof (string).Equals (gt[0])) {
-					return JsonDataType.StringKeyDictionary;
-				}
 				return JsonDataType.Dictionary;
+			}
+			if (typeof (IList).IsAssignableFrom (type)) {
+				return JsonDataType.List;
 			}
 			if (typeof (DataSet).IsAssignableFrom (type)) {
 				return JsonDataType.DataSet;
@@ -308,7 +319,7 @@ namespace fastJSON
 			return (GenericSetter)dynamicSet.CreateDelegate (typeof(GenericSetter));
 		}
 
-		internal static GenericSetter CreateSetMethod (Type type, PropertyInfo propertyInfo) {
+		internal static GenericSetter CreateSetProperty (Type type, PropertyInfo propertyInfo) {
 			var setMethod = propertyInfo.GetSetMethod ();
 			if (setMethod == null)
 				return null;
@@ -371,10 +382,8 @@ namespace fastJSON
 					continue;
 				}
 				var d = new myPropInfo (p.PropertyType, p.Name, custType);
-				d.Setter = CreateSetMethod (type, p);
-				if (d.Setter != null
-					// supports read-only IList
-					|| typeof(IList).IsAssignableFrom (p.PropertyType) && (d.JsonDataType == JsonDataType.GenericList || d.JsonDataType == JsonDataType.Undefined))
+				d.Setter = CreateSetProperty (type, p);
+				if (d.Setter != null)
 					d.CanWrite = true;
 				d.Getter = CreateGetProperty (type, p);
 				AddMyPropInfo (sd, d, p, controller, manager);
@@ -387,7 +396,7 @@ namespace fastJSON
 				var d = new myPropInfo (f.FieldType, f.Name, custType);
 				//if (f.IsInitOnly == false) {
 				d.Setter = CreateSetField (type, f);
-				if (d.Setter != null || typeof (IList).IsAssignableFrom (f.FieldType) && (d.JsonDataType == JsonDataType.GenericList || d.JsonDataType == JsonDataType.Undefined))
+				if (d.Setter != null)
 					d.CanWrite = true;
 				//}
 				d.Getter = CreateGetField (type, f);
@@ -421,7 +430,7 @@ namespace fastJSON
 				dt.Getter = d.Getter;
 				dt.Setter = d.Setter;
 				dt.Converter = d.Converter;
-				dt.ItemConverter = d.Converter;
+				dt.ItemConverter = d.ItemConverter;
 				dt.CanWrite = d.CanWrite;
 				sd.Add (sn, dt);
 			}

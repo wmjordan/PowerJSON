@@ -1850,5 +1850,26 @@ namespace UnitTests
 			var o = JSON.ToObject<LazyList> (s);
 			CollectionAssert.AreEqual (l.LazyGeneric, o.LazyGeneric);
 		}
+
+		public class MultiDimensionalArray
+		{
+			public int[,,] MDArray;
+		}
+
+		[TestMethod]
+		public void MultiDimensionalArrayTest () {
+			var d = new MultiDimensionalArray () {
+				MDArray = new int[,,]{
+					{ { 1, 2 }, { 3, 4 } },
+					{ { 5, 6 }, { 7, 8 } },
+					{ { 9, 10 }, { 11, 12 } }
+				}
+			};
+			var s = JSON.ToJSON (d);
+			Console.WriteLine (s);
+			var o = JSON.ToObject<MultiDimensionalArray> (s);
+			Assert.AreEqual (3, o.MDArray.Rank);
+			Console.WriteLine (JSON.ToJSON (o));
+		}
     }
 }

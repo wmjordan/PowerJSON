@@ -31,11 +31,12 @@ namespace fastJSON
 			r[(int)JsonDataType.Dictionary] = RevertDictionary;
 			r[(int)JsonDataType.Double] = RevertPrimitive;
 			r[(int)JsonDataType.Enum] = RevertEnum;
-			r[(int)JsonDataType.GenericList] = RevertGenericList;
+			r[(int)JsonDataType.List] = RevertList;
 			r[(int)JsonDataType.Guid] = RevertGuid;
 			r[(int)JsonDataType.Hashtable] = RevertHashTable;
 			r[(int)JsonDataType.Int] = RevertInt32;
 			r[(int)JsonDataType.Long] = RevertPrimitive;
+			r[(int)JsonDataType.MultiDimensionalArray] = RevertMultiDimensionalArray;
 			r[(int)JsonDataType.NameValue] = RevertNameValueCollection;
 			r[(int)JsonDataType.Object] = RevertUndefined;
 			r[(int)JsonDataType.Single] = RevertSingle;
@@ -153,7 +154,6 @@ namespace fastJSON
 				return GetRevertMethod (d);
 			}
 			return typeof (byte).Equals (type) ? RevertByte
-				: typeof (float).Equals (type) ? RevertSingle
 				: typeof (decimal).Equals (type) ? RevertDecimal
 				: typeof (char).Equals (type) ? RevertChar
 				: typeof (sbyte).Equals (type) ? RevertSByte
@@ -183,21 +183,21 @@ namespace fastJSON
 			return h;
 		}
 
-		private object RootList (object parse, Type type) {
-			var c = _manager.GetReflectionCache (type);
-			var et = c.ArgumentTypes[0];
-			var m = GetRevertMethod (Reflection.GetJsonDataType (et));
-			IList o = (IList)c.Instantiate ();
-			foreach (var k in (IList)parse) {
-				_usingglobals = false;
-				object v = m (this, k, et);
-				o.Add (v);
-			}
-			return o;
+	private object RootList (object parse, Type type) {
+		var c = _manager.GetReflectionCache (type);
+		var et = c.ArgumentTypes[0];
+		var m = GetRevertMethod (Reflection.GetJsonDataType (et));
+		IList o = (IList)c.Instantiate ();
+		foreach (var k in (IList)parse) {
+			_usingglobals = false;
+			object v = m (this, k, et);
+			o.Add (v);
 		}
+		return o;
+	}
 
-		private object RootDictionary (object parse, Type type) {
-			var c = _manager.GetReflectionCache (type);
+	private object RootDictionary (object parse, Type type) {
+		var c = _manager.GetReflectionCache (type);
 			Type[] gtypes = c.ArgumentTypes;
 			Type t1 = null;
 			Type t2 = null;
@@ -286,63 +286,27 @@ namespace fastJSON
 			if (data.Map != null) {
 				ProcessMap (o, props, data.Map);
 			}
-			foreach (string n in data.Keys) {
+			foreach (var kv in data) {
+				var n = kv.Key;
+				var v = kv.Value;
 				myPropInfo pi;
-				if (props.TryGetValue (n, out pi) == false || pi.CanWrite == false)
+				if (props.TryGetValue (n, out pi) == false || pi.CanWrite == false && pi.JsonDataType != JsonDataType.List)
 					continue;
-				object v = data[n];
 				var ji = new JsonItem (n, v, false);
 				bool converted = false;
-				// convert IEnumerable item
 				if (v is IList && pi.ItemConverter != null) {
-					var vl = v as IList;
-					var l = vl.Count;
-					var ai = new JsonItem (n, null);
-					for (int i = 0; i < l; i++) {
-						var vi = vl[i];
-						ai._Value = vi;
-						pi.ItemConverter.DeserializationConvert (ai);
-						if (ReferenceEquals (vi, ai._Value) == false) {
-							vl[i] = ai._Value;
-							converted = true;
-						}
-					}
-					if (converted) {
-						if (pi.JsonDataType == JsonDataType.Array) {
-							ji._Value = Array.CreateInstance (pi.ElementType, l);
-							vl.CopyTo ((Array)ji._Value, 0);
-						}
-						else {
-							ji._Value = _manager.GetReflectionCache (pi.MemberType).Instantiate ();
-							var gl = ji._Value as IList;
-							for (int i = 0; i < l; i++) {
-								gl.Add (vl[i]);
-							}
-						}
-					}
+					converted = ConvertItems (pi, ji);
 				}
-				// convert member data and type
 				if (pi.Converter != null) {
-					var pc = pi.Converter;
-					var rt = pc.GetReversiveType (ji);
-					var xv = v;
-					if (v != null && rt != null && typeof (object).Equals (rt) == false && pi.MemberType.Equals (xv.GetType ()) == false) {
-						var jt = Reflection.GetJsonDataType (rt);
-						if (jt != JsonDataType.Undefined) {
-							var m = GetRevertMethod (rt);
-							xv = m (this, v, rt);
-						}
-						else if (v is JsonDict) {
-							xv = ParseDictionary ((JsonDict)xv, rt, pi.Getter (o));
-						}
-					}
-					ji._Value = xv;
-					pc.DeserializationConvert (ji);
+					ConvertProperty (o, pi, ji);
 				}
 
 				object oset = null;
 				// use the converted value
 				if (converted || ReferenceEquals (ji._Value, v) == false) {
+					if (pi.CanWrite == false && pi.JsonDataType == JsonDataType.List) {
+						// todo: fill list
+					}
 					if (ji._Value != null || pi.IsClass || pi.IsNullable) {
 						oset = ji._Value;
 						goto SET_VALUE;
@@ -375,13 +339,16 @@ namespace fastJSON
 					case JsonDataType.Guid: oset = CreateGuid (v); break;
 					case JsonDataType.TimeSpan: oset = CreateTimeSpan (v); break;
 
-					case JsonDataType.GenericList:
-						oset = CreateGenericList ((JsonArray)v, pi.MemberType, pi.Getter (o));
+					case JsonDataType.List:
+						oset = CreateList ((JsonArray)v, pi.MemberType, pi.CanWrite == false ? pi.Getter (o) : null);
 						break;
 					case JsonDataType.Array:
 						if (!pi.IsValueType)
 							oset = CreateArray ((JsonArray)v, pi.MemberType);
 						// what about 'else'?
+						break;
+					case JsonDataType.MultiDimensionalArray:
+						oset = CreateMultiDimensionalArray ((JsonArray)v, pi.MemberType);
 						break;
 					case JsonDataType.ByteArray: oset = Convert.FromBase64String ((string)v); break;
 #if !SILVERLIGHT
@@ -435,6 +402,55 @@ namespace fastJSON
 				si.OnDeserialized (o);
 			}
 			return o;
+		}
+
+		private void ConvertProperty (object o, myPropInfo pi, JsonItem ji) {
+			var pc = pi.Converter;
+			var rt = pc.GetReversiveType (ji);
+			var xv = ji._Value;
+			if (xv != null && rt != null && typeof (object).Equals (rt) == false && pi.MemberType.Equals (xv.GetType ()) == false) {
+				var jt = Reflection.GetJsonDataType (rt);
+				if (jt != JsonDataType.Undefined) {
+					var m = GetRevertMethod (rt);
+					xv = m (this, xv, rt);
+				}
+				else if (xv is JsonDict) {
+					xv = ParseDictionary ((JsonDict)xv, rt, pi.Getter (o));
+				}
+			}
+			ji._Value = xv;
+			pc.DeserializationConvert (ji);
+		}
+
+		private bool ConvertItems (myPropInfo pi, JsonItem ji) {
+			var vl = ji._Value as IList;
+			var l = vl.Count;
+			var converted = false;
+			var ai = new JsonItem (ji._Name, null);
+			for (int i = 0; i < l; i++) {
+				var vi = vl[i];
+				ai._Value = vi;
+				pi.ItemConverter.DeserializationConvert (ai);
+				if (ReferenceEquals (vi, ai._Value) == false) {
+					vl[i] = ai._Value;
+					converted = true;
+				}
+			}
+			if (converted) {
+				if (pi.JsonDataType == JsonDataType.Array) {
+					ji._Value = Array.CreateInstance (pi.ElementType, l);
+					vl.CopyTo ((Array)ji._Value, 0);
+				}
+				else if (pi.JsonDataType == JsonDataType.List) {
+					ji._Value = _manager.GetReflectionCache (pi.MemberType).Instantiate ();
+					var gl = ji._Value as IList;
+					for (int i = 0; i < l; i++) {
+						gl.Add (vl[i]);
+					}
+				}
+			}
+
+			return converted;
 		}
 
 		private static StringDictionary CreateStringDictionary (JsonDict d) {
@@ -521,7 +537,7 @@ namespace fastJSON
 			var r = c.ItemDeserializer;
 			if (r != null) {
 				for (int i = 0; i < l; i++) {
-					object ob = data[i];
+					var ob = data[i];
 					if (ob == null) {
 						continue;
 					}
@@ -530,9 +546,11 @@ namespace fastJSON
 				return col;
 			}
 
+			// TODO: revert multi-dimensional array
+			// TODO: candidate of code clean-up
 			// create an array of objects
 			for (int i = 0; i < l; i++) {
-				object ob = data[i];
+				var ob = data[i];
 				if (ob == null) {
 					continue;
 				}
@@ -549,10 +567,67 @@ namespace fastJSON
 			return col;
 		}
 
-		private object CreateGenericList (JsonArray data, Type listType, object input) {
+		private object CreateMultiDimensionalArray (JsonArray data, Type arrayType) {
+			var c = _manager.GetReflectionCache (arrayType);
+			Type et = c.ArgumentTypes[0];
+			var ar = arrayType.GetArrayRank ();
+			var ub = new int[ar];
+			var d = data;
+			// get upper bounds
+			for (int i = 0; i < ar; i++) {
+				var l = d.Count;
+				ub[i] = l;
+				if (i == ar - 1) {
+					break;
+				}
+				JsonArray a = null;
+				for (int j = 0; j < l; j++) {
+					a = d[j] as JsonArray;
+					if (d != null) {
+						d = a;
+						break;
+					}
+				}
+				if (a == null) {
+					throw new JsonSerializationException ("The rank of the multi-dimensional array does not match.");
+				}
+			}
+			var mdi = new int[ar];
+			Array col = Array.CreateInstance (et, ub);
+			var m = c.ItemDeserializer;
+			var ri = 0;
+			SetMultiDimensionalArrayValue (data, et, ub, mdi, col, m, ri);
+			return col;
+		}
+
+		private void SetMultiDimensionalArrayValue (JsonArray data, Type et, int[] ub, int[] mdi, Array col, RevertJsonValue m, int ri) {
+			if (ri + 1 == ub.Length) {
+				foreach (var item in data) {
+					col.SetValue (m (this, item, et), mdi);
+					++mdi[ri];
+				}
+				return;
+			}
+			for (int i = 0; i < ub[ri]; i++) {
+				var ob = data[mdi[ri]] as JsonArray;
+				if (ob == null) {
+					continue;
+				}
+
+				else {
+					for (int j = mdi.Length - 1; j > ri; j--) {
+						mdi[j] = 0;
+					}
+					SetMultiDimensionalArrayValue (ob, et, ub, mdi, col, m, ri + 1);
+					++mdi[ri];
+				}
+			}
+		}
+
+		private object CreateList (JsonArray data, Type listType, object input) {
 			var c = _manager.GetReflectionCache (listType);
 			IList col = input as IList ?? (IList)c.Instantiate ();
-			Type et = c.ArgumentTypes[0];
+			Type et = c.ArgumentTypes != null ? c.ArgumentTypes[0] : null;
 			var r = c.ItemDeserializer;
 			if (r != null) {
 				foreach (var item in data) {
@@ -564,8 +639,9 @@ namespace fastJSON
 				return col;
 			}
 
+			// TODO: candidate of code clean-up.
 			// create an array of objects
-			foreach (object ob in data) {
+			foreach (var ob in data) {
 				if (ob is IDictionary)
 					col.Add (ParseDictionary ((JsonDict)ob, et, null));
 
@@ -781,7 +857,7 @@ namespace fastJSON
 		}
 		internal static object RevertByteArray (JsonDeserializer deserializer, object value, Type type) {
 			return Convert.FromBase64String ((string)value);
-        }
+		}
 		internal static object RevertDateTime (JsonDeserializer deserializer, object value, Type type) {
 			return CreateDateTime (deserializer, value);
 		}
@@ -830,7 +906,7 @@ namespace fastJSON
 			}
 			var a = value as JsonArray;
 			if (a != null) {
-				return deserializer.CreateGenericList (a, type, null);
+				return deserializer.CreateList (a, type, null);
 			}
 			return d;
 		}
@@ -838,9 +914,13 @@ namespace fastJSON
 			if (value == null) return null;
 			return deserializer.CreateArray ((JsonArray)value, type);
 		}
-		internal static object RevertGenericList (JsonDeserializer deserializer, object value, Type type) {
+		internal static object RevertMultiDimensionalArray (JsonDeserializer deserializer, object value, Type type) {
 			if (value == null) return null;
-			return deserializer.CreateGenericList ((JsonArray)value, type, null);
+			return deserializer.CreateMultiDimensionalArray ((JsonArray)value, type);
+		}
+		internal static object RevertList (JsonDeserializer deserializer, object value, Type type) {
+			if (value == null) return null;
+			return deserializer.CreateList ((JsonArray)value, type, null);
 		}
 		internal static object RevertDataSet (JsonDeserializer deserializer, object value, Type type) {
 			return deserializer.CreateDataSet ((JsonDict)value);

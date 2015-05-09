@@ -36,7 +36,6 @@ namespace fastJSON
 		/// </summary>
 		public static SerializationManager Manager {
 			get { return _Manager; }
-			set { _Manager = value; }
 		}
 
 		/// <summary>

@@ -84,9 +84,9 @@ namespace MsUnitTest
 	{
 		public int ID { get; set; }
 		public string Name { get; set; }
-		public List<Employee> Employees { get; set; }
+		public List<Member> Members { get; private set; } = new List<Member>();
 	}
-	public class Employee
+	public class Member
 	{
 		public int GroupID { get; set; }
 		public string Name { get; set; }
@@ -194,27 +194,32 @@ namespace MsUnitTest
 		[TestMethod]
 		public void AlterationTest () {
 			JSON.Parameters.NamingConvention = NamingConvention.Default;
+			#region Alternated SerializationManager
 			var g = new Group () {
 				ID = 1,
 				Name = "test",
-				Employees = new List<Employee> {
-					new Employee () { GroupID = 1, Name = "a" },
-					new Employee () { GroupID = 1, Name = "b" },
-					new Employee () { GroupID = 1, Name = "c" }
+				Members = {
+					new Member () { GroupID = 1, Name = "a" },
+					new Member () { GroupID = 1, Name = "b" },
+					new Member () { GroupID = 1, Name = "c" }
 				}
 			};
-			var s = JSON.ToJSON (g);
-			Console.WriteLine (s);
+
 			var gsm = new SerializationManager (new DefaultReflectionController ());
-			gsm.Override<Employee> (new TypeOverride () {
+			gsm.Override<Member> (new TypeOverride () {
 				MemberOverrides = { new MemberOverride ("GroupID", TriState.False) }
 			});
-			s = JSON.ToJSON (g, JSON.Parameters, gsm);
-			Console.WriteLine (s);
-			Assert.IsFalse (s.Contains ("GroupID"));
-			s = JSON.ToJSON (g.Employees[0]);
-			Console.WriteLine (s);
-			StringAssert.Contains (s, "GroupID");
+
+			// use the alternated SerializationManager
+			var s1 = JSON.ToJSON (g, JSON.Parameters, gsm);
+			Console.WriteLine (s1);
+			Assert.IsFalse (s1.Contains ("GroupID")); // "GroupID" is invisible
+
+			 // use the default SerializationManager
+			s1 = JSON.ToJSON (g.Members[0]);
+			Console.WriteLine (s1);
+			StringAssert.Contains (s1, "GroupID"); // "GroupID" is visible
+			#endregion
 		}
 	}
 }
