@@ -96,6 +96,7 @@ namespace fastJSON
 			if (m != null) {
 				return m (this, o, type);
 			}
+
 			var d = o as JsonDict;
 			if (d != null) {
 				if (type != null) {
@@ -225,10 +226,10 @@ namespace fastJSON
 		}
 
 		internal object ParseDictionary (JsonDict data, Type type, object input) {
-			if (typeof (NameValueCollection).Equals (type))
-				return CreateNameValueCollection (data);
-			if (typeof (StringDictionary).Equals (type))
-				return CreateStringDictionary (data);
+			//if (typeof (NameValueCollection).Equals (type))
+			//	return CreateNameValueCollection (data);
+			//if (typeof (StringDictionary).Equals (type))
+			//	return CreateStringDictionary (data);
 
 			if (data.RefIndex > 0) {
 				object v = null;
@@ -305,7 +306,7 @@ namespace fastJSON
 				// use the converted value
 				if (converted || ReferenceEquals (ji._Value, v) == false) {
 					if (pi.CanWrite == false && pi.JsonDataType == JsonDataType.List) {
-						// todo: fill list
+						ji._Value = CreateList ((JsonArray)ji._Value, pi.MemberType, pi.Getter (o));
 					}
 					if (ji._Value != null || pi.IsClass || pi.IsNullable) {
 						oset = ji._Value;
@@ -932,7 +933,7 @@ namespace fastJSON
 			return deserializer.RootHashTable ((JsonArray)value);
 		}
 		internal static object RevertDictionary (JsonDeserializer deserializer, object value, Type type) {
-			return deserializer.CreateDictionary ((JsonArray)value, type);
+			return deserializer.RootDictionary (value, type);
 		}
 		internal static object RevertNameValueCollection (JsonDeserializer deserializer, object value, Type type) {
 			return CreateNameValueCollection ((JsonDict)value);

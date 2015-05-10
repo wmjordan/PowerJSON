@@ -67,6 +67,7 @@ namespace fastJSON
 				}
 				else if (GenericDefinition.Equals (typeof (Nullable<>))) {
 					CommonType = ComplexType.Nullable;
+					SerializeMethod = JsonSerializer.GetWriteJsonMethod (ArgumentTypes[0]);
 				}
 				if (ArgumentTypes.Length == 1) {
 					ItemSerializer = JsonSerializer.GetWriteJsonMethod (ArgumentTypes[0]);
@@ -84,7 +85,7 @@ namespace fastJSON
 				ItemDeserializer = JsonDeserializer.GetReadJsonMethod (typeof(object));
 			}
 			if (controller != null) {
-				AlwaysDeserializable = controller.IsAlwaysDeserializable (type) || typeof (DatasetSchema).Equals (type);
+				AlwaysDeserializable = controller.IsAlwaysDeserializable (type) || type.Namespace == typeof (JSON).Namespace;
 				Interceptor = controller.GetInterceptor (type);
 			}
 			if (CommonType != ComplexType.Array

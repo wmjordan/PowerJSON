@@ -92,7 +92,7 @@ namespace fastJSON
 
 			// FEATURE : enable extensions when you can deserialize anon types
 			if (param.EnableAnonymousTypes) { param.UseExtensions = false; param.UsingGlobalTypes = false; }
-			return new JsonSerializer(param, manager).ConvertToJSON(obj);
+			return new JsonSerializer(param, manager).ConvertToJSON(obj, c);
 		}
 
 		/// <summary>

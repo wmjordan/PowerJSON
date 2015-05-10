@@ -13,6 +13,8 @@ namespace fastJSON
 {
 	internal sealed class JsonSerializer
 	{
+		static readonly WriteJsonValue[] _convertMethods = RegisterMethods ();
+
 		StringBuilder _output = new StringBuilder ();
 		int _before;
 		readonly int _MAX_DEPTH = 20;
@@ -30,14 +32,14 @@ namespace fastJSON
 			_manager = manager;
 		}
 
-		internal string ConvertToJSON (object obj) {
-			//var m = _manager.GetReflectionCache (obj.GetType ()).SerializeMethod;
-			//if (m != null) {
-			//	m (this, obj);
-			//}
-			//else {
+		internal string ConvertToJSON (object obj, ReflectionCache cache) {
+			var m = cache.SerializeMethod;
+			if (m != null) {
+				m (this, obj);
+			}
+			else {
 				WriteValue (obj);
-			//}
+			}
 
 			if (_params.UseExtensions && _params.UsingGlobalTypes && _globalTypes != null && _globalTypes.Count > 0) {
 				var sb = new StringBuilder ();
@@ -57,6 +59,34 @@ namespace fastJSON
 			return _output.ToString ();
 		}
 
+		private static WriteJsonValue[] RegisterMethods () {
+			var r = new WriteJsonValue[Enum.GetNames (typeof (JsonDataType)).Length];
+			r[(int)JsonDataType.Array] = WriteArray;
+			r[(int)JsonDataType.Bool] = WriteBoolean;
+			r[(int)JsonDataType.ByteArray] = WriteByteArray;
+			r[(int)JsonDataType.Custom] = WriteCustom;
+			r[(int)JsonDataType.DataSet] = WriteDataSet;
+			r[(int)JsonDataType.DataTable] = WriteDataTable;
+			r[(int)JsonDataType.DateTime] = WriteDateTime;
+			r[(int)JsonDataType.Dictionary] = WriteDictionary;
+			r[(int)JsonDataType.Double] = WriteDouble;
+			r[(int)JsonDataType.Enum] = WriteEnum;
+			r[(int)JsonDataType.List] = WriteArray;
+			r[(int)JsonDataType.Guid] = WriteGuid;
+			r[(int)JsonDataType.Hashtable] = WriteDictionary;
+			r[(int)JsonDataType.Int] = WriteInt32;
+			r[(int)JsonDataType.Long] = WriteInt64;
+			r[(int)JsonDataType.MultiDimensionalArray] = WriteMultiDimensionalArray;
+			r[(int)JsonDataType.NameValue] = WriteNameValueCollection;
+			r[(int)JsonDataType.Object] = WriteUnknown;
+			r[(int)JsonDataType.Single] = WriteSingle;
+			r[(int)JsonDataType.String] = WriteString;
+			r[(int)JsonDataType.StringDictionary] = WriteStringDictionary;
+			r[(int)JsonDataType.StringKeyDictionary] = WriteDictionary;
+			r[(int)JsonDataType.TimeSpan] = WriteTimeSpan;
+			r[(int)JsonDataType.Undefined] = WriteObject;
+			return r;
+		}
 		private void WriteValue (object obj) {
 			if (obj == null || obj is DBNull)
 				_output.Append ("null");
@@ -377,7 +407,13 @@ namespace fastJSON
 					_params.NamingStrategy.WriteName (_output, ji._Name);
 				}
 				if (p.WriteValue != null && p.Converter == null) {
-					p.WriteValue (this, ji._Value);
+					var v = ji._Value;
+					if (v == null || v is DBNull) {
+						_output.Append ("null");
+					}
+					else {
+						p.WriteValue (this, v);
+					}
 				}
 				else {
 					WriteValue (ji._Value);
@@ -459,10 +495,22 @@ namespace fastJSON
 				var w = d.ItemSerializer;
 				if (w != null) {
 					o.Append ('[');
-					w (serializer, list[0]);
+					var v = list[0];
+					if (v == null) {
+						o.Append ("null");
+					}
+					else {
+						w (serializer, v);
+					}
 					for (int i = 1; i < c; i++) {
 						o.Append (',');
-						w (serializer, list[i]);
+						v = list[i];
+						if (v == null) {
+							o.Append ("null");
+						}
+						else {
+							w (serializer, v);
+						}
 					}
 					o.Append (']');
 					return;
@@ -537,7 +585,13 @@ namespace fastJSON
 					if (s) {
 						_output.Append (',');
 					}
-					m (this, md.GetValue (mdi));
+					var v = md.GetValue (mdi);
+					if (v == null || v is DBNull) {
+						_output.Append ("null");
+					}
+					else {
+						m (this, v);
+					}
 					s = true;
 				} while (++mdi[ri] < u);
 				_output.Append (']');
@@ -834,6 +888,10 @@ namespace fastJSON
 
 		#region WriteJsonValue delegate methods
 		internal static WriteJsonValue GetWriteJsonMethod (Type type) {
+			var t = Reflection.GetJsonDataType (type);
+			if (t != JsonDataType.Primitive) {
+				return _convertMethods[(int)t];
+			}
 			return typeof(int).Equals (type) ? WriteInt32
 					: typeof(long).Equals (type) ? WriteInt64
 					: typeof(string).Equals (type) ? WriteString
@@ -854,7 +912,7 @@ namespace fastJSON
 					: type.IsSubclassOf (typeof(Enum)) ? WriteEnum
 					: type.IsSubclassOf (typeof(Array)) && type.GetArrayRank () > 1 ? WriteMultiDimensionalArray
 					: type.IsSubclassOf (typeof(Array)) && typeof(byte[]).Equals (type) == false ? WriteArray
-					: (WriteJsonValue)WriteObject;
+					: (WriteJsonValue)WriteUnknown;
 		}
 
 		static void WriteByte (JsonSerializer serializer, object value) {
@@ -971,8 +1029,40 @@ namespace fastJSON
 				serializer._output.Append (Convert.ToInt64 (e).ToString (NumberFormatInfo.InvariantInfo));
 			}
 		}
+		static void WriteByteArray(JsonSerializer serializer, object value) {
+			serializer.WriteStringFast (Convert.ToBase64String ((byte[])value));
+		}
+		static void WriteCustom (JsonSerializer serializer, object value) {
+			serializer.WriteCustom (value);
+		}
+		static void WriteDataSet (JsonSerializer serializer, object value) {
+			serializer.WriteDataset ((DataSet)value);
+		}
+		static void WriteDataTable (JsonSerializer serializer, object value) {
+			serializer.WriteDataTable ((DataTable)value);
+		}
+		static void WriteDictionary (JsonSerializer serializer, object value) {
+			if (serializer._params.KVStyleStringDictionary == false && value is IDictionary &&
+				value.GetType ().IsGenericType && typeof (string).Equals (value.GetType ().GetGenericArguments ()[0]))
 
+				serializer.WriteStringDictionary ((IDictionary)value);
+#if NET_40_OR_GREATER
+			else if (serializer._params.KVStyleStringDictionary == false && value is System.Dynamic.ExpandoObject)
+				serializer.WriteStringDictionary ((IDictionary<string, object>)value);
+#endif
+			else if (value is IDictionary)
+				serializer.WriteDictionary ((IDictionary)value);
+		}
+		static void WriteStringDictionary (JsonSerializer serializer, object value) {
+			serializer.WriteSD ((StringDictionary)value);
+		}
+		static void WriteNameValueCollection (JsonSerializer serializer, object value) {
+			serializer.WriteNameValueCollection ((NameValueCollection)value);
+		}
 		static void WriteObject(JsonSerializer serializer, object value) {
+			serializer.WriteObject (value);
+		}
+		static void WriteUnknown (JsonSerializer serializer, object value) {
 			serializer.WriteValue (value);
 		}
 		#endregion

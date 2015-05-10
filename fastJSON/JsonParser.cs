@@ -70,7 +70,7 @@ namespace fastJSON
                             // :
                             if (NextToken() != Token.Colon)
                             {
-								throw new JsonSerializationException ("Expected colon at index " + _index);
+								throw new JsonSerializationException ("Expected colon at index " + _index + ": " + GetContextText ());
                             }
 
                             // value
@@ -98,7 +98,14 @@ namespace fastJSON
             }
         }
 
-        private JsonArray ParseArray()
+		private string GetContextText () {
+			const int ContextLength = 20;
+			var s = _index < ContextLength ? _index : ContextLength;
+			var e = _index + ContextLength > _json.Length ? _json.Length - _index : ContextLength;
+			return string.Concat (_json.Substring (_index - s, s), "^ERROR^", _json.Substring (_index, e));
+		}
+
+		private JsonArray ParseArray()
         {
             var array = new JsonArray();
             ConsumeToken(); // [
@@ -151,7 +158,7 @@ namespace fastJSON
                     return null;
             }
 
-			throw new JsonSerializationException ("Unrecognized token at index " + _index);
+			throw new JsonSerializationException ("Unrecognized token at index " + _index + ":" + GetContextText ());
         }
 
         private string ParseString()
@@ -433,7 +440,7 @@ namespace fastJSON
                     }
                     break;
             }
-			throw new JsonSerializationException ("Could not find token at index " + --_index);
+			throw new JsonSerializationException ("Could not find token at index " + --_index + ":" + GetContextText ());
         }
     }
 

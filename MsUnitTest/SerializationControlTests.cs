@@ -94,7 +94,7 @@ namespace MsUnitTest
 	#endregion
 
 	[TestClass]
-	public class OverrideTest
+	public class SerializationControlTests
 	{
 		[TestInitialize]
 		public void Bootstrap () {
