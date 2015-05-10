@@ -1854,22 +1854,37 @@ namespace UnitTests
 		public class MultiDimensionalArray
 		{
 			public int[,,] MDArray;
+			public baseclass[,] MDClass;
 		}
 
 		[TestMethod]
 		public void MultiDimensionalArrayTest () {
-			var d = new MultiDimensionalArray () {
-				MDArray = new int[,,]{
+			var a = new int[,,]{
 					{ { 1, 2 }, { 3, 4 } },
 					{ { 5, 6 }, { 7, 8 } },
 					{ { 9, 10 }, { 11, 12 } }
-				}
+				};
+			var ca = new baseclass[,] {
+				{ new baseclass() { Name = "a0" },new baseclass() { Name = "a1" },new baseclass() { Name = "a2" } },
+				{ new baseclass() { Name = "b0" },null,new class2() { Name = "b2", description = "hello" } }
+			};
+			var d = new MultiDimensionalArray () {
+				MDArray = a
 			};
 			var s = JSON.ToJSON (d);
 			Console.WriteLine (s);
 			var o = JSON.ToObject<MultiDimensionalArray> (s);
 			Assert.AreEqual (3, o.MDArray.Rank);
+			CollectionAssert.AreEqual (a, o.MDArray);
 			Console.WriteLine (JSON.ToJSON (o));
+			s = JSON.ToJSON (a);
+			Console.WriteLine (s);
+			var o1 = JSON.ToObject<int[,,]> (s);
+			CollectionAssert.AreEqual (a, o1);
+			s = JSON.ToJSON (ca);
+			Console.WriteLine (s);
+			var o2 = JSON.ToObject<baseclass[,]> (s);
+			Assert.AreEqual ("hello", ((class2)ca[1, 2]).description);
 		}
     }
 }

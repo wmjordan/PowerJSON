@@ -31,7 +31,13 @@ namespace fastJSON
 		}
 
 		internal string ConvertToJSON (object obj) {
-			WriteValue (obj);
+			//var m = _manager.GetReflectionCache (obj.GetType ()).SerializeMethod;
+			//if (m != null) {
+			//	m (this, obj);
+			//}
+			//else {
+				WriteValue (obj);
+			//}
 
 			if (_params.UseExtensions && _params.UsingGlobalTypes && _globalTypes != null && _globalTypes.Count > 0) {
 				var sb = new StringBuilder ();
@@ -421,19 +427,12 @@ namespace fastJSON
 
 			WriteValue (value);
 		}
-		static void WriteMultiDimensionalArray (JsonSerializer serializer, object value) {
-			var a = value as Array;
-			if (a == null) {
-				serializer._output.Append ("null");
-				return;
-			}
-			WriteMultiDimensionalArray (serializer._output, a);
-		}
 
 		static void WriteArray (JsonSerializer serializer, object value) {
 			IEnumerable array = value as IEnumerable;
+			var o = serializer._output;
 			if (array == null) {
-				serializer._output.Append ("null");
+				o.Append ("null");
 				return;
 			}
 			//if (_params.SerializeEmptyCollections == false) {
@@ -442,48 +441,66 @@ namespace fastJSON
 			//		return;
 			//	}
 			//}
-			serializer._output.Append ('[');
 
 			var list = array as IList;
 			if (list != null) {
 				var c = list.Count;
 				if (c == 0) {
-					goto EXIT;
+					o.Append ("[]");
+					return;
 				}
 
-				var d = serializer._manager.GetReflectionCache (list.GetType ());
+				var t = list.GetType ();
+				if (t.IsArray && t.GetArrayRank () >  1) {
+					WriteMultiDimensionalArray (serializer, list);
+					return;
+				}
+				var d = serializer._manager.GetReflectionCache (t);
 				var w = d.ItemSerializer;
 				if (w != null) {
+					o.Append ('[');
 					w (serializer, list[0]);
 					for (int i = 1; i < c; i++) {
-						serializer._output.Append (',');
+						o.Append (',');
 						w (serializer, list[i]);
 					}
-					goto EXIT;
+					o.Append (']');
+					return;
 				}
 
+				o.Append ('[');
 				serializer.WriteValue (list[0]);
 				for (int i = 1; i < c; i++) {
-					serializer._output.Append (',');
+					o.Append (',');
 					serializer.WriteValue (list[i]);
 				}
-				goto EXIT;
+				o.Append (']');
+				return;
 			}
 
 			var pendingSeperator = false;
-
+			o.Append ('[');
 			foreach (object obj in array) {
-				if (pendingSeperator) serializer._output.Append (',');
+				if (pendingSeperator) o.Append (',');
 
 				serializer.WriteValue (obj);
 
 				pendingSeperator = true;
 			}
-			EXIT:
-			serializer._output.Append (']');
+			o.Append (']');
 		}
 
-		private static void WriteMultiDimensionalArray (StringBuilder output, Array md) {
+		static void WriteMultiDimensionalArray (JsonSerializer serializer, object value) {
+			var a = value as Array;
+			if (a == null) {
+				serializer._output.Append ("null");
+				return;
+			}
+			var m = serializer._manager.GetReflectionCache (a.GetType ().GetElementType ()).SerializeMethod;
+			serializer.WriteMultiDimensionalArray (m, a);
+		}
+
+		private void WriteMultiDimensionalArray (WriteJsonValue m, Array md) {
 			var r = md.Rank;
 			var lb = new int[r];
 			var ub = new int[r];
@@ -493,37 +510,37 @@ namespace fastJSON
 				ub[i] = md.GetUpperBound (i) + 1;
 			}
 			Array.Copy (lb, 0, mdi, 0, r);
-			WriteMultiDimensionalArray (output, md, r, lb, ub, mdi, 0);
+			WriteMultiDimensionalArray (m, md, r, lb, ub, mdi, 0);
 		}
 
-		private static void WriteMultiDimensionalArray (StringBuilder output, Array md, int r, int[] lb, int[] ub, int[] mdi, int ri) {
+		private void WriteMultiDimensionalArray (WriteJsonValue m, Array md, int r, int[] lb, int[] ub, int[] mdi, int ri) {
 			var u = ub[ri];
 			if (ri < r - 1) {
-				output.Append ('[');
+				_output.Append ('[');
 				bool s = false;
 				var d = ri;
 				do {
 					if (s) {
-						output.Append (',');
+						_output.Append (',');
 					}
 					Array.Copy (lb, d + 1, mdi, d + 1, r - d - 1);
-					WriteMultiDimensionalArray (output, md, r, lb, ub, mdi, ++d);
+					WriteMultiDimensionalArray (m, md, r, lb, ub, mdi, ++d);
 					d = ri;
 					s = true;
 				} while (++mdi[ri] < u);
-				output.Append (']');
+				_output.Append (']');
 			}
 			else if (ri == r - 1) {
-				output.Append ('[');
+				_output.Append ('[');
 				bool s = false;
 				do {
 					if (s) {
-						output.Append (',');
+						_output.Append (',');
 					}
-					output.Append (md.GetValue (mdi));
+					m (this, md.GetValue (mdi));
 					s = true;
 				} while (++mdi[ri] < u);
-				output.Append (']');
+				_output.Append (']');
 			}
 		}
 
@@ -837,7 +854,7 @@ namespace fastJSON
 					: type.IsSubclassOf (typeof(Enum)) ? WriteEnum
 					: type.IsSubclassOf (typeof(Array)) && type.GetArrayRank () > 1 ? WriteMultiDimensionalArray
 					: type.IsSubclassOf (typeof(Array)) && typeof(byte[]).Equals (type) == false ? WriteArray
-					: (WriteJsonValue)null;
+					: (WriteJsonValue)WriteObject;
 		}
 
 		static void WriteByte (JsonSerializer serializer, object value) {
@@ -955,6 +972,9 @@ namespace fastJSON
 			}
 		}
 
+		static void WriteObject(JsonSerializer serializer, object value) {
+			serializer.WriteValue (value);
+		}
 		#endregion
 	}
 }
