@@ -379,6 +379,7 @@ namespace UnitTests
 		class FakeEncryptionConverter : IJsonConverter
 		{
 			public Type GetReversiveType (JsonItem item) {
+				// no type conversion is required
 				return null;
 			}
 			public void SerializationConvert (JsonItem item) {

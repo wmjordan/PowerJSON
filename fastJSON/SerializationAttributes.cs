@@ -146,12 +146,14 @@ namespace fastJSON
 		/// <summary>
 		/// Gets whether the <see cref="Name"/> property of this <see cref="JsonItem"/> instance can be changed.
 		/// </summary>
+		/// <remarks>During serialization, the <see cref="Name"/> of the property can be changed, and this value is true. During deserialization or serializing an item of an <see cref="IEnumerable{T}"/> instance, the <see cref="Name"/> can not be changed, and this value is false.</remarks>
 		public bool Renameable { get { return _Renameable; } }
 
 		internal string _Name;
 		/// <summary>
-		/// The name of the item.
+		/// The name of the item. During serialization, this property can be changed to serialize the member to another name.
 		/// </summary>
+		/// <exception cref="InvalidOperationException">This value is changed during deserialization or serializing an item of an <see cref="IEnumerable{T}"/> instance.</exception>
 		public string Name {
 			get { return _Name; }
 			set {
@@ -164,7 +166,7 @@ namespace fastJSON
 
 		internal object _Value;
 		/// <summary>
-		/// The value of the item.
+		/// The value of the item. The type and value of this property is changed. The serializer and deserializer will take the changed value.
 		/// </summary>
 		public object Value {
 			get { return _Value; }
@@ -175,7 +177,7 @@ namespace fastJSON
 		/// </summary>
 		/// <param name="name">The name of the item.</param>
 		/// <param name="value">The value of the item.</param>
-		public JsonItem (string name, object value) : this (name, value, false) { }
+		public JsonItem (string name, object value) : this (name, value, true) { }
 
 		internal JsonItem (string name, object value, bool canRename) {
 			_Renameable = canRename;

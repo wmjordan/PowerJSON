@@ -317,7 +317,7 @@ namespace fastJSON
 				}
 				// process null value
 				if (ji._Value == null) {
-					var i = new JsonItem (n, null);
+					var i = new JsonItem (n, null, false);
 					if (si != null && si.OnDeserializing (o, i) == false) {
 						continue;
 					}
@@ -428,7 +428,7 @@ namespace fastJSON
 			var vl = ji._Value as IList;
 			var l = vl.Count;
 			var converted = false;
-			var ai = new JsonItem (ji._Name, null);
+			var ai = new JsonItem (ji._Name, null, false);
 			for (int i = 0; i < l; i++) {
 				var vi = vl[i];
 				ai._Value = vi;

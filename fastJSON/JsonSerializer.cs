@@ -377,7 +377,7 @@ namespace fastJSON
 				}
 				#region Convert Items
 				if (p.ItemConverter != null && ji._Value is IEnumerable) {
-					var ai = new JsonItem (ji.Name, null);
+					var ai = new JsonItem (ji.Name, null, false);
 					var ol = new List<object> ();
 					foreach (var item in (ji._Value as IEnumerable)) {
 						ai.Value = item;
