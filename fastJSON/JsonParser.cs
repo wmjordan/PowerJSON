@@ -70,7 +70,7 @@ namespace fastJSON
                             // :
                             if (NextToken() != Token.Colon)
                             {
-								throw new JsonSerializationException ("Expected colon at index " + _index + ": " + GetContextText ());
+								throw new JsonParseException ("Expected colon at index ", _index, GetContextText ());
                             }
 
                             // value
@@ -85,7 +85,8 @@ namespace fastJSON
 									case JsonDict.ExtTypes: table.Types = (JsonDict)value; continue;
 									case JsonDict.ExtType: table.Type = (string)value; continue;
 									case JsonDict.ExtRefIndex: table.RefIndex = (int)(long)value; continue;
-									case JsonDict.ExtMap: table.Map = (JsonDict)value; continue;
+									//TODO: Candidate to removal of unknown use of map
+									//case JsonDict.ExtMap: table.Map = (JsonDict)value; continue;
 									case JsonDict.ExtSchema: table.Schema = value; continue;
 									default:
 										break;
@@ -158,7 +159,7 @@ namespace fastJSON
                     return null;
             }
 
-			throw new JsonSerializationException ("Unrecognized token at index " + _index + ":" + GetContextText ());
+			throw new JsonParseException ("Unrecognized token at index ", _index, GetContextText ());
         }
 
         private string ParseString()
@@ -249,7 +250,7 @@ namespace fastJSON
                 }
             }
 
-			throw new JsonSerializationException ("Unexpectedly reached end of string");
+			throw new JsonParseException ("Unexpectedly reached end of string", _json.Length, GetContextText ());
         }
 
 		private static int ParseSingleChar (char c1)
@@ -361,7 +362,7 @@ namespace fastJSON
 
             if (_index == _json.Length)
             {
-				throw new JsonSerializationException ("Reached end of string unexpectedly");
+				throw new JsonParseException ("Reached end of string unexpectedly", _json.Length, GetContextText ());
             }
 
             c = _json[_index];
@@ -440,7 +441,7 @@ namespace fastJSON
                     }
                     break;
             }
-			throw new JsonSerializationException ("Could not find token at index " + --_index + ":" + GetContextText ());
+			throw new JsonParseException ("Could not find token at index ", --_index, GetContextText ());
         }
     }
 
@@ -449,13 +450,15 @@ namespace fastJSON
 		internal const string ExtRefIndex = "$i";
 		internal const string ExtTypes = "$types";
 		internal const string ExtType = "$type";
-		internal const string ExtMap = "$map";
+		// TODO: Candidate to removal of unknown use of map
+		//internal const string ExtMap = "$map";
 		internal const string ExtSchema = "$schema";
 
 		internal int RefIndex;
 		internal JsonDict Types;
 		internal string Type;
-		internal JsonDict Map;
+		// TODO: Candidate to removal of unknown use of map
+		//internal JsonDict Map;
 		internal object Schema;
 	}
 }

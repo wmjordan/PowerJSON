@@ -284,9 +284,10 @@ namespace fastJSON
 				si.OnDeserializing (o);
 			}
 			Dictionary<string, myPropInfo> props = c.Properties;
-			if (data.Map != null) {
-				ProcessMap (o, props, data.Map);
-			}
+			//TODO: Candidate to removal of unknown use of map
+			//if (data.Map != null) {
+			//	ProcessMap (o, props, data.Map);
+			//}
 			foreach (var kv in data) {
 				var n = kv.Key;
 				var v = kv.Value;
@@ -491,15 +492,16 @@ namespace fastJSON
 			return nv;
 		}
 
-		private static void ProcessMap (object obj, Dictionary<string, myPropInfo> props, JsonDict dic) {
-			foreach (KeyValuePair<string, object> kv in dic) {
-				myPropInfo p = props[kv.Key];
-				object o = p.Getter (obj);
-				Type t = Type.GetType ((string)kv.Value);
-				if (typeof (Guid).Equals (t))
-					p.Setter (obj, CreateGuid (o));
-			}
-		}
+		// TODO: Candidate to removal of unknown use of map
+		//private static void ProcessMap (object obj, Dictionary<string, myPropInfo> props, JsonDict dic) {
+		//	foreach (KeyValuePair<string, object> kv in dic) {
+		//		myPropInfo p = props[kv.Key];
+		//		object o = p.Getter (obj);
+		//		Type t = Type.GetType ((string)kv.Value);
+		//		if (typeof (Guid).Equals (t))
+		//			p.Setter (obj, CreateGuid (o));
+		//	}
+		//}
 
 		private object ChangeType (object value, Type conversionType) {
 			// 8-30-2014 - James Brooks - Added code for nullable types.
@@ -950,9 +952,9 @@ namespace fastJSON
 		internal static object RevertCustom (JsonDeserializer deserializer, object value, Type type) {
 			return deserializer._manager.CreateCustom ((string)value, type);
 		}
-		internal static object ChangeType (JsonDeserializer deserializer, object value, Type type) {
-			return deserializer.ChangeType (value, type);
-		}
+		//internal static object ChangeType (JsonDeserializer deserializer, object value, Type type) {
+		//	return deserializer.ChangeType (value, type);
+		//}
 		#endregion
 	}
 }

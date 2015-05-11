@@ -81,10 +81,11 @@ namespace fastJSON
 				var g = type.GetGenericTypeDefinition ();
 				if (typeof(Nullable<>).Equals (g)) {
 					var it = type.GetGenericArguments ()[0];
-					if (_jsonTypeCache.TryGetValue (it, out t)) {
-						_jsonTypeCache.Add (type, t);
-						return t;
+					if (_jsonTypeCache.TryGetValue (it, out t) == false) {
+						t = GetJsonDataType (it);
 					}
+					_jsonTypeCache.Add (type, t);
+					return t;
 				}
 			}
 			t = DetermineExtraDataType (type);

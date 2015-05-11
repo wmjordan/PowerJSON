@@ -8,7 +8,6 @@ namespace fastJSON
 	[Serializable]
 	public class JsonSerializationException : Exception
 	{
-
 		/// <summary>
 		/// Initializes a new instance of the <see cref="JsonSerializationException"/> class.
 		/// </summary>
@@ -33,5 +32,28 @@ namespace fastJSON
 		  System.Runtime.Serialization.SerializationInfo info,
 		  System.Runtime.Serialization.StreamingContext context)
 			: base (info, context) { }
+	}
+
+	/// <summary>
+	/// An exception thrown when parser encounters malform JSON string.
+	/// </summary>
+	[Serializable]
+	public class JsonParseException : JsonSerializationException
+	{
+		/// <summary>
+		/// Gets the index where parse error occurs.
+		/// </summary>
+		public int Position { get; private set; }
+		/// <summary>
+		/// Gets the context text around the error position.
+		/// </summary>
+		public string ContextText { get; private set; }
+
+		internal JsonParseException (string reason, int index, string context) : base (
+			String.Concat (reason, index, ": ", context)
+			) {
+			Position = index;
+			ContextText = context;
+		}
 	}
 }

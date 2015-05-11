@@ -16,9 +16,9 @@ namespace fastJSON
 		static readonly WriteJsonValue[] _convertMethods = RegisterMethods ();
 
 		StringBuilder _output = new StringBuilder ();
-		int _before;
 		readonly int _MAX_DEPTH = 20;
-		int _current_depth = 0;
+		int _currentDepth;
+		int _before;
 		readonly Dictionary<string, int> _globalTypes = new Dictionary<string, int> ();
 		readonly Dictionary<object, int> _cirobj = new Dictionary<object, int> ();
 		readonly JSONParameters _params;
@@ -174,7 +174,7 @@ namespace fastJSON
 					if (pendingSeparator) _output.Append (',');
 
 					_params.NamingStrategy.WriteName (_output, (string)entry.Key);
-					WriteValue (entry.Value);
+					WriteString (_output, (string)entry.Value);
 					pendingSeparator = true;
 				}
 			}
@@ -245,7 +245,7 @@ namespace fastJSON
 		private void WriteDataset (DataSet ds) {
 			_output.Append ('{');
 			if (_params.UseExtensions) {
-				WritePair ("$schema", _params.UseOptimizedDatasetSchema ? (object)GetSchema (ds) : ds.GetXmlSchema ());
+				WritePair (JsonDict.ExtSchema, _params.UseOptimizedDatasetSchema ? (object)GetSchema (ds) : ds.GetXmlSchema ());
 				_output.Append (',');
 			}
 			var tablesep = false;
@@ -284,7 +284,7 @@ namespace fastJSON
 		void WriteDataTable (DataTable dt) {
 			_output.Append ('{');
 			if (_params.UseExtensions) {
-				WritePair ("$schema", _params.UseOptimizedDatasetSchema ? (object)GetSchema (dt) : GetXmlSchema (dt));
+				WritePair (JsonDict.ExtSchema, _params.UseOptimizedDatasetSchema ? (object)GetSchema (dt) : GetXmlSchema (dt));
 				_output.Append (',');
 			}
 
@@ -294,43 +294,47 @@ namespace fastJSON
 		}
 #endif
 
-		bool _TypesWritten = false;
+		// HACK: This is a very long function, individual parts in regions are inlined for better performance
 		private void WriteObject (object obj) {
+			#region Detect Circurlar Reference
 			var ci = 0;
 			if (_cirobj.TryGetValue (obj, out ci) == false)
 				_cirobj.Add (obj, _cirobj.Count + 1);
 			else {
-				if (_current_depth > 0 && _params.UseExtensions && _params.InlineCircularReferences == false) {
+				if (_currentDepth > 0 && _params.UseExtensions && _params.InlineCircularReferences == false) {
 					//_circular = true;
 					_output.Append ("{\"" + JsonDict.ExtRefIndex + "\":");
 					_output.Append (Int32ToString (ci));
 					_output.Append ("}");
 					return;
 				}
-			}
+			} 
+			#endregion
 			var def = _manager.GetReflectionCache (obj.GetType ());
 			var si = def.Interceptor;
 			if (si != null && si.OnSerializing (obj) == false) {
 				return;
 			}
+			#region Locate Extension Insertion Position
 			if (_params.UseExtensions == false || _params.UsingGlobalTypes == false)
 				_output.Append ('{');
 			else {
-				if (_TypesWritten == false) {
+				if (_before == 0) {
 					_output.Append ('{');
 					_before = _output.Length;
 				}
 				else
 					_output.Append ('{');
 			}
-			_TypesWritten = true;
-			_current_depth++;
-			if (_current_depth > _MAX_DEPTH)
+			#endregion
+
+			_currentDepth++;
+			if (_currentDepth > _MAX_DEPTH)
 				throw new JsonSerializationException ("Serializer encountered maximum depth of " + _MAX_DEPTH);
 
-
-			var map = new Dictionary<string, string> ();
+			//var map = new Dictionary<string, string> ();
 			var append = false;
+			#region Write Type Reference
 			if (_params.UseExtensions) {
 				if (_params.UsingGlobalTypes == false)
 					WritePairFast (JsonDict.ExtType, def.AssemblyName);
@@ -344,7 +348,8 @@ namespace fastJSON
 					WritePairFast (JsonDict.ExtType, Int32ToString (dt));
 				}
 				append = true;
-			}
+			} 
+			#endregion
 
 			var g = def.Getters;
 			var c = g.Length;
@@ -352,6 +357,7 @@ namespace fastJSON
 			var rf = _params.ShowReadOnlyFields || _params.EnableAnonymousTypes;
 			for (int ii = 0; ii < c; ii++) {
 				var p = g[ii];
+				#region Skip Members Not For Serialization
 				if (p.Serializable == TriState.False) {
 					continue;
 				}
@@ -360,7 +366,8 @@ namespace fastJSON
 						|| p.IsReadOnly && (p.IsProperty && rp == false || p.IsProperty == false && rf == false)) {
 						continue;
 					}
-				}
+				} 
+				#endregion
 				var ji = new JsonItem (p.MemberName, p.Getter (obj), true);
 				if (si != null && si.OnSerializing (obj, ji) == false) {
 					continue;
@@ -368,9 +375,10 @@ namespace fastJSON
 				if (p.Converter != null) {
 					p.Converter.SerializationConvert (ji);
 				}
+				#region Convert Items
 				if (p.ItemConverter != null && ji._Value is IEnumerable) {
-					var ol = new List<object> ();
 					var ai = new JsonItem (ji.Name, null);
+					var ol = new List<object> ();
 					foreach (var item in (ji._Value as IEnumerable)) {
 						ai.Value = item;
 						p.ItemConverter.SerializationConvert (ai);
@@ -378,6 +386,8 @@ namespace fastJSON
 					}
 					ji._Value = ol;
 				}
+				#endregion
+				#region Determine Serialized Field Name
 				if (p.SpecificName) {
 					if (ji._Value == null || p.TypedNames == null || p.TypedNames.TryGetValue (ji._Value.GetType (), out ji._Name) == false) {
 						ji._Name = p.SerializedName;
@@ -386,6 +396,8 @@ namespace fastJSON
 				else {
 					ji._Name = p.SerializedName;
 				}
+				#endregion
+				#region Skip Null, Default Value or Empty Collection
 				if (_params.SerializeNullValues == false && (ji._Value == null || ji._Value is DBNull)) {
 					continue;
 				}
@@ -395,10 +407,12 @@ namespace fastJSON
 				}
 				if (p.IsCollection && _params.SerializeEmptyCollections == false && ji._Value is ICollection && (ji._Value as ICollection).Count == 0) {
 					continue;
-				}
+				} 
+				#endregion
 				if (append)
 					_output.Append (',');
 
+				#region Write Name
 				if (p.SpecificName) {
 					WriteStringFast (ji._Name);
 					_output.Append (':');
@@ -406,6 +420,8 @@ namespace fastJSON
 				else {
 					_params.NamingStrategy.WriteName (_output, ji._Name);
 				}
+				#endregion
+				#region Write Value
 				if (p.WriteValue != null && p.Converter == null) {
 					var v = ji._Value;
 					if (v == null || v is DBNull) {
@@ -418,20 +434,23 @@ namespace fastJSON
 				else {
 					WriteValue (ji._Value);
 				}
+				#endregion
 
-				if (ji._Value != null && _params.UseExtensions) {
-					var tt = ji._Value.GetType ();
-					if (typeof(object).Equals (tt))
-						map.Add (p.SerializedName, tt.ToString ());
-				}
+				// TODO: Candidate to removal of unknown use of map
+				//if (ji._Value != null && _params.UseExtensions) {
+				//	var tt = ji._Value.GetType ();
+				//	if (typeof (object).Equals (tt))
+				//		map.Add (p.SerializedName, tt.ToString ());
+				//}
 				append = true;
 			}
-			if (map.Count > 0 && _params.UseExtensions) {
-				_output.Append (",\"" + JsonDict.ExtMap + "\":");
-				WriteStringDictionary (map);
-				append = true;
-			}
+			//if (map.Count > 0 && _params.UseExtensions) {
+			//	_output.Append (",\"" + JsonDict.ExtMap + "\":");
+			//	WriteStringDictionary (map);
+			//	append = true;
+			//}
 			if (si != null) {
+				#region Write Extra Values
 				var ev = si.SerializeExtraValues (obj);
 				if (ev != null) {
 					foreach (var item in ev) {
@@ -441,26 +460,23 @@ namespace fastJSON
 						append = true;
 					}
 				}
+				#endregion
 				si.OnSerialized (obj);
 			}
-		_current_depth--;
+		_currentDepth--;
 		_output.Append ('}');
 	}
 
 
 	private void WritePairFast (string name, string value) {
 			WriteStringFast (name);
-
 			_output.Append (':');
-
 			WriteStringFast (value);
 		}
 
 		private void WritePair (string name, object value) {
 			WriteStringFast (name);
-
 			_output.Append (':');
-
 			WriteValue (value);
 		}
 
@@ -600,9 +616,7 @@ namespace fastJSON
 
 		private void WriteStringDictionary (IDictionary dic) {
 			_output.Append ('{');
-
 			var pendingSeparator = false;
-
 			foreach (DictionaryEntry entry in dic) {
 				if (_params.SerializeNullValues == false && entry.Value == null) {
 					continue;
@@ -671,7 +685,7 @@ namespace fastJSON
 			_output.Append ('{');
 			var pendingSeparator = false;
 			foreach (KeyValuePair<string, object> entry in dic) {
-				if (_params.SerializeNullValues == false && (entry.Value == null)) {
+				if (_params.SerializeNullValues == false && entry.Value == null) {
 					continue;
 				}
 				if (pendingSeparator) _output.Append (',');

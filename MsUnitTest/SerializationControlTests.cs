@@ -98,8 +98,10 @@ namespace MsUnitTest
 	{
 		[TestInitialize]
 		public void Bootstrap () {
+			#region Bootstrap
 			JSON.Parameters.NamingConvention = NamingConvention.CamelCase;
 			JSON.Parameters.UseExtensions = false;
+			#endregion
 		}
 		[TestCleanup]
 		public void CleanUp () {
@@ -109,6 +111,7 @@ namespace MsUnitTest
 
 		[TestMethod]
 		public void InvasiveTest () {
+			#region Initialization
 			var d = new Demo1.DemoClass () {
 				MyProperty = "p",
 				Number = 1,
@@ -116,8 +119,11 @@ namespace MsUnitTest
 				InternalValue = 2,
 				Identifier = new ClassA () { Name = "c" }
 			};
+			#endregion
+			#region Print Result
 			var s = JSON.ToJSON (d);
 			Console.WriteLine (s);
+			#endregion
 			Assert.IsTrue (s.Contains ("\"prop\":\"p\""));
 			Assert.IsTrue (s.Contains ("\"number\":1"));
 			Assert.IsTrue (s.Contains ("\"enum\":\"VIP\""));
@@ -140,24 +146,32 @@ namespace MsUnitTest
 		public void NoninvasiveTest () {
 
 			#region Noninvasive Control Code
+			// overrides the serialization behavior of DemoClass
 			JSON.Manager.Override<DemoClass> (new TypeOverride () {
+				// makes DemoClass always deserializable
 				Deserializable = TriState.True,
+				// override members of the class
 				MemberOverrides = new List<MemberOverride> {
+					// assigns the serialized name "prop" to MyProperty property
 					new MemberOverride ("MyProperty", "prop"),
 					new MemberOverride ("MyEnumProperty", "enum"),
+					// assigns a default value to the Number property
 					new MemberOverride ("Number") { DefaultValue = 0 },
+					// assigns default serialized name and typed serialized name
 					new MemberOverride ("Identifier", "variant") {
 						TypedNames = new Dictionary<Type,string> () {
 							{ typeof(ClassA), "a" },
 							{ typeof(ClassB), "b" }
 						}
 					},
+					// denotes the InternalValue property is neither serialized nor deserialized
 					new MemberOverride ("InternalValue") {
 						Deserializable = TriState.True,
 						Serializable = TriState.False
 					}
 				}
 			});
+			// changes the serialized name of the "Vip" field of the MyEnum enum type
 			JSON.Manager.OverrideEnumValueNames<MyEnum> (new Dictionary<string, string> {
 				{ "Vip", "VIP" }
 			});
@@ -212,12 +226,12 @@ namespace MsUnitTest
 
 			// use the alternated SerializationManager
 			var s1 = JSON.ToJSON (g, JSON.Parameters, gsm);
-			Console.WriteLine (s1);
+			Console.WriteLine ("Group: " + s1);
 			Assert.IsFalse (s1.Contains ("GroupID")); // "GroupID" is invisible
 
 			 // use the default SerializationManager
 			s1 = JSON.ToJSON (g.Members[0]);
-			Console.WriteLine (s1);
+			Console.WriteLine ("Member: " + s1);
 			StringAssert.Contains (s1, "GroupID"); // "GroupID" is visible
 			#endregion
 		}

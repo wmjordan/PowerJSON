@@ -726,6 +726,7 @@ namespace UnitTests
 		#region SerializationManager
 		public class WebExceptionJsonInterceptor : JsonInterceptor<System.Net.WebException>
 		{
+			// Adds extra values to the serialization result
 			public override IEnumerable<JsonItem> SerializeExtraValues (System.Net.WebException obj) {
 				return new JsonItem[] {
 					new JsonItem ("exceptionTime", DateTime.Now),
@@ -733,12 +734,14 @@ namespace UnitTests
 				};
 			}
 			public override bool OnSerializing (System.Net.WebException obj, JsonItem item) {
+				// filter properties
 				switch (item.Name) {
-					case "Response":
 					case "Status":
 					case "Message":
+						// show the above properties
 						return true;
 					default:
+						// hide other properties
 						return false;
 				}
 			}
@@ -752,7 +755,9 @@ namespace UnitTests
 				NamingConvention = NamingConvention.CamelCase
 			};
 			SerializationManager manager = SerializationManager.Instance;
+			// apply the interceptor to WebException
 			manager.OverrideInterceptor<System.Net.WebException> (new WebExceptionJsonInterceptor ());
+			// override the serialized name of the Status property
 			manager.OverrideMemberName<System.Net.WebException> ("Status", "httpstatus");
 			try {
 				var c = System.Net.WebRequest.Create ("http://inexistent-domain.com");
@@ -763,7 +768,6 @@ namespace UnitTests
 			catch (System.Net.WebException ex) {
 				string s = JSON.ToJSON (ex, p);
 				Console.WriteLine (s);
-				StringAssert.Contains (s, @"""response"":");
 				StringAssert.Contains (s, @"""httpstatus"":");
 				StringAssert.Contains (s, @"""exceptionTime"":");
 				StringAssert.Contains (s, @"""machine"":""" + Environment.MachineName + "\"");
