@@ -226,12 +226,13 @@ namespace fastJSON
 		}
 
 		internal object ParseDictionary (JsonDict data, Type type, object input) {
-			//if (typeof (NameValueCollection).Equals (type))
-			//	return CreateNameValueCollection (data);
-			//if (typeof (StringDictionary).Equals (type))
-			//	return CreateStringDictionary (data);
+            //TODO: Candidate to removal of special dictionary
+            //if (typeof (NameValueCollection).Equals (type))
+            //	return CreateNameValueCollection (data);
+            //if (typeof (StringDictionary).Equals (type))
+            //	return CreateStringDictionary (data);
 
-			if (data.RefIndex > 0) {
+            if (data.RefIndex > 0) {
 				object v = null;
 				_cirrev.TryGetValue (data.RefIndex, out v);
 				return v;

@@ -274,11 +274,9 @@ namespace fastJSON
 		internal readonly JsonDataType JsonDataType;
 		internal readonly Type ElementType; // bt
 		internal readonly Type ChangeType;
-		internal readonly Type[] GenericTypes;
 
 		internal readonly bool IsClass;
 		internal readonly bool IsValueType;
-		internal readonly bool IsGenericType;
 		internal readonly bool IsStruct;
 		internal readonly bool IsNullable;
 
@@ -298,9 +296,6 @@ namespace fastJSON
 			if (dt == JsonDataType.Array || dt == JsonDataType.MultiDimensionalArray) {
 				ElementType = type.GetElementType ();
 			}
-			else if (dt == JsonDataType.Dictionary || dt == JsonDataType.StringKeyDictionary) {
-				GenericTypes = type.GetGenericArguments ();
-			}
 			else if (customType) {
 				dt = JsonDataType.Custom;
 			}
@@ -310,7 +305,6 @@ namespace fastJSON
 			IsClass = type.IsClass;
 			IsValueType = type.IsValueType;
 			if (type.IsGenericType) {
-				IsGenericType = true;
 				ElementType = type.GetGenericArguments ()[0];
 				IsNullable = type.GetGenericTypeDefinition ().Equals (typeof (Nullable<>));
 			}

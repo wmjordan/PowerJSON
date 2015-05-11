@@ -49,13 +49,13 @@ namespace MsUnitTest
 			Console.WriteLine ("Begin constructing the original objects. Please ignore trace information until I'm done.");
 
 			// set all parameters to false to produce pure JSON
-			JSON.Parameters = new JSONParameters { EnableAnonymousTypes = false, IgnoreCaseOnDeserialize = false, SerializeNullValues = false, ShowReadOnlyProperties = false, UseExtensions = false, UseFastGuid = false, UseOptimizedDatasetSchema = false, UseUTCDateTime = false, UsingGlobalTypes = false };
+			JSON.Parameters = new JSONParameters { EnableAnonymousTypes = false, SerializeNullValues = false, ShowReadOnlyProperties = false, UseExtensions = false, UseFastGuid = false, UseOptimizedDatasetSchema = false, UseUTCDateTime = false, UsingGlobalTypes = false };
 
 			var a = new ConcurrentClassA { PayloadA = new PayloadA () };
 			var b = new ConcurrentClassB { PayloadB = new PayloadB () };
 
 			// A is serialized with extensions and global types
-			jsonA = JSON.ToJSON (a, new JSONParameters { EnableAnonymousTypes = false, IgnoreCaseOnDeserialize = false, SerializeNullValues = false, ShowReadOnlyProperties = false, UseExtensions = true, UseFastGuid = false, UseOptimizedDatasetSchema = false, UseUTCDateTime = false, UsingGlobalTypes = true });
+			jsonA = JSON.ToJSON (a, new JSONParameters { EnableAnonymousTypes = false, SerializeNullValues = false, ShowReadOnlyProperties = false, UseExtensions = true, UseFastGuid = false, UseOptimizedDatasetSchema = false, UseUTCDateTime = false, UsingGlobalTypes = true });
 			// B is serialized using the above defaults
 			jsonB = JSON.ToJSON (b);
 

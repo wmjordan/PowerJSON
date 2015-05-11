@@ -130,6 +130,9 @@ namespace fastJSON
 		/// <param name="interceptorType">The type of <see cref="IJsonInterceptor"/></param>
 		/// <exception cref="JsonSerializationException">The exception will be thrown if the type does not implements <see cref="IJsonInterceptor"/>.</exception>
 		public JsonInterceptorAttribute (Type interceptorType) {
+            if (interceptorType == null) {
+                throw new ArgumentNullException ("interceptorType");
+            }
 			if (interceptorType.IsInterface || typeof (IJsonInterceptor).IsAssignableFrom (interceptorType) == false) {
 				throw new JsonSerializationException (String.Concat ("The type ", interceptorType.FullName, " defined in ", typeof (JsonInterceptorAttribute).FullName, " does not implement interface ", typeof (IJsonInterceptor).FullName));
 			}

@@ -348,11 +348,12 @@ namespace fastJSON
 		IJsonConverter GetMemberItemConverter (MemberInfo member);
 	}
 
-	/// <summary>
-	/// Contains the names for a serialized member.
-	/// </summary>
-	/// <preliminary />
-	public class SerializedNames : Dictionary<Type, string>
+    /// <summary>
+    /// Contains the names for a serialized member.
+    /// </summary>
+    /// <preliminary />
+    [Serializable]
+    public class SerializedNames : Dictionary<Type, string>
 	{
 		/// <summary>
 		/// Gets the default name for the serialized member.

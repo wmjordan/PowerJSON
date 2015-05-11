@@ -457,7 +457,7 @@ namespace fastJSON
 
 		IList<MemberOverride> _MemberOverrides;
 		/// <summary>
-		/// Specifies the override for members.
+		/// Gets the override information for members.
 		/// </summary>
 		public IList<MemberOverride> MemberOverrides {
 			get {
@@ -466,7 +466,6 @@ namespace fastJSON
 				}
 				return _MemberOverrides;
 			}
-			set { _MemberOverrides = value; }
 		}
 	}
 
@@ -498,7 +497,7 @@ namespace fastJSON
 		}
 		Dictionary<Type, string> _TypedNames;
 		/// <summary>
-		/// Gets or sets the polymorphic serialization for the member. The item key is the type and the item value is the serialized name corrsponding to the type. The type should derive from the type of the member.
+		/// Gets the polymorphic serialization for the member. The item key is the type and the item value is the serialized name corresponding to the type. The type should derive from the type of the member.
 		/// </summary>
 		public Dictionary<Type, string> TypedNames {
 			get {
@@ -506,9 +505,6 @@ namespace fastJSON
 					_TypedNames = new Dictionary<Type, string> ();
 				}
 				return _TypedNames;
-			}
-			set {
-				_TypedNames = value;
 			}
 		}
 

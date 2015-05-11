@@ -151,7 +151,7 @@ namespace MsUnitTest
 				// makes DemoClass always deserializable
 				Deserializable = TriState.True,
 				// override members of the class
-				MemberOverrides = new List<MemberOverride> {
+				MemberOverrides = {
 					// assigns the serialized name "prop" to MyProperty property
 					new MemberOverride ("MyProperty", "prop"),
 					new MemberOverride ("MyEnumProperty", "enum"),
@@ -159,7 +159,7 @@ namespace MsUnitTest
 					new MemberOverride ("Number") { DefaultValue = 0 },
 					// assigns default serialized name and typed serialized name
 					new MemberOverride ("Identifier", "variant") {
-						TypedNames = new Dictionary<Type,string> () {
+						TypedNames = {
 							{ typeof(ClassA), "a" },
 							{ typeof(ClassB), "b" }
 						}

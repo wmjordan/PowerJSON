@@ -35,7 +35,7 @@ namespace fastJSON
 	}
 
 	/// <summary>
-	/// An exception thrown when parser encounters malform JSON string.
+	/// An exception thrown when parser encounters malformed JSON string.
 	/// </summary>
 	[Serializable]
 	public class JsonParseException : JsonSerializationException

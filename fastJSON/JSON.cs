@@ -79,6 +79,7 @@ namespace fastJSON
 		/// <returns>The serialized JSON string.</returns>
 		public static string ToJSON(object obj, JSONParameters param, SerializationManager manager)
 		{
+			
 			//param.FixValues();
 
 			if (obj == null)

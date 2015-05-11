@@ -87,8 +87,12 @@ namespace fastJSON.BonusPack
 		/// </summary>
 		/// <param name="collection">The collection.</param>
 		/// <param name="showReadOnlyValues">if set to <c>true</c>, read-only values will be exported to the <see cref="IDataReader"/>.</param>
-		/// <exception cref="System.NotSupportedException">This exception will be thrown when <typeparamref name="T"/> is a scalar type.</exception>
+		/// <exception cref="NotSupportedException">This exception will be thrown when <typeparamref name="T"/> is a scalar type.</exception>
 		public EnumerableDataReader (IEnumerable<T> collection, bool showReadOnlyValues) {
+            if (collection == null)
+            {
+                throw new ArgumentNullException ("collection");
+            }
 			var t = typeof(T);
 			if (_scalarTypes.ContainsKey (t)) {
 				throw new NotSupportedException (t.FullName + " is not supported.");
@@ -420,6 +424,9 @@ namespace fastJSON.BonusPack
 		/// <param name="values">The array which holds the field values.</param>
 		/// <returns>The number of fields loaded into the array.</returns>
 		public int GetValues (object[] values) {
+            if (values == null) {
+                throw new ArgumentNullException ("values");
+            }
 			var vl = values.Length;
 			var l = _fieldCount > vl ? vl : _fieldCount;
 			for (int i = l - 1; i >= 0; i--) {
