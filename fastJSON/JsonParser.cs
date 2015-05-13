@@ -14,7 +14,7 @@ namespace fastJSON
     {
         enum Token
         {
-            None = -1,           // Used to denote no Lookahead available
+            None,           // Used to denote no Lookahead available
             Curly_Open,
             Curly_Close,
             Squared_Open,
@@ -27,12 +27,28 @@ namespace fastJSON
             False,
             Null
         }
-
+		readonly static Token[] _CharTokenMap = InitCharTokenMap ();
         readonly string _json;
         readonly StringBuilder _sb = new StringBuilder();
         Token _lookAheadToken = Token.None;
         int _index;
 
+		static Token[] InitCharTokenMap () {
+			var t = new Token[0x7F];
+			t['{'] = Token.Curly_Open;
+			t['}'] = Token.Curly_Close;
+			t[':'] = Token.Colon;
+			t[','] = Token.Comma;
+			t['.'] = Token.Number;
+			t['['] = Token.Squared_Open;
+			t[']'] = Token.Squared_Close;
+			t['\"'] = Token.String;
+			for (int i = '0'; i <= '9'; i++) {
+				t[(char)i] = Token.Number;
+			}
+			t['-'] = t['+'] = t['.'] = Token.Number;
+			return t;
+		}
         internal JsonParser(string json)
         {
            _json = json;
@@ -369,80 +385,43 @@ namespace fastJSON
 
             _index++;
 
-            switch (c)
-            {
-                case '{':
-                    return Token.Curly_Open;
+			var t = _CharTokenMap[c];
+			if (t != Token.None) {
+				return t;
+			}
 
-                case '}':
-                    return Token.Curly_Close;
-
-                case '[':
-                    return Token.Squared_Open;
-
-                case ']':
-                    return Token.Squared_Close;
-
-                case ',':
-                    return Token.Comma;
-
-                case '"':
-                    return Token.String;
-
-                case '0':
-                case '1':
-                case '2':
-                case '3':
-                case '4':
-                case '5':
-                case '6':
-                case '7':
-                case '8':
-                case '9':
-                case '-':
-                case '+':
-                case '.':
-                    return Token.Number;
-
-                case ':':
-                    return Token.Colon;
-
-                case 'f':
-                    if (_json.Length - _index >= 4 &&
-                        _json[_index + 0] == 'a' &&
-                        _json[_index + 1] == 'l' &&
-                        _json[_index + 2] == 's' &&
-                        _json[_index + 3] == 'e')
-                    {
-                        _index += 4;
-                        return Token.False;
-                    }
-                    break;
-
-                case 't':
-                    if (_json.Length - _index >= 3 &&
-                        _json[_index + 0] == 'r' &&
-                        _json[_index + 1] == 'u' &&
-                        _json[_index + 2] == 'e')
-                    {
-                        _index += 3;
-                        return Token.True;
-                    }
-                    break;
-
-                case 'n':
-                    if (_json.Length - _index >= 3 &&
-                        _json[_index + 0] == 'u' &&
-                        _json[_index + 1] == 'l' &&
-                        _json[_index + 2] == 'l')
-                    {
-                        _index += 3;
-                        return Token.Null;
-                    }
-                    break;
-            }
+			switch (c) {
+				case 'f':
+					if (_json.Length - _index >= 4 &&
+						_json[_index + 0] == 'a' &&
+						_json[_index + 1] == 'l' &&
+						_json[_index + 2] == 's' &&
+						_json[_index + 3] == 'e') {
+						_index += 4;
+						return Token.False;
+					}
+					break;
+				case 't':
+					if (_json.Length - _index >= 3 &&
+						_json[_index + 0] == 'r' &&
+						_json[_index + 1] == 'u' &&
+						_json[_index + 2] == 'e') {
+						_index += 3;
+						return Token.True;
+					}
+					break;
+				case 'n':
+					if (_json.Length - _index >= 3 &&
+						_json[_index + 0] == 'u' &&
+						_json[_index + 1] == 'l' &&
+						_json[_index + 2] == 'l') {
+						_index += 3;
+						return Token.Null;
+					}
+					break;
+			}
 			throw new JsonParseException ("Could not find token at index ", --_index, GetContextText ());
-        }
+		}
     }
 
 	class JsonArray : List<object> { }

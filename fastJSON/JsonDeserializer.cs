@@ -297,6 +297,7 @@ namespace fastJSON
 					continue;
 				var ji = new JsonItem (n, v, false);
 				bool converted = false;
+				// TODO: Convert items for types implements IEnumerable and Add(?) method
 				if (v is IList && pi.ItemConverter != null) {
 					converted = ConvertItems (pi, ji);
 				}
@@ -630,19 +631,26 @@ namespace fastJSON
 
 		private object CreateList (JsonArray data, Type listType, object input) {
 			var c = _manager.GetReflectionCache (listType);
-			IList col = input as IList ?? (IList)c.Instantiate ();
 			Type et = c.ArgumentTypes != null ? c.ArgumentTypes[0] : null;
 			var r = c.ItemDeserializer;
-			if (r != null) {
-				foreach (var item in data) {
-					if (item == null) {
-						continue;
+			object l = input ?? c.Instantiate ();
+			IList col = l as IList;
+			if (col != null) {
+				if (r != null) {
+					foreach (var item in data) {
+						// TODO: determine whether item type is nullable
+						col.Add (item != null ? r (this, item, et) : null);
 					}
-					col.Add (r (this, item, et));
+					return col;
 				}
-				return col;
 			}
-
+			var a = c.AppendItem;
+			if (a != null) {
+				foreach (var item in data) {
+					a (l, r (this, item, et));
+				}
+				return l;
+			}
 			// TODO: candidate of code clean-up.
 			// create an array of objects
 			foreach (var ob in data) {

@@ -366,6 +366,9 @@ namespace fastJSON
 		/// <param name="converterType">The type of the <see cref="IJsonConverter"/>.</param>
 		/// <exception cref="JsonSerializationException">Exception can be thrown if the type does not implements <see cref="IJsonConverter"/>.</exception>
 		public JsonConverterAttribute (Type converterType) {
+			if (converterType == null) {
+				throw new ArgumentNullException ("converterType");
+			}
 			if (converterType.IsInterface || typeof (IJsonConverter).IsAssignableFrom (converterType) == false) {
 				throw new JsonSerializationException (String.Concat ("The type ", converterType.FullName, " defined in ", typeof (JsonConverterAttribute).FullName, " does not implement interface ", typeof (IJsonConverter).FullName));
 			}
@@ -396,6 +399,9 @@ namespace fastJSON
 		/// <param name="converter">The type of the <see cref="IJsonConverter"/>.</param>
 		/// <exception cref="JsonSerializationException">Exception can be thrown if the type does not implements <see cref="IJsonConverter"/>.</exception>
 		public JsonItemConverterAttribute (Type converter) {
+			if (converter == null) {
+				throw new ArgumentNullException ("converter");
+			}
 			if (converter.IsInterface || typeof(IJsonConverter).IsAssignableFrom (converter) == false) {
 				throw new JsonSerializationException (String.Concat ("The type ", converter.FullName, " defined in ", typeof(JsonConverterAttribute).FullName, " does not implement interface ", typeof(IJsonConverter).FullName));
 			}

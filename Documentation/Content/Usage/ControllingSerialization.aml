@@ -38,7 +38,7 @@
 				<list class="bullet">
 					<listItem>
 						<para>
-							<codeInline>DemoClass</codeInline> is an <languageKeyword>internal</languageKeyword> class, which, by default, is NOT serializable, but we want to make it deserializable.
+							<codeInline>DemoClass</codeInline> is an <languageKeyword>internal class</languageKeyword>, which, by default, is NOT serializable for its constructor is not publicly visible, but we want to make it deserializable here.
 						</para>
 					</listItem>
 					<listItem>
@@ -75,7 +75,7 @@
 						</para>
 					</listItem>
 				</list>
-				<para>The above requirements could not be fulfilled with fastJSON, but with PowerJSON, it is possible. There are two ways to achieve serialization control.</para>
+				<para>The above requirements could not be fulfilled with fastJSON, but with PowerJSON, it is possible. There are two ways to achieve the serialization control.</para>
 				<list class="ordered">
 					<listItem>
 						<para>
@@ -84,33 +84,33 @@
 					</listItem>
 					<listItem>
 						<para>
-							<newTerm>Noninvasive Mode</newTerm>: Don't modify the data model. Programmatically control how the data model is serialized.
+							<newTerm>Noninvasive Mode</newTerm>: Leave the data model along. Programmatically control the serialization result.
 						</para>
 					</listItem>
 				</list>
 			</content>
 		</section>
 		<section address="CustomAttributes">
-			<title>Controlling Serialization with Custom Attributes</title>
+			<title>Invasive Mode: Controlling Serialization with Custom Attributes</title>
 			<content>
 				<para>
 					The first approach is to add <newTerm>custom attributes</newTerm> to the <languageKeyword>class</languageKeyword>es or <languageKeyword>struct</languageKeyword>s we want to take control.
 				</para>
 				<para>
-					Since this approach requires modification of source code, it is called <newTerm>Invasive Mode</newTerm>.
+					Since this approach touches the source code, it is called <newTerm>Invasive Mode</newTerm>.
 				</para>
 				<para>The following code shows how to use custom attributes to control the serialization result.</para>
 				<code language="c#" source="..\MsUnitTest\SerializationControlTests.cs" region="Annotated Demo Class" />
 				<para>After annotating the data model with custom attributes, we can serialize the data model.</para>
-				<para>Firstly, setup the default serialization settings to fulfill the above requirement--all properties should have camel-case serialized names.</para>
+				<para>Firstly, setup the default serialization settings to fulfill this requirement--all properties should have camel-case serialized names.</para>
 				<code language="c#" source="..\MsUnitTest\SerializationControlTests.cs" region="Bootstrap"/>
-				<para>Secondly, initialize the data model with values.</para>
+				<para>Secondly, initialize the data model with some values.</para>
 				<code language="c#" source="..\MsUnitTest\SerializationControlTests.cs" region="Initialization"/>
 				<para>Finally, call the <codeEntityReference>M:fastJSON.JSON.ToJSON(System.Object)</codeEntityReference> method to get the serialization result.</para>
 				<code language="c#" source="..\MsUnitTest\SerializationControlTests.cs" region="Print Result"/>
 				<para>The above example gives the following result.</para>
 				<code language="javascript"><![CDATA[{"prop":"p","enum":"VIP","number":1,"a":{"name":"c"}}]]></code>
-				<para>To convert the serialized JSON back to an instance of <codeInline>DemoClass</codeInline>, use the <codeEntityReference>M:fastJSON.JSON.ToObject``1(System.String)</codeEntityReference> method.</para>
+				<para>To deserialize the JSON string back to an instance of <codeInline>DemoClass</codeInline>, use the <codeEntityReference>M:fastJSON.JSON.ToObject``1(System.String)</codeEntityReference> method.</para>
 				<code language="c#"><![CDATA[var o = JSON.ToObject<Demo1.DemoClass> (s);]]></code>
 				<para>The basic custom attributes used in this example are listed below.</para>
 				<list class="bullet">
@@ -151,12 +151,12 @@
 			</content>
 		</section>
 		<section address="NoninvasiveControl">
-			<title>Controlling Serialization with SerializationManager</title>
+			<title>Noninvasive Mode: Controlling Serialization with SerializationManager</title>
 			<content>
 				<para>The invasive mode is quite simple--simply marking the classes and members with custom attributes and things are done. However, there are some disadvantages of custom attributes. Some of them are listed below.</para>
 				<list class="bullet">
 					<listItem>
-						<para>Issue 1: Custom attributes require modifications on source code, but sometimes it is impossible, e.g. we want to control the serialization result of a type in the .NET Framework.</para>
+						<para>Issue 1: Custom attributes require modifications on source code, but sometimes it is impossible, e.g. we can't modify the CLR types in the .NET Framework.</para>
 					</listItem>
 					<listItem>
 						<para>
@@ -174,7 +174,7 @@
 					The noninvasive mode is majorly implemented with the following classes: <codeEntityReference>T:fastJSON.SerializationManager</codeEntityReference>, <codeEntityReference>T:fastJSON.TypeOverride</codeEntityReference> and <codeEntityReference>T:fastJSON.MemberOverride</codeEntityReference>.
 				</para>
 				<para>
-					The default instance of <codeInline>SerializationManager</codeInline> can be access from the static <codeEntityReference>P:fastJSON.JSON.Manager</codeEntityReference> property in the <codeEntityReference>T:fastJSON.JSON</codeEntityReference> class. Calling its <codeEntityReference>M:fastJSON.SerializationManager.Override``1(fastJSON.TypeOverride)</codeEntityReference> method will tell the serialization engine how to alter the result of serialization or deserialization.
+					The default instance of <codeInline>SerializationManager</codeInline> can be access from the static <codeEntityReference>P:fastJSON.JSON.Manager</codeEntityReference> property in the <codeEntityReference>T:fastJSON.JSON</codeEntityReference> class. Calling its <codeEntityReference>M:fastJSON.SerializationManager.Override``1(fastJSON.TypeOverride)</codeEntityReference> method, which takes an instance of <codeInline>TypeOverride</codeInline>,  will tell the serialization engine how to alter the result of serialization or deserialization.
 				</para>
 				<para>
 					The following code gives a usage example of <codeInline>SerializationManager</codeInline>.
@@ -182,14 +182,14 @@
 				<code source="..\MsUnitTest\SerializationControlTests.cs" region="Noninvasive Control Code" />
 				<para>To serialize or deserialize the data model, use the same function call as the invasive mode to the <codeEntityReference>T:fastJSON.JSON</codeEntityReference> class. And the output will be the same as the invasive mode example.</para>
 				<para>
-					With the <codeInline>SerializationManager</codeInline>, serialization can be controlled from external code. Issue 1 and Issue 2 is resolved. To solve Issue 3, we will use an alternating <codeInline>SerializationManager</codeInline>, which is discussed below.
+					With the <codeInline>SerializationManager</codeInline>, serialization can be controlled from external code. Issue 1 and Issue 2 is resolved. To solve Issue 3, conflictive serializations, we will use an alternating <codeInline>SerializationManager</codeInline>, which is discussed below.
 				</para>
 			</content>
 		</section>
 		<section address="Alteration">
 			<title>Alternating the SerializationManager</title>
 			<content>
-				<para>To demonstrate why custom attributes may conflic and how to solve the conflict with the alternation of <codeInline>SerializationManager</codeInline>, let's take a look at the following classes first. </para>
+				<para>To demonstrate why custom attributes may conflic and how to resolve the conflict with the alternation of <codeInline>SerializationManager</codeInline>, let's take a look at the following classes first. </para>
 				<code source="..\MsUnitTest\SerializationControlTests.cs" region="Alteration Demo Classes" />
 				<para>
 					The above code snippet has two classes. A <codeInline>Group</codeInline> class has a list containing multiple instances of <codeInline>Member</codeInline> class.
@@ -207,9 +207,9 @@
 ]}]]>
 				</code>
 				<para>
-					We can see that the <codeInline>"GroupID":1</codeInline> is repeated multiple times in each serialized <codeInline>Member</codeInline> instance.
+					We can see that the <codeInline>"GroupID":1</codeInline> is repeated multiple times in each serialized <codeInline>Member</codeInline> instance. Since all members belong to the group 1, which is already represented in <codeInline>"ID": 1</codeInline> and implied by the cascading structure of the JSON result, those <codeInline>"GroupID": 1</codeInline> fields could be omitted for conciseness.
 				</para>
-				<para>The requirements are: 1) The <codeInline>GroupID</codeInline> fields should be hidden when they are serialized within a <codeInline>Group</codeInline> instance to generate a compact, unredundant result. 2)The <codeInline>GroupID</codeInline> fields should be visible when they are individually serialized within the <codeInline>Member</codeInline> instance.</para>
+				<para>So we may hope that: 1) The <codeInline>GroupID</codeInline> fields should be hidden when they are serialized within a <codeInline>Group</codeInline> instance to generate a compact, unredundant result. 2) The <codeInline>GroupID</codeInline> fields should be visible when they are individually serialized within the <codeInline>Member</codeInline> instance.</para>
 				<code language="javascript">
 					<![CDATA[
 // the desired serialization result of a Group instance

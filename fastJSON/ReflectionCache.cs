@@ -9,6 +9,7 @@ namespace fastJSON
 	delegate void WriteJsonValue (JsonSerializer serializer, object value);
 	delegate object CreateObject ();
 	delegate object GenericSetter (object target, object value);
+	delegate void AddCollectionItem (object target, object value);
 	delegate object GenericGetter (object obj);
 
 	class ReflectionCache
@@ -23,6 +24,7 @@ namespace fastJSON
 		internal readonly ComplexType CommonType;
 		internal readonly WriteJsonValue ItemSerializer;
 		internal readonly RevertJsonValue ItemDeserializer;
+		internal readonly AddCollectionItem AppendItem;
 		#endregion
 
 		#region Object Serialization and Deserialization Info
@@ -83,6 +85,9 @@ namespace fastJSON
 			}
 			else if (JsonDataType == JsonDataType.List) {
 				ItemDeserializer = JsonDeserializer.GetReadJsonMethod (typeof(object));
+			}
+			if (typeof(IEnumerable).IsAssignableFrom (type)) {
+				AppendItem = Reflection.CreateDynamicMethod<AddCollectionItem> (Reflection.FindMethod (type, "Add", new Type[1] { null }));
 			}
 			if (controller != null) {
 				AlwaysDeserializable = controller.IsAlwaysDeserializable (type) || type.Namespace == typeof (JSON).Namespace;

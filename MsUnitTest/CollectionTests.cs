@@ -70,6 +70,14 @@ namespace MsUnitTest
 			public int b;
 			public DateTime? d;
 		}
+		public class HashSetClass
+		{
+			public HashSet<string> Strings { get; private set; }
+			public HashSet<baseclass> Classes;
+			public HashSetClass () {
+				Strings = new HashSet<string> ();
+			}
+		}
 		#endregion
 
 		#region Array Tests
@@ -520,7 +528,33 @@ namespace MsUnitTest
 			var o = JSON.ToObject<Hashtable> (s);
 			Assert.AreEqual (typeof (Hashtable), o.GetType ());
 			Assert.AreEqual (typeof (class1), o["dsds"].GetType ());
-		} 
+		}
+
+		[TestMethod]
+		public void HashSetTest () {
+			var d = new HashSetClass () {
+				Strings = { "a", "b", "c" },
+				Classes = new HashSet<baseclass> () {
+					new baseclass () { Name = "a" },
+					new class1 () { Name = "b", guid = Guid.NewGuid () }
+				}
+			};
+			var s = JSON.ToJSON (d, new JSONParameters () { ShowReadOnlyProperties = true });
+			Console.WriteLine (s);
+			var o = JSON.ToObject<HashSetClass> (s);
+			CollectionAssert.AreEqual (new List<string> (d.Strings), new List<string>(o.Strings));
+			bool a = false, b = false;
+			foreach (var item in o.Classes) {
+				if (item.Name == "a") {
+					a = true;
+				}
+				if (item.Name == "b" && item is class1) {
+					b = true;
+				}
+			}
+			Assert.IsTrue (a);
+			Assert.IsTrue (b);
+		}
 		#endregion
 
 	}

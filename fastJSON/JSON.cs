@@ -85,6 +85,13 @@ namespace fastJSON
 			if (obj == null)
 				return "null";
 
+			if (param == null) {
+				throw new ArgumentNullException ("param");
+			}
+			if (manager == null) {
+				throw new ArgumentNullException ("manager");
+			}
+
 			ReflectionCache c = manager.GetReflectionCache (obj.GetType ());
 
 			if (c.CommonType == ComplexType.Dictionary || c.CommonType == ComplexType.List) {
@@ -197,8 +204,13 @@ namespace fastJSON
 		/// <param name="input">The object to contain the result of the deserialization.</param>
 		/// <param name="json">The JSON representation string to be deserialized.</param>
 		/// <returns>The <paramref name="input" /> object containing deserialized properties and fields from the JSON string.</returns>
-		public static object FillObject(object input, string json)
-		{
+		public static object FillObject(object input, string json) {
+			if (json == null) {
+				throw new ArgumentNullException ("json");
+			}
+			if (input == null) {
+				throw new ArgumentNullException ("input");
+			}
 			var ht = new JsonParser(json).Decode() as JsonDict;
 			if (ht == null) return null;
 			return new JsonDeserializer(Parameters, Manager).ParseDictionary(ht, input.GetType(), input);

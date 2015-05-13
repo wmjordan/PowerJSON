@@ -191,6 +191,12 @@ namespace fastJSON
 		/// <para>If a class has its subclasses, the override will not be applied to its subclasses.</para>
 		/// </remarks>
 		public void Override (Type type, TypeOverride overrideInfo, bool purgeExisting) {
+			if (type == null) {
+				throw new ArgumentNullException ("type");
+			}
+			if (overrideInfo == null) {
+				throw new ArgumentNullException ("overrideInfo");
+			}
 			var c = purgeExisting ? new ReflectionCache (type, this) : GetReflectionCache (type);
 			if (overrideInfo.OverrideInterceptor) {
 				c.Interceptor = overrideInfo.Interceptor;
@@ -372,6 +378,12 @@ namespace fastJSON
 		/// <remarks>If the member has already gotten an <see cref="IJsonConverter"/>, the new <paramref name="converter"/> will replace it. If the new converter is null, existing converter will be removed from the type.</remarks>
 		/// <exception cref="MissingMemberException">No field or property matches <paramref name="memberName"/> in <paramref name="type"/>.</exception>
 		public void OverrideMemberConverter (Type type, string memberName, IJsonConverter converter) {
+			if (type == null) {
+				throw new ArgumentNullException ("type");
+			}
+			if (memberName == null) {
+				throw new ArgumentNullException ("memberName");
+			}
 			var c = GetReflectionCache (type);
 			string n = null;
 			var g = c.FindGetters (memberName);
@@ -402,6 +414,12 @@ namespace fastJSON
 		/// <param name="nameMapper">The Enum value mapper. The key of the dictionary is the original name of the enum value to be overridden, the value is the new serialized name to be specified to the value.</param>
 		/// <exception cref="InvalidOperationException"><paramref name="type"/> is not an Enum type.</exception>
 		public void OverrideEnumValueNames (Type type, IDictionary<string, string> nameMapper) {
+			if (type == null) {
+				throw new ArgumentNullException ("type");
+			}
+			if (nameMapper == null) {
+				throw new ArgumentNullException ("nameMapper");
+			}
 			var d = GetReflectionCache (type);
 			if (d.EnumNames == null) {
 				throw new InvalidOperationException (type.Name + " is not an Enum type.");

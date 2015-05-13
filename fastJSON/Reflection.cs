@@ -106,7 +106,7 @@ namespace fastJSON
 						continue;
 					}
 					var g = item.GetGenericTypeDefinition ();
-					if (typeof(IList<>).Equals (g)) {
+					if (typeof(IEnumerable<>).Equals (g)) {
 						return JsonDataType.List;
 					}
 					if (typeof(IDictionary<,>).Equals (g)) {
@@ -121,9 +121,6 @@ namespace fastJSON
 			if (typeof (IDictionary).IsAssignableFrom (type)) {
 				return JsonDataType.Dictionary;
 			}
-			if (typeof (IList).IsAssignableFrom (type)) {
-				return JsonDataType.List;
-			}
 			if (typeof (DataSet).IsAssignableFrom (type)) {
 				return JsonDataType.DataSet;
 			}
@@ -132,6 +129,9 @@ namespace fastJSON
 			}
 			if (typeof (NameValueCollection).IsAssignableFrom (type)) {
 				return JsonDataType.NameValue;
+			}
+			if (typeof (IEnumerable).IsAssignableFrom (type)) {
+				return JsonDataType.List;
 			}
 			return JsonDataType.Undefined;
 		}
@@ -437,6 +437,83 @@ namespace fastJSON
 			}
 			sd.Add (String.IsNullOrEmpty (tn.DefaultName) ? d.MemberName : tn.DefaultName, d);
 		}
+
+		// TODO: Support method that takes more than 1 arguments
+		internal static T CreateDynamicMethod<T> (MethodInfo method) where T : class {
+			if (method == null)
+				return null;
+
+			var type = method.ReflectedType;
+			var mp = method.GetParameters ();
+			var pt = mp[0].ParameterType;
+			var rt = method.ReturnType;
+
+			var arguments = new Type[2];
+			arguments[0] = arguments[1] = typeof (object);
+
+			var setter = new DynamicMethod (method.Name, null, arguments, true);
+			var il = setter.GetILGenerator ();
+
+			if (!type.IsClass) // structs
+			{
+				var lv = il.DeclareLocal (type);
+				il.Emit (OpCodes.Ldarg_0);
+				il.Emit (OpCodes.Unbox_Any, type);
+				il.Emit (OpCodes.Stloc_0);
+				il.Emit (OpCodes.Ldloca_S, lv);
+				il.Emit (OpCodes.Ldarg_1);
+				if (pt.IsClass)
+					il.Emit (OpCodes.Castclass, pt);
+				else
+					il.Emit (OpCodes.Unbox_Any, pt);
+				il.EmitCall (OpCodes.Call, method, null);
+			}
+			else {
+				il.Emit (OpCodes.Ldarg_0);
+				il.Emit (OpCodes.Castclass, type);
+				il.Emit (OpCodes.Ldarg_1);
+				if (pt.IsClass)
+					il.Emit (OpCodes.Castclass, pt);
+				else
+					il.Emit (OpCodes.Unbox_Any, pt);
+				il.EmitCall (method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method, null);
+			}
+
+			if (rt.Equals (typeof (void)) == false) {
+				il.Emit (OpCodes.Pop);
+			}
+			il.Emit (OpCodes.Ret);
+
+			return setter.CreateDelegate (typeof (T)) as T;
+		}
+
+		internal static MethodInfo FindMethod (Type type, string methodName, Type[] argumentTypes) {
+			int ac = argumentTypes != null ? argumentTypes.Length : -1;
+			foreach (var item in type.GetMethods ()) {
+				if (item.Name != methodName || item.IsPublic == false || item.IsStatic) {
+					continue;
+				}
+				if (ac == -1) {
+					return item;
+				}
+				var p = item.GetParameters ();
+				if (p.Length != ac) {
+					continue;
+				}
+				bool m = true;
+				for (int i = ac - 1; i >= 0; i--) {
+					if (argumentTypes[i] != null && p[i].ParameterType.Equals (argumentTypes[i]) == false) {
+						m = false;
+						break;
+					}
+				}
+				if (m) {
+					return item;
+				}
+			}
+			return null;
+		}
+
 		#endregion
 
 		internal static Dictionary<string, Enum> GetEnumValues (Type type, IReflectionController controller, SerializationManager manager) {

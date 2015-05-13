@@ -353,7 +353,7 @@ namespace fastJSON
     /// </summary>
     /// <preliminary />
     [Serializable]
-    public class SerializedNames : Dictionary<Type, string>
+    public sealed class SerializedNames : Dictionary<Type, string>
 	{
 		/// <summary>
 		/// Gets the default name for the serialized member.
