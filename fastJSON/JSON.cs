@@ -94,12 +94,12 @@ namespace fastJSON
 
 			ReflectionCache c = manager.GetReflectionCache (obj.GetType ());
 
-			if (c.CommonType == ComplexType.Dictionary || c.CommonType == ComplexType.List) {
-				param.UsingGlobalTypes = false;
-			}
-
-			// FEATURE : enable extensions when you can deserialize anon types
-			if (param.EnableAnonymousTypes) { param.UseExtensions = false; param.UsingGlobalTypes = false; }
+			// The following lines were removed for they have been enforced in JsonSerializer
+			//if (c.CommonType == ComplexType.Dictionary || c.CommonType == ComplexType.List) {
+			//	param.UsingGlobalTypes = false;
+			//}
+			// -FEATURE : enable extensions when you can deserialize anon types
+			//if (param.EnableAnonymousTypes) { param.UseExtensions = false; param.UsingGlobalTypes = false; }
 			return new JsonSerializer(param, manager).ConvertToJSON(obj, c);
 		}
 
@@ -213,7 +213,7 @@ namespace fastJSON
 			}
 			var ht = new JsonParser(json).Decode() as JsonDict;
 			if (ht == null) return null;
-			return new JsonDeserializer(Parameters, Manager).ParseDictionary(ht, input.GetType(), input);
+			return new JsonDeserializer(Parameters, Manager).ParseDictionary(ht, Manager.GetReflectionCache (input.GetType()), input);
 		}
 
 		/// <summary>

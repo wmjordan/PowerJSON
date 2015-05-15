@@ -17,10 +17,10 @@ namespace fastJSON
 
 		readonly SafeDictionary<Type, ReflectionCache> _reflections = new SafeDictionary<Type, ReflectionCache> ();
 		readonly IReflectionController _controller;
-		internal readonly SafeDictionary<Enum, string> EnumValueCache = new SafeDictionary<Enum, string> ();
+		readonly SafeDictionary<Enum, string> _EnumValueCache = new SafeDictionary<Enum, string> ();
 		// JSON custom
-		internal readonly SafeDictionary<Type, Serialize> _customSerializer = new SafeDictionary<Type, Serialize> ();
-		internal readonly SafeDictionary<Type, Deserialize> _customDeserializer = new SafeDictionary<Type, Deserialize> ();
+		readonly SafeDictionary<Type, Serialize> _customSerializer = new SafeDictionary<Type, Serialize> ();
+		readonly SafeDictionary<Type, Deserialize> _customDeserializer = new SafeDictionary<Type, Deserialize> ();
 
 		/// <summary>
 		/// Returns the <see cref="IReflectionController"/> currently used by the <see cref="SerializationManager"/>.
@@ -95,17 +95,46 @@ namespace fastJSON
 			if (_reflections.TryGetValue (type, out c)) {
 				return c;
 			}
-			return _reflections[type] = new ReflectionCache (type, this);
+			return CreateReflectionCacheAndRegister (type);
+		}
+
+		private ReflectionCache CreateReflectionCacheAndRegister (Type type) {
+			var c = _reflections[type] = new ReflectionCache (type, this);
+			if (type.IsClass || type.IsValueType) {
+				c.Getters = Reflection.GetGetters (type, _controller);
+				c.Properties = Reflection.GetProperties (type, _controller, this);
+			}
+			return c;
+		}
+
+		#region Enum Cache
+		internal Dictionary<string, Enum> GetEnumValues (Type type, IReflectionController controller) {
+			var ns = Enum.GetNames (type);
+			var vs = Enum.GetValues (type);
+			var vm = new Dictionary<string, Enum> (ns.Length);
+			var vc = _EnumValueCache;
+			for (int i = ns.Length - 1; i >= 0; i--) {
+				var en = ns[i];
+				var ev = (Enum)vs.GetValue (i);
+				var m = type.GetMember (en)[0];
+				var sn = controller.GetEnumValueName (m);
+				if (String.IsNullOrEmpty (sn) == false) {
+					en = sn;
+				}
+				vc.Add (ev, en);
+				vm.Add (en, ev);
+			}
+			return vm;
 		}
 
 		internal string GetEnumName (Enum value) {
 			string t;
-			if (EnumValueCache.TryGetValue (value, out t)) {
+			if (_EnumValueCache.TryGetValue (value, out t)) {
 				return t;
 			}
 			var et = value.GetType ();
 			var c = GetReflectionCache (et);
-			if (EnumValueCache.TryGetValue (value, out t)) {
+			if (_EnumValueCache.TryGetValue (value, out t)) {
 				return t;
 			}
 			if (c.IsFlaggedEnum) {
@@ -124,7 +153,7 @@ namespace fastJSON
 					}
 					if ((iv & ev) == ev) {
 						iv -= ev;
-						sl.Add (EnumValueCache[(Enum)Enum.ToObject (et, ev)]);
+						sl.Add (_EnumValueCache[(Enum)Enum.ToObject (et, ev)]);
 					}
 				}
 				if (iv != 0) {
@@ -132,7 +161,7 @@ namespace fastJSON
 				}
 				sl.Reverse ();
 				t = String.Join (",", sl.ToArray ());
-				EnumValueCache.Add (value, t);
+				_EnumValueCache.Add (value, t);
 				GetReflectionCache (et).EnumNames[t] = value;
 			}
 			return t;
@@ -157,6 +186,7 @@ namespace fastJSON
 			}
 			throw new KeyNotFoundException ("Key \"" + name + "\" not found for type " + type.FullName);
 		}
+		#endregion
 
 		#region Reflection Overrides
 		/// <summary>
@@ -197,7 +227,7 @@ namespace fastJSON
 			if (overrideInfo == null) {
 				throw new ArgumentNullException ("overrideInfo");
 			}
-			var c = purgeExisting ? new ReflectionCache (type, this) : GetReflectionCache (type);
+			var c = purgeExisting ? CreateReflectionCacheAndRegister (type) : GetReflectionCache (type);
 			if (overrideInfo.OverrideInterceptor) {
 				c.Interceptor = overrideInfo.Interceptor;
 			}
@@ -219,15 +249,15 @@ namespace fastJSON
 				}
 
 				OverrideGetters (g, mo);
-				OverrideMyPropInfo (s, mo, g);
+				OverridePropInfo (s, mo, g);
 			}
 			if (purgeExisting) {
 				_reflections[type] = c;
 			}
 		}
 
-		private void OverrideMyPropInfo (Dictionary<string, myPropInfo> s, MemberOverride mo, Getters g) {
-			myPropInfo mp = null;
+		private void OverridePropInfo (Dictionary<string, JsonPropertyInfo> s, MemberOverride mo, Getters g) {
+			JsonPropertyInfo mp = null;
 			if (mo.OverrideTypedNames) {
 				// remove previous polymorphic deserialization info
 				var rt = new List<string> ();
@@ -250,14 +280,15 @@ namespace fastJSON
 					foreach (var item in mo.TypedNames) {
 						var t = item.Key;
 						if (g.MemberType.IsAssignableFrom (t) == false) {
-							throw new InvalidCastException ("The override type (" + t.FullName + ") does not derive from the member type (" + g.MemberType.FullName + ")");
+							throw new InvalidCastException ("The type (" + t.FullName + ") does not derive from the member type (" + g.MemberType.FullName + ")");
 						}
 						var n = item.Value;
-						var p = new myPropInfo (t, g.MemberName, IsTypeRegistered (t));
+						var p = new JsonPropertyInfo (t, g.MemberName, IsTypeRegistered (t));
 						p.Getter = mp.Getter;
 						p.Setter = mp.Setter;
 						p.CanWrite = mp.CanWrite;
-						myPropInfo tp;
+						p.MemberTypeReflection = GetReflectionCache (t);
+						JsonPropertyInfo tp;
 						if (s.TryGetValue (n, out tp) && Equals (tp.MemberType, g.MemberType)) {
 							s[n] = p;
 						}
@@ -295,9 +326,10 @@ namespace fastJSON
 			if (mo.Serializable != TriState.Default) {
 				getter.Serializable = mo.Serializable;
 			}
-			if (mo.OverrideDefaultValue) {
-				getter.HasDefaultValue = true;
-				getter.DefaultValue = mo.DefaultValue;
+			if (mo._NonSerializedValues != null) {
+				getter.HasNonSerializedValue = true;
+				getter.NonSerializedValues = new object[mo.NonSerializedValues.Count];
+				mo.NonSerializedValues.CopyTo (getter.NonSerializedValues, 0);
 			}
 			if (mo.OverrideTypedNames) {
 				getter.TypedNames = mo.TypedNames;
@@ -392,7 +424,7 @@ namespace fastJSON
 			}
 			g.Converter = converter;
 			n = g.SerializedName;
-			myPropInfo p;
+			JsonPropertyInfo p;
 			if (c.Properties.TryGetValue (n, out p)) {
 				p.Converter = converter;
 			}
@@ -425,15 +457,15 @@ namespace fastJSON
 				throw new InvalidOperationException (type.Name + " is not an Enum type.");
 			}
 			foreach (var item in d.EnumNames) {
-				EnumValueCache.Remove (item.Value);
+				_EnumValueCache.Remove (item.Value);
 			}
 			d.EnumNames.Clear ();
-			foreach (var item in Reflection.GetEnumValues (type, new RemapEnumValueController (nameMapper), this)) {
+			foreach (var item in GetEnumValues (type, new RemapEnumValueController (nameMapper))) {
 				d.EnumNames.Add (item.Key, item.Value);
 			}
 		}
 
-		class RemapEnumValueController : DefaultReflectionController
+		sealed class RemapEnumValueController : DefaultReflectionController
 		{
 			IDictionary<string, string> _mapper;
 			public RemapEnumValueController (IDictionary<string,string> mapper) {
@@ -454,7 +486,7 @@ namespace fastJSON
 	/// </summary>
 	/// <seealso cref="SerializationManager"/>
 	/// <preliminary />
-	public class TypeOverride
+	public sealed class TypeOverride
 	{
 		/// <summary>
 		/// Specifies whether the type is deserializable disregarding its visibility.
@@ -493,7 +525,7 @@ namespace fastJSON
 	/// <seealso cref="SerializationManager"/>
 	/// <seealso cref="TypeOverride"/>
 	/// <preliminary />
-	public class MemberOverride
+	public sealed class MemberOverride
 	{
 		/// <summary>
 		/// Gets the name of the overridden member.
@@ -536,18 +568,16 @@ namespace fastJSON
 		/// </summary>
 		public TriState Deserializable { get; set; }
 
-		internal bool OverrideDefaultValue;
-		object _DefaultValue;
+		internal List<object> _NonSerializedValues;
 		/// <summary>
-		/// Gets or sets the default value of the member. When the value of the member equals the default value, it will not be serialized.
+		/// Gets the values of the member that should not be serialized.
 		/// </summary>
-		public object DefaultValue {
+		public IList<object> NonSerializedValues {
 			get {
-				return _DefaultValue;
-			}
-			set {
-				_DefaultValue = value;
-				OverrideDefaultValue = true;
+				if (_NonSerializedValues == null) {
+					_NonSerializedValues = new List<object> ();
+				}
+				return _NonSerializedValues;
 			}
 		}
 
@@ -577,7 +607,6 @@ namespace fastJSON
 		/// Creates an instance of <see cref="MemberOverride"/>. The override info can be set via the properties.
 		/// </summary>
 		/// <param name="memberName">The name of the member.</param>
-		/// <remarks>The member name is case sensitive during serialization, and case-insensitive during deserialization.</remarks>
 		public MemberOverride (string memberName) {
 			MemberName = memberName;
 		}
@@ -586,7 +615,6 @@ namespace fastJSON
 		/// </summary>
 		/// <param name="memberName">The name of the member.</param>
 		/// <param name="serializable">How the member is serialized.</param>
-		/// <remarks>The member name is case sensitive during serialization, and case-insensitive during deserialization.</remarks>
 		public MemberOverride (string memberName, TriState serializable) : this(memberName) {
 			Serializable = serializable;
 		}
@@ -595,9 +623,6 @@ namespace fastJSON
 		/// </summary>
 		/// <param name="memberName">The name of the member.</param>
 		/// <param name="converter">The converter.</param>
-		/// <remarks>
-		/// <para>The member name is case sensitive during serialization, and case-insensitive during deserialization.</para>
-		/// </remarks>
 		public MemberOverride (string memberName, IJsonConverter converter) : this (memberName) {
 			Converter = converter;
 		}
@@ -606,9 +631,6 @@ namespace fastJSON
 		/// </summary>
 		/// <param name="memberName">The name of the member.</param>
 		/// <param name="serializedName">The serialized name of the member.</param>
-		/// <remarks>
-		/// <para>The member name is case sensitive during serialization, and case-insensitive during deserialization.</para>
-		/// </remarks>
 		public MemberOverride (string memberName, string serializedName) : this (memberName) {
 			SerializedName = serializedName;
 		}

@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Runtime.Serialization;
+using System.Security.Permissions;
 
 namespace fastJSON
 {
@@ -38,7 +40,7 @@ namespace fastJSON
 	/// An exception thrown when parser encounters malformed JSON string.
 	/// </summary>
 	[Serializable]
-	public class JsonParseException : JsonSerializationException
+	public sealed class JsonParserException : JsonSerializationException, ISerializable
 	{
 		/// <summary>
 		/// Gets the index where parse error occurs.
@@ -49,11 +51,20 @@ namespace fastJSON
 		/// </summary>
 		public string ContextText { get; private set; }
 
-		internal JsonParseException (string reason, int index, string context) : base (
+		internal JsonParserException (string reason, int index, string context) : base (
 			String.Concat (reason, index, ": ", context)
 			) {
 			Position = index;
 			ContextText = context;
+		}
+
+		[SecurityPermission (SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.SerializationFormatter)]
+		void ISerializable.GetObjectData (SerializationInfo info, StreamingContext context) {
+			if (info == null)
+				throw new ArgumentNullException ("info");
+			info.AddValue ("Position", Position);
+			info.AddValue ("ContextText", ContextText);
+			GetObjectData (info, context);
 		}
 	}
 }

@@ -13,11 +13,11 @@ namespace fastJSON
 		// Singleton pattern 4 from : http://csharpindepth.com/articles/general/singleton.aspx
 		static readonly Reflection instance = new Reflection();
 		static readonly SafeDictionary<Type, JsonDataType> _jsonTypeCache = InitBuiltInTypes ();
-		static readonly Dictionary<Type, OpCode> _revertTypeCodes = InitRevertTypeCodes ();
+		// TODO: Commented for invisible benefit
 		// Explicit static constructor to tell C# compiler
 		// not to mark type as beforefieldinit
-		static Reflection () {
-		}
+		//static Reflection () {
+		//}
 		Reflection () {
 		}
 		public static Reflection Instance { get { return instance; } }
@@ -55,22 +55,6 @@ namespace fastJSON
 				{ typeof(decimal), JsonDataType.Primitive }
 			};
 			return new SafeDictionary<Type, JsonDataType> (d);
-		}
-		static Dictionary<Type, OpCode> InitRevertTypeCodes () {
-			var d = new Dictionary<Type, OpCode> {
-				{ typeof(byte), OpCodes.Conv_U1  },
-				{ typeof(sbyte), OpCodes.Conv_I1  },
-				{ typeof(short), OpCodes.Conv_I2  },
-				{ typeof(ushort), OpCodes.Conv_U2  },
-				{ typeof(int), OpCodes.Conv_I4  },
-				{ typeof(uint), OpCodes.Conv_U4  },
-				{ typeof(long), OpCodes.Conv_I8  },
-				{ typeof(ulong), OpCodes.Conv_U8  },
-				{ typeof(char), OpCodes.Conv_U2  },
-				{ typeof(float), OpCodes.Conv_R4 },
-				{ typeof(double), OpCodes.Conv_R8 }
-			};
-			return d;
 		}
         internal static JsonDataType GetJsonDataType (Type type) {
 			JsonDataType t;
@@ -175,12 +159,12 @@ namespace fastJSON
 				if (m.GetIndexParameters ().Length > 0) {// Property is an indexer
 					continue;
 				}
-				AddGetter (getters, m, CreateGetProperty (type, m), controller);
+				AddGetter (getters, m, CreateGetProperty (m), controller);
 			}
 
 			foreach (var m in fl) {
 				if (m.IsLiteral == false) {
-					AddGetter (getters, m, CreateGetField (type, m), controller);
+					AddGetter (getters, m, CreateGetField (m), controller);
 				}
 			}
 
@@ -195,13 +179,17 @@ namespace fastJSON
 
 			if (controller != null) {
 				g.Serializable = controller.IsMemberSerializable (memberInfo, g);
-				object dv;
 				g.Converter = controller.GetMemberConverter (memberInfo);
 				g.ItemConverter = controller.GetMemberItemConverter (memberInfo);
-				g.HasDefaultValue = controller.GetDefaultValue (memberInfo, out dv);
-				if (g.HasDefaultValue) {
-					g.DefaultValue = dv;
+				var dv = controller.GetNonSerializedValues (memberInfo);
+				if (dv != null) {
+					var v = new List<object> ();
+					foreach (var item in dv) {
+						v.Add (item);
+					}
+					g.NonSerializedValues = v.ToArray ();
 				}
+				g.HasNonSerializedValue = g.NonSerializedValues != null;
 				var tn = controller.GetSerializedNames (memberInfo);
 				if (tn != null) {
 					if (String.IsNullOrEmpty (tn.DefaultName) == false && tn.DefaultName != g.SerializedName) {
@@ -217,7 +205,8 @@ namespace fastJSON
 			getters.Add (n, g);
 		}
 
-		internal static GenericGetter CreateGetField (Type type, FieldInfo fieldInfo) {
+		internal static GenericGetter CreateGetField (FieldInfo fieldInfo) {
+			var type = fieldInfo.DeclaringType;
 			var dynamicGet = new DynamicMethod (fieldInfo.Name, typeof(object), new Type[] { typeof(object) }, type, true);
 
 			var il = dynamicGet.GetILGenerator ();
@@ -245,11 +234,13 @@ namespace fastJSON
 			return (GenericGetter)dynamicGet.CreateDelegate (typeof(GenericGetter));
 		}
 
-		internal static GenericGetter CreateGetProperty (Type type, PropertyInfo propertyInfo) {
+		internal static GenericGetter CreateGetProperty (PropertyInfo propertyInfo) {
 			var getMethod = propertyInfo.GetGetMethod ();
 			if (getMethod == null)
 				return null;
 
+			var type = propertyInfo.DeclaringType;
+			var pt = propertyInfo.PropertyType;
 			var getter = new DynamicMethod (getMethod.Name, typeof(object), new Type[] { typeof(object) }, type, true);
 
 			var il = getter.GetILGenerator ();
@@ -262,8 +253,8 @@ namespace fastJSON
 				il.Emit (OpCodes.Stloc_0);
 				il.Emit (OpCodes.Ldloca_S, lv);
 				il.EmitCall (OpCodes.Call, getMethod, null);
-				if (propertyInfo.PropertyType.IsValueType)
-					il.Emit (OpCodes.Box, propertyInfo.PropertyType);
+				if (pt.IsValueType)
+					il.Emit (OpCodes.Box, pt);
 			}
 			else {
 				if (getMethod.IsStatic) {
@@ -271,11 +262,11 @@ namespace fastJSON
 				}
 				else {
 					il.Emit (OpCodes.Ldarg_0);
-					il.Emit (OpCodes.Castclass, propertyInfo.DeclaringType);
+					il.Emit (OpCodes.Castclass, type);
 					il.EmitCall (OpCodes.Callvirt, getMethod, null);
 				}
-				if (propertyInfo.PropertyType.IsValueType)
-					il.Emit (OpCodes.Box, propertyInfo.PropertyType);
+				if (pt.IsValueType)
+					il.Emit (OpCodes.Box, pt);
 			}
 
 			il.Emit (OpCodes.Ret);
@@ -283,7 +274,8 @@ namespace fastJSON
 			return (GenericGetter)getter.CreateDelegate (typeof(GenericGetter));
 		}
 
-		internal static GenericSetter CreateSetField (Type type, FieldInfo fieldInfo) {
+		internal static GenericSetter CreateSetField (FieldInfo fieldInfo) {
+			var type = fieldInfo.DeclaringType;
 			var arguments = new Type[2];
 			arguments[0] = arguments[1] = typeof(object);
 
@@ -320,12 +312,14 @@ namespace fastJSON
 			return (GenericSetter)dynamicSet.CreateDelegate (typeof(GenericSetter));
 		}
 
-		internal static GenericSetter CreateSetProperty (Type type, PropertyInfo propertyInfo) {
+		internal static GenericSetter CreateSetProperty (PropertyInfo propertyInfo) {
 			var setMethod = propertyInfo.GetSetMethod ();
 			if (setMethod == null)
 				return null;
 
-			var arguments = new Type[2];
+			var type = propertyInfo.DeclaringType;
+			var pt = propertyInfo.PropertyType;
+            var arguments = new Type[2];
 			arguments[0] = arguments[1] = typeof(object);
 
 			var setter = new DynamicMethod (setMethod.Name, typeof(object), arguments, true);
@@ -339,10 +333,10 @@ namespace fastJSON
 				il.Emit (OpCodes.Stloc_0);
 				il.Emit (OpCodes.Ldloca_S, lv);
 				il.Emit (OpCodes.Ldarg_1);
-				if (propertyInfo.PropertyType.IsClass)
-					il.Emit (OpCodes.Castclass, propertyInfo.PropertyType);
+				if (pt.IsClass)
+					il.Emit (OpCodes.Castclass, pt);
 				else
-					il.Emit (OpCodes.Unbox_Any, propertyInfo.PropertyType);
+					il.Emit (OpCodes.Unbox_Any, pt);
 				il.EmitCall (OpCodes.Call, setMethod, null);
 				il.Emit (OpCodes.Ldloc_0);
 				il.Emit (OpCodes.Box, type);
@@ -350,20 +344,20 @@ namespace fastJSON
 			else {
 				if (setMethod.IsStatic) {
 					il.Emit (OpCodes.Ldarg_1);
-					if (propertyInfo.PropertyType.IsClass)
-						il.Emit (OpCodes.Castclass, propertyInfo.PropertyType);
+					if (pt.IsClass)
+						il.Emit (OpCodes.Castclass, pt);
 					else
-						il.Emit (OpCodes.Unbox_Any, propertyInfo.PropertyType);
+						il.Emit (OpCodes.Unbox_Any, pt);
 					il.EmitCall (OpCodes.Call, setMethod, null);
 				}
 				else {
 					il.Emit (OpCodes.Ldarg_0);
-					il.Emit (OpCodes.Castclass, propertyInfo.DeclaringType);
+					il.Emit (OpCodes.Castclass, type);
 					il.Emit (OpCodes.Ldarg_1);
-					if (propertyInfo.PropertyType.IsClass)
-						il.Emit (OpCodes.Castclass, propertyInfo.PropertyType);
+					if (pt.IsClass)
+						il.Emit (OpCodes.Castclass, pt);
 					else
-						il.Emit (OpCodes.Unbox_Any, propertyInfo.PropertyType);
+						il.Emit (OpCodes.Unbox_Any, pt);
 					il.EmitCall (OpCodes.Callvirt, setMethod, null);
 				}
 				il.Emit (OpCodes.Ldarg_0);
@@ -374,19 +368,19 @@ namespace fastJSON
 			return (GenericSetter)setter.CreateDelegate (typeof(GenericSetter));
 		}
 
-		internal static Dictionary<string, myPropInfo> GetProperties (Type type, IReflectionController controller, SerializationManager manager) {
+		internal static Dictionary<string, JsonPropertyInfo> GetProperties (Type type, IReflectionController controller, SerializationManager manager) {
 			var custType = manager.IsTypeRegistered (type);
-			var sd = new Dictionary<string, myPropInfo> (StringComparer.OrdinalIgnoreCase);
+			var sd = new Dictionary<string, JsonPropertyInfo> (StringComparer.OrdinalIgnoreCase);
 			var pr = type.GetProperties (BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
 			foreach (PropertyInfo p in pr) {
 				if (p.GetIndexParameters ().Length > 0) {// Property is an indexer
 					continue;
 				}
-				var d = new myPropInfo (p.PropertyType, p.Name, custType);
-				d.Setter = CreateSetProperty (type, p);
+				var d = new JsonPropertyInfo (p.PropertyType, p.Name, custType);
+				d.Setter = CreateSetProperty (p);
 				if (d.Setter != null)
 					d.CanWrite = true;
-				d.Getter = CreateGetProperty (type, p);
+				d.Getter = CreateGetProperty (p);
 				AddMyPropInfo (sd, d, p, controller, manager);
 			}
 			var fi = type.GetFields (BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
@@ -394,20 +388,21 @@ namespace fastJSON
 				if (f.IsLiteral || f.IsInitOnly) {
 					continue;
 				}
-				var d = new myPropInfo (f.FieldType, f.Name, custType);
+				var d = new JsonPropertyInfo (f.FieldType, f.Name, custType);
 				//if (f.IsInitOnly == false) {
-				d.Setter = CreateSetField (type, f);
+				d.Setter = CreateSetField (f);
 				if (d.Setter != null)
 					d.CanWrite = true;
 				//}
-				d.Getter = CreateGetField (type, f);
+				d.Getter = CreateGetField (f);
 				AddMyPropInfo (sd, d, f, controller, manager);
 			}
 
 			return sd;
 		}
 
-		internal static void AddMyPropInfo (Dictionary<string, myPropInfo> sd, myPropInfo d, MemberInfo member, IReflectionController controller, SerializationManager manager) {
+		internal static void AddMyPropInfo (Dictionary<string, JsonPropertyInfo> sd, JsonPropertyInfo d, MemberInfo member, IReflectionController controller, SerializationManager manager) {
+			d.MemberTypeReflection = manager.GetReflectionCache (d.MemberType);
 			if (controller == null) {
 				sd.Add (d.MemberName, d);
 				return;
@@ -427,12 +422,13 @@ namespace fastJSON
 			foreach (var item in tn) {
 				var st = item.Key;
 				var sn = item.Value;
-				var dt = new myPropInfo (st, member.Name, manager.IsTypeRegistered (st));
+				var dt = new JsonPropertyInfo (st, member.Name, manager.IsTypeRegistered (st));
 				dt.Getter = d.Getter;
 				dt.Setter = d.Setter;
 				dt.Converter = d.Converter;
 				dt.ItemConverter = d.ItemConverter;
 				dt.CanWrite = d.CanWrite;
+				dt.MemberTypeReflection = manager.GetReflectionCache (st);
 				sd.Add (sn, dt);
 			}
 			sd.Add (String.IsNullOrEmpty (tn.DefaultName) ? d.MemberName : tn.DefaultName, d);
@@ -466,7 +462,7 @@ namespace fastJSON
 					il.Emit (OpCodes.Castclass, pt);
 				else
 					il.Emit (OpCodes.Unbox_Any, pt);
-				il.EmitCall (OpCodes.Call, method, null);
+				il.EmitCall (method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method, null);
 			}
 			else {
 				il.Emit (OpCodes.Ldarg_0);
@@ -515,25 +511,6 @@ namespace fastJSON
 		}
 
 		#endregion
-
-		internal static Dictionary<string, Enum> GetEnumValues (Type type, IReflectionController controller, SerializationManager manager) {
-			var ns = Enum.GetNames (type);
-			var vs = Enum.GetValues (type);
-			var vm = new Dictionary<string, Enum> (ns.Length);
-			var vc = manager.EnumValueCache;
-			for (int i = ns.Length - 1; i >= 0; i--) {
-				var en = ns[i];
-				var ev = (Enum)vs.GetValue (i);
-				var m = type.GetMember (en)[0];
-				var sn = controller.GetEnumValueName (m);
-				if (String.IsNullOrEmpty (sn) == false) {
-					en = sn;
-				}
-				vc.Add (ev, en);
-				vm.Add (en, ev);
-			}
-			return vm;
-		}
 
 		internal Type GetTypeFromCache(string typename)
 		{

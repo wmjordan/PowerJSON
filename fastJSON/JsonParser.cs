@@ -86,7 +86,7 @@ namespace fastJSON
                             // :
                             if (NextToken() != Token.Colon)
                             {
-								throw new JsonParseException ("Expected colon at index ", _index, GetContextText ());
+								throw new JsonParserException ("Expected colon at index ", _index, GetContextText ());
                             }
 
                             // value
@@ -175,7 +175,7 @@ namespace fastJSON
                     return null;
             }
 
-			throw new JsonParseException ("Unrecognized token at index ", _index, GetContextText ());
+			throw new JsonParserException ("Unrecognized token at index ", _index, GetContextText ());
         }
 
         private string ParseString()
@@ -266,7 +266,7 @@ namespace fastJSON
                 }
             }
 
-			throw new JsonParseException ("Unexpectedly reached end of string", _json.Length, GetContextText ());
+			throw new JsonParserException ("Unexpectedly reached end of string", _json.Length, GetContextText ());
         }
 
 		private static int ParseSingleChar (char c1)
@@ -378,7 +378,7 @@ namespace fastJSON
 
             if (_index == _json.Length)
             {
-				throw new JsonParseException ("Reached end of string unexpectedly", _json.Length, GetContextText ());
+				throw new JsonParserException ("Reached end of string unexpectedly", _json.Length, GetContextText ());
             }
 
             c = _json[_index];
@@ -420,7 +420,7 @@ namespace fastJSON
 					}
 					break;
 			}
-			throw new JsonParseException ("Could not find token at index ", --_index, GetContextText ());
+			throw new JsonParserException ("Could not find token at index ", --_index, GetContextText ());
 		}
     }
 

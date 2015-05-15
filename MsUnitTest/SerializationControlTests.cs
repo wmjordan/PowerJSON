@@ -84,8 +84,12 @@ namespace MsUnitTest
 	{
 		public int ID { get; set; }
 		public string Name { get; set; }
-		public List<Member> Members { get; private set; } = new List<Member>();
+		public List<Member> Members { get; private set; }
+		public Group () {
+			Members = new List<Member> ();
+		}
 	}
+
 	public class Member
 	{
 		public int GroupID { get; set; }
@@ -155,8 +159,8 @@ namespace MsUnitTest
 					// assigns the serialized name "prop" to MyProperty property
 					new MemberOverride ("MyProperty", "prop"),
 					new MemberOverride ("MyEnumProperty", "enum"),
-					// assigns a default value to the Number property
-					new MemberOverride ("Number") { DefaultValue = 0 },
+					// assigns a non-serialized value to the Number property
+					new MemberOverride ("Number") { NonSerializedValues = { 0 } },
 					// assigns default serialized name and typed serialized name
 					new MemberOverride ("Identifier", "variant") {
 						TypedNames = {

@@ -258,15 +258,15 @@ namespace fastJSON.BonusPack
 		/// Gets a <see cref="char"/> array at the specific index.
 		/// </summary>
 		/// <param name="i">The index of the field.</param>
-		/// <param name="fieldOffset">The field offset.</param>
+		/// <param name="fieldoffset">The field offset.</param>
 		/// <param name="buffer">The buffer.</param>
 		/// <param name="bufferoffset">The buffer offset.</param>
 		/// <param name="length">The length to read.</param>
 		/// <returns>The number of bytes copied into the buffer.</returns>
-		public long GetChars (int i, long fieldOffset, char[] buffer, int bufferoffset, int length) {
+		public long GetChars (int i, long fieldoffset, char[] buffer, int bufferoffset, int length) {
 			string s = GetString (i);
-			int chars = Math.Min (length, s.Length - (int)fieldOffset);
-			s.CopyTo ((int)fieldOffset, buffer, bufferoffset, chars);
+			int chars = Math.Min (length, s.Length - (int)fieldoffset);
+			s.CopyTo ((int)fieldoffset, buffer, bufferoffset, chars);
 			return chars;
 		}
 

@@ -1,6 +1,9 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.Serialization;
+using System.Security.Permissions;
 
 namespace fastJSON
 {
@@ -144,19 +147,16 @@ namespace fastJSON
 		}
 
 		/// <summary>
-		/// Gets the default value for a field or a property. When the value of the member matches the default value, it will not be serialized. The return value of this method indicates whether the default value should be used. The value can be set via <see cref="System.ComponentModel.DefaultValueAttribute"/>.
+		/// This method returns a series of values that will not be serialized for a field or a property. When the value of the member matches those values, it will not be serialized. If all values can be serialized, null should be returned. The value can be set via <see cref="System.ComponentModel.DefaultValueAttribute"/>.
 		/// </summary>
 		/// <param name="member">The <see cref="MemberInfo"/> of the field or property.</param>
-		/// <param name="defaultValue">The default value of the member.</param>
-		/// <returns>Whether the member has a default value.</returns>
-		public virtual bool GetDefaultValue (MemberInfo member, out object defaultValue) {
+		/// <returns>The values which are not serialized for <paramref name="member"/>.</returns>
+		public virtual IEnumerable GetNonSerializedValues (MemberInfo member) {
 			var a = AttributeHelper.GetAttribute<System.ComponentModel.DefaultValueAttribute> (member, true);
 			if (a != null) {
-				defaultValue = a.Value;
-				return true;
+				return new object[] { a.Value };
 			}
-			defaultValue = null;
-			return false;
+			return null;
 		}
 
 		/// <summary>
@@ -244,12 +244,11 @@ namespace fastJSON
 		public virtual SerializedNames GetSerializedNames (MemberInfo member) { return null; }
 
 		/// <summary>
-		/// This method returns a default value for a field or a property. When the value of the member matches the default value, it will not be serialized. The return value of this method indicates whether the default value should be used.
+		/// This method returns a series of values that will not be serialized for a field or a property. When the value of the member matches those values, it will not be serialized. If all values can be serialized, null should be returned.
 		/// </summary>
 		/// <param name="member">The <see cref="MemberInfo"/> of the field or property.</param>
-		/// <param name="defaultValue">The default value of the member.</param>
-		/// <returns>Whether the member has a default value.</returns>
-		public virtual bool GetDefaultValue (MemberInfo member, out object defaultValue) { defaultValue = null; return false; }
+		/// <returns>The values which are not serialized for <paramref name="member"/>.</returns>
+		public virtual IEnumerable GetNonSerializedValues (MemberInfo member) { return null; }
 
 		/// <summary>
 		/// This method returns the <see cref="IJsonConverter"/> to convert values for a field or a property during serialization and deserialization. If no converter is used, null can be returned.
@@ -326,12 +325,11 @@ namespace fastJSON
 		SerializedNames GetSerializedNames (MemberInfo member);
 
 		/// <summary>
-		/// This method returns a default value for a field or a property. When the value of the member matches the default value, it will not be serialized. The return value of this method indicates whether the default value should be used.
+		/// This method returns a series of values that will not be serialized for a field or a property. When the value of the member matches those values, it will not be serialized. If all values can be serialized, null should be returned.
 		/// </summary>
 		/// <param name="member">The <see cref="MemberInfo"/> of the field or property.</param>
-		/// <param name="defaultValue">The default value of the member.</param>
-		/// <returns>Whether the member has a default value.</returns>
-		bool GetDefaultValue (MemberInfo member, out object defaultValue);
+		/// <returns>The values which are not serialized for <paramref name="member"/>.</returns>
+		IEnumerable GetNonSerializedValues (MemberInfo member);
 
 		/// <summary>
 		/// This method returns an <see cref="IJsonConverter"/> instance to convert values for a field or a property during serialization and deserialization. If no converter is used, null can be returned.
@@ -353,12 +351,21 @@ namespace fastJSON
     /// </summary>
     /// <preliminary />
     [Serializable]
-    public sealed class SerializedNames : Dictionary<Type, string>
+    public sealed class SerializedNames : Dictionary<Type, string>, ISerializable
 	{
 		/// <summary>
 		/// Gets the default name for the serialized member.
 		/// </summary>
 		public string DefaultName { get; set; }
+
+		[SecurityPermission (SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.SerializationFormatter)]
+		void ISerializable.GetObjectData (SerializationInfo info, StreamingContext context) {
+			if (info == null)
+				throw new ArgumentNullException ("info");
+
+			info.AddValue ("$DefaultName", DefaultName);
+			GetObjectData (info, context);
+		}
 	}
 
 }

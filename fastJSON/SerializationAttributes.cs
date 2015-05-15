@@ -388,7 +388,6 @@ namespace fastJSON
 		/// </summary>
 		public Type ConverterType {
 			get { return Converter == null ? null : Converter.GetType (); }
-			set { Converter = value != null ? Activator.CreateInstance (value) as IJsonConverter : null; }
 		}
 
 		internal IJsonConverter Converter { get; private set; }
@@ -396,16 +395,17 @@ namespace fastJSON
 		/// <summary>
 		/// Marks the item value of a field or a property to be converted by an <see cref="IJsonConverter"/>.
 		/// </summary>
-		/// <param name="converter">The type of the <see cref="IJsonConverter"/>.</param>
+		/// <param name="converterType">The type of the <see cref="IJsonConverter"/>.</param>
 		/// <exception cref="JsonSerializationException">Exception can be thrown if the type does not implements <see cref="IJsonConverter"/>.</exception>
-		public JsonItemConverterAttribute (Type converter) {
-			if (converter == null) {
-				throw new ArgumentNullException ("converter");
+		public JsonItemConverterAttribute (Type converterType) {
+			if (converterType == null) {
+				throw new ArgumentNullException ("converterType");
 			}
-			if (converter.IsInterface || typeof(IJsonConverter).IsAssignableFrom (converter) == false) {
-				throw new JsonSerializationException (String.Concat ("The type ", converter.FullName, " defined in ", typeof(JsonConverterAttribute).FullName, " does not implement interface ", typeof(IJsonConverter).FullName));
+			if (converterType.IsInterface || typeof(IJsonConverter).IsAssignableFrom (converterType) == false) {
+				throw new JsonSerializationException (String.Concat ("The type ", converterType.FullName, " defined in ", typeof(JsonConverterAttribute).FullName, " does not implement interface ", typeof(IJsonConverter).FullName));
 			}
-			ConverterType = converter;
+			Converter = Activator.CreateInstance (converterType) as IJsonConverter;
+
 		}
 	}
 
@@ -415,8 +415,8 @@ namespace fastJSON
 	/// <remarks>
 	/// <para>During deserialization, the JSON string is parsed and converted to primitive data. The data could be of the following six types returned from the JSON Parser: <see cref="Boolean"/>, <see cref="Int64"/>, <see cref="Double"/>, <see cref="String"/>, <see cref="List{Object}"/> and <see cref="Dictionary{String, Object}"/>.</para>
 	/// <para>The <see cref="DeserializationConvert"/> method should be able to process the above six types, as well as the null value, and convert the value to match the type of the member being deserialized.</para>
-	/// <para>If the <see cref="GetReversiveType"/> method returns a <see cref="Type"/>, the deserializer will firstly attempt to revert the primitive data to match the type, and then pass the reverted value to the <see cref="DeserializationConvert"/> method. By this means, the implementation of <see cref="DeserializationConvert"/> method does not have to cope with primitive data.</para>
-	/// <para>To implement the <see cref="GetReversiveType"/> method, keep in mind that the the <see name="JsonItem.Value"/> in the <see cref="JsonItem"/> instance will always be primitive data.</para>
+	/// <para>If the <see cref="GetReversiveType"/> method returns a <see cref="Type"/> instead of null or the type of <see cref="Object"/>, the deserializer will firstly attempt to revert the primitive data to match the type, and then pass the reverted value to the <see cref="DeserializationConvert"/> method. By this means, the implementation of <see cref="DeserializationConvert"/> method does not have to cope with primitive data.</para>
+	/// <para>To implement the <see cref="GetReversiveType"/> method, keep in mind that the <see name="JsonItem.Value"/> in the <see cref="JsonItem"/> instance will always be primitive data.</para>
 	/// </remarks>
 	/// <preliminary />
 	public interface IJsonConverter
@@ -469,7 +469,7 @@ namespace fastJSON
 		}
 
 		/// <summary>
-		/// Returns the expected type for <paramref name="item"/>. The implemenation returns <typeparamref name="TSerialized"/>.
+		/// Returns the expected type for <paramref name="item"/>. The implementation returns <typeparamref name="TSerialized"/>.
 		/// </summary>
 		/// <param name="item">The item to be deserialized.</param>
 		/// <returns>The type of <typeparamref name="TSerialized"/>.</returns>
