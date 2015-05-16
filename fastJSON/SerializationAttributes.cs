@@ -90,6 +90,30 @@ namespace fastJSON
 	}
 
 	/// <summary>
+	/// Indicates the value format of the annotated enum type.
+	/// </summary>
+	[AttributeUsage (AttributeTargets.Enum)]
+	public sealed class JsonEnumFormatAttribute : Attribute
+	{
+		readonly EnumValueFormat _format;
+
+		/// <summary>
+		/// Specifies the format of an enum type.
+		/// </summary>
+		/// <param name="valueFormat">The format of the serialized enum type.</param>
+		public JsonEnumFormatAttribute (EnumValueFormat valueFormat) {
+			_format = valueFormat;
+		}
+
+		/// <summary>
+		/// Gets the format of the annotated enum type.
+		/// </summary>
+		public EnumValueFormat Format {
+			get { return _format; }
+		}
+	}
+
+	/// <summary>
 	/// Controls the serialized name of an Enum value.
 	/// </summary>
 	[AttributeUsage (AttributeTargets.Field)]
@@ -154,7 +178,7 @@ namespace fastJSON
 
 		internal string _Name;
 		/// <summary>
-		/// The name of the item. During serialization, this property can be changed to serialize the member to another name.
+		/// The name of the item. During serialization, this property can be changed to serialize the member to another name. If the item is the object initially passed to the <see cref="JSON.ToJSON(object)"/> method (or its overloads), this value will be an empty string.
 		/// </summary>
 		/// <exception cref="InvalidOperationException">This value is changed during deserialization or serializing an item of an <see cref="IEnumerable{T}"/> instance.</exception>
 		public string Name {
@@ -347,7 +371,12 @@ namespace fastJSON
 	/// <summary>
 	/// Controls data conversion in serialization and deserialization.
 	/// </summary>
-	[AttributeUsage (AttributeTargets.Field | AttributeTargets.Property)]
+	/// <remarks>
+	/// <para>This attribute can be applied to types or type members.</para>
+	/// <para>If it is applied to types, the converter will be used in all instances of the type, each property or field that has that data type will use the converter prior to serialization or deserialization.</para>
+	/// <para>If both the type member and the type has applied this attribute, the attribute on the type member will have a higher precedence.</para>
+	/// </remarks>
+	[AttributeUsage (AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Class | AttributeTargets.Struct)]
 	public sealed class JsonConverterAttribute : Attribute
 	{
 		/// <summary>
@@ -415,28 +444,28 @@ namespace fastJSON
 	/// <remarks>
 	/// <para>During deserialization, the JSON string is parsed and converted to primitive data. The data could be of the following six types returned from the JSON Parser: <see cref="Boolean"/>, <see cref="Int64"/>, <see cref="Double"/>, <see cref="String"/>, <see cref="List{Object}"/> and <see cref="Dictionary{String, Object}"/>.</para>
 	/// <para>The <see cref="DeserializationConvert"/> method should be able to process the above six types, as well as the null value, and convert the value to match the type of the member being deserialized.</para>
-	/// <para>If the <see cref="GetReversiveType"/> method returns a <see cref="Type"/> instead of null or the type of <see cref="Object"/>, the deserializer will firstly attempt to revert the primitive data to match the type, and then pass the reverted value to the <see cref="DeserializationConvert"/> method. By this means, the implementation of <see cref="DeserializationConvert"/> method does not have to cope with primitive data.</para>
-	/// <para>To implement the <see cref="GetReversiveType"/> method, keep in mind that the <see name="JsonItem.Value"/> in the <see cref="JsonItem"/> instance will always be primitive data.</para>
+	/// <para>If the <see cref="GetReversiveType"/> method returns a <see cref="Type"/> instead of null or the type of <see cref="Object"/>, the deserializer will firstly attempt to revert the primitive data to match that type, and then pass the reverted value to the <see cref="DeserializationConvert"/> method. By this means, the implementation of <see cref="DeserializationConvert"/> method does not have to cope with primitive data types.</para>
+	/// <para>To implement the <see cref="GetReversiveType"/> method, keep in mind that the <see cref="JsonItem.Value"/> in the <see cref="JsonItem"/> instance will always be primitive data.</para>
 	/// </remarks>
 	/// <preliminary />
 	public interface IJsonConverter
 	{
 		/// <summary>
-		/// Returns the expected type from the primitive data in <paramref name="item" />. If the returned type is not null, the deserializer will attempt to convert the <see name="JsonItem.Value"/> of <paramref name="item" /> to match the returned type.
+		/// Returns the expected type from the primitive data in <paramref name="item" />. If the returned type is not null, the deserializer will attempt to convert the <see cref="JsonItem.Value"/> of <paramref name="item" /> to match the returned type.
 		/// </summary>
 		/// <param name="item">The item to be deserialized.</param>
 		/// <returns>The expected data type.</returns>
 		Type GetReversiveType (JsonItem item);
 
 		/// <summary>
-		/// Converts the <paramref name="item" /> to a new value during serialization. Either <see name="JsonItem.Name"/> or <see name="JsonItem.Value"/> of the <paramref name="item" /> can be changed to another value.
+		/// Converts the <paramref name="item" /> to a new value during serialization. Either <see name="JsonItem.Name"/> or <see cref="JsonItem.Value"/> of the <paramref name="item" /> can be changed to another value.
 		/// </summary>
 		/// <param name="item">The item to be deserialized.</param>
 		void SerializationConvert (JsonItem item);
 
 		/// <summary>
-		/// <para>Converts the <see name="JsonItem.Value"/> of <paramref name="item" /> to a new value during deserialization. The <see name="JsonItem.Value"/> of <paramref name="item" /> can be changed to a different type. This enables adapting various data types from deserialization.</para>
-		/// <para>The <see name="JsonItem.Value"/> of <paramref name="item" /> could be one of six primitive value types. For further information, refer to <see cref="IJsonConverter"/>.</para>
+		/// <para>Converts the <see cref="JsonItem.Value"/> of <paramref name="item" /> to a new value during deserialization. The <see cref="JsonItem.Value"/> of <paramref name="item" /> can be changed to a different type. This enables adapting various data types from deserialization.</para>
+		/// <para>The <see cref="JsonItem.Value"/> of <paramref name="item" /> could be one of six primitive value types. For further information, refer to <see cref="IJsonConverter"/>.</para>
 		/// </summary>
 		/// <param name="item">The item to be deserialized.</param>
 		void DeserializationConvert (JsonItem item);

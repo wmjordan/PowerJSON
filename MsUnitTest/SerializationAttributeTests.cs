@@ -143,6 +143,7 @@ namespace UnitTests
 
 		#region Enums
 		[Flags]
+		[JsonEnumFormat (EnumValueFormat.CamelCase)]
 		public enum Fruits
 		{
 			None,

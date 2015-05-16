@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection;
 
 namespace fastJSON
@@ -12,6 +13,7 @@ namespace fastJSON
 	delegate void AddCollectionItem (object target, object value);
 	delegate object RevertJsonValue (JsonDeserializer deserializer, object value, ReflectionCache targetType);
 
+	[DebuggerDisplay ("{TypeName} ({JsonDataType})")]
 	class ReflectionCache
 	{
 		internal readonly string TypeName;
@@ -37,12 +39,14 @@ namespace fastJSON
 		internal readonly WriteJsonValue SerializeMethod;
 		internal readonly RevertJsonValue DeserializeMethod;
 		internal bool AlwaysDeserializable;
+		internal IJsonConverter Converter;
 		internal IJsonInterceptor Interceptor;
 		#endregion
 
 		#region Enum Info
 		internal readonly bool IsFlaggedEnum;
 		internal readonly Dictionary<string, Enum> EnumNames;
+		internal EnumValueFormat EnumValueFormat;
 		#endregion
 
 		internal ReflectionCache (Type type, SerializationManager manager) {
@@ -51,16 +55,17 @@ namespace fastJSON
 			TypeName = type.FullName;
 			AssemblyName = type.AssemblyQualifiedName;
 
-			if (type.IsEnum) {
-				IsFlaggedEnum = AttributeHelper.GetAttribute<FlagsAttribute> (type, false) != null;
-				EnumNames = manager.GetEnumValues (type, controller);
-				JsonDataType = JsonDataType.Enum;
-				return;
-			}
-
 			JsonDataType = Reflection.GetJsonDataType (type);
 			SerializeMethod = JsonSerializer.GetWriteJsonMethod (type);
 			DeserializeMethod = JsonDeserializer.GetReadJsonMethod (type);
+			Converter = controller.GetConverter (type);
+
+			if (JsonDataType == JsonDataType.Enum) {
+				IsFlaggedEnum = AttributeHelper.GetAttribute<FlagsAttribute> (type, false) != null;
+				EnumNames = manager.GetEnumValues (type, controller);
+				EnumValueFormat = controller.GetEnumValueFormat (type);
+				return;
+			}
 
 			if (type.IsGenericType) {
 				ArgumentTypes = type.GetGenericArguments ();
@@ -186,10 +191,12 @@ namespace fastJSON
 		bool IsStatic { get; }
 	}
 
+	[DebuggerDisplay ("{MemberName} ({SerializedName})")]
 	sealed class Getters : IMemberInfo
 	{
 		internal readonly string MemberName;
 		internal readonly Type MemberType;
+		internal ReflectionCache MemberTypeReflection;
 		internal readonly GenericGetter Getter;
 		internal readonly bool IsStatic;
 		internal readonly bool IsProperty;
@@ -244,6 +251,7 @@ namespace fastJSON
 
 	}
 
+	[DebuggerDisplay ("{MemberName} ({JsonDataType})")]
 	sealed class JsonPropertyInfo // myPropInfo
 	{
 		internal readonly string MemberName;
@@ -292,57 +300,6 @@ namespace fastJSON
 			ChangeType = IsNullable ? ElementType : type;
 			JsonDataType = dt;
 		}
-	}
-
-	enum JsonDataType // myPropInfoType
-	{
-		Undefined,
-		Int,
-		Long,
-		String,
-		Bool,
-		Single,
-		Double,
-		DateTime,
-		Enum,
-		Guid,
-		TimeSpan,
-
-		Array,
-		List,
-		ByteArray,
-		MultiDimensionalArray,
-		Dictionary,
-		StringKeyDictionary,
-		NameValue,
-		StringDictionary,
-#if !SILVERLIGHT
-		Hashtable,
-		DataSet,
-		DataTable,
-#endif
-		Custom,
-		Primitive,
-		Object
-	}
-
-	[Flags]
-	enum ConstructorTypes
-	{
-		// public, parameterless
-		Default = 0,
-		NonPublic = 1,
-		Parametric = 2
-	}
-
-	enum ComplexType
-	{
-		General,
-		Array,
-		MultiDimensionalArray,
-		Dictionary,
-		List,
-		Nullable
 	}
 
 }

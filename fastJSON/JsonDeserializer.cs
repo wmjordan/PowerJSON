@@ -83,11 +83,19 @@ namespace fastJSON
 			ReflectionCache c = null;
 			if (type != null) {
 				c = _manager.GetReflectionCache (type);
-				if (c.CommonType == ComplexType.Dictionary
-					|| c.CommonType == ComplexType.List) {
-					_usingglobals = false;
+				var cv = c.Converter;
+				if (cv != null) {
+					var ji = new JsonItem (String.Empty, o, false);
+					ConvertObject (cv, ji, type);
+					if (ReferenceEquals (ji._Value, o) == false) {
+						return ji._Value;
+					}
+					if (c.CommonType == ComplexType.Dictionary
+						|| c.CommonType == ComplexType.List) {
+						_usingglobals = false;
+					}
 				}
-				if (c.DeserializeMethod != null) {
+				else if (c.DeserializeMethod != null) {
 					return c.DeserializeMethod (this, o, c);
 				}
 			}
@@ -163,6 +171,25 @@ namespace fastJSON
 		}
 
 		#region [   p r i v a t e   m e t h o d s   ]
+		private void ConvertObject (IJsonConverter converter, JsonItem ji, Type sourceType) {
+			var rt = converter.GetReversiveType (ji);
+			var xv = ji._Value;
+			/* skipped: typeof (object).Equals (rt) == false && */
+			if (xv != null && rt != null && sourceType.Equals (xv.GetType ()) == false) {
+				var c = _manager.GetReflectionCache (rt);
+				var jt = Reflection.GetJsonDataType (rt);
+				if (jt != JsonDataType.Undefined) {
+					var m = GetRevertMethod (c);
+					xv = m (this, xv, c);
+				}
+				else if (xv is JsonDict) {
+					xv = ParseDictionary ((JsonDict)xv, c, null);
+				}
+			}
+			ji._Value = xv;
+			converter.DeserializationConvert (ji);
+		}
+
 		private object RootHashTable (JsonArray o) {
 			Hashtable h = new Hashtable ();
 			var c = _manager.GetReflectionCache (typeof (object));
@@ -290,7 +317,7 @@ namespace fastJSON
 				if (v is IList && pi.ItemConverter != null) {
 					converted = ConvertItems (pi, ji);
 				}
-				if (pi.Converter != null) {
+				if (pi.Converter != null || pi.MemberTypeReflection.Converter != null) {
 					ConvertProperty (o, pi, ji);
 				}
 
@@ -402,10 +429,11 @@ namespace fastJSON
 		}
 
 		private void ConvertProperty (object o, JsonPropertyInfo pi, JsonItem ji) {
-			var pc = pi.Converter;
+			var pc = pi.Converter ?? pi.MemberTypeReflection.Converter;
 			var rt = pc.GetReversiveType (ji);
 			var xv = ji._Value;
-			if (xv != null && rt != null && typeof (object).Equals (rt) == false && pi.MemberType.Equals (xv.GetType ()) == false) {
+			/* skipped: typeof (object).Equals (rt) == false && */
+			if (xv != null && rt != null && pi.MemberType.Equals (xv.GetType ()) == false) {
 				var c = _manager.GetReflectionCache (rt);
 				var jt = Reflection.GetJsonDataType (rt);
 				if (jt != JsonDataType.Undefined) {

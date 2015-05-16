@@ -50,6 +50,15 @@ namespace fastJSON
 				_useGlobalTypes = false;
 			}
 
+			var cv = cache.Converter;
+			if (cv != null) {
+				var ji = new JsonItem (String.Empty, obj, false);
+				cv.SerializationConvert (ji);
+				if (ReferenceEquals (obj, ji._Value) == false) {
+					obj = ji._Value;
+				}
+				cache = _manager.GetReflectionCache (obj.GetType ());
+			}
 			var m = cache.SerializeMethod;
 			if (m != null) {
 				m (this, obj);
@@ -385,8 +394,9 @@ namespace fastJSON
 				if (si != null && si.OnSerializing (obj, ji) == false) {
 					continue;
 				}
-				if (p.Converter != null) {
-					p.Converter.SerializationConvert (ji);
+				var cv = p.Converter ?? p.MemberTypeReflection.Converter;
+				if (cv != null) {
+					cv.SerializationConvert (ji);
 				}
 				#region Convert Items
 				if (p.ItemConverter != null && ji._Value is IEnumerable) {
@@ -435,7 +445,7 @@ namespace fastJSON
 				}
 				#endregion
 				#region Write Value
-				if (p.WriteValue != null && p.Converter == null) {
+				if (p.WriteValue != null && cv == null) {
 					var v = ji._Value;
 					if (v == null || v is DBNull) {
 						_output.Append ("null");

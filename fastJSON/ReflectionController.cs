@@ -30,7 +30,7 @@ namespace fastJSON
 	/// The general implementation of <see cref="IReflectionController"/>.
 	/// </summary>
 	/// <preliminary />
-	public class FastJsonReflectionController : IReflectionController
+	public class JsonReflectionController : IReflectionController
 	{
 		/// <summary>
 		/// Ignore attributes to check for (default : XmlIgnoreAttribute).
@@ -38,14 +38,24 @@ namespace fastJSON
 		public IList<Type> IgnoreAttributes { get; private set; }
 
 		/// <summary>
-		/// Creates an instance of <see cref="FastJsonReflectionController"/>. For backward compatibility, <see cref="System.Xml.Serialization.XmlIgnoreAttribute"/> is added into <see cref="IgnoreAttributes"/>.
+		/// Creates an instance of <see cref="JsonReflectionController"/>. For backward compatibility, <see cref="System.Xml.Serialization.XmlIgnoreAttribute"/> is added into <see cref="IgnoreAttributes"/>.
 		/// </summary>
-		public FastJsonReflectionController () {
+		public JsonReflectionController () {
 			IgnoreAttributes = new List<Type> { typeof (System.Xml.Serialization.XmlIgnoreAttribute) };
 		}
 
 		/// <summary>
-		/// Gets the overridden name for an enum value. The overridden name can be set via the <see cref="JsonEnumValueAttribute"/>.
+		/// This method is called to determine whether the values of the given <see cref="Enum"/> type should be serialized as its numeric form rather than literal form. The overriden can be set via the <see cref="JsonEnumFormatAttribute"/>.
+		/// </summary>
+		/// <param name="type">An <see cref="Enum"/> value type.</param>
+		/// <returns>If the type should be serialized numerically, returns true, otherwise, false.</returns>
+		public virtual EnumValueFormat GetEnumValueFormat (Type type) {
+			var a = AttributeHelper.GetAttribute<JsonEnumFormatAttribute> (type, false);
+			return a != null ? a.Format : EnumValueFormat.Default;
+		}
+
+		/// <summary>
+		/// Gets the overridden name for an enum value. The overridden name can be set via the <see cref="JsonEnumValueAttribute"/>. If null or empty string is returned, the original name of the enum value is used.
 		/// </summary>
 		/// <param name="member">The enum value member.</param>
 		/// <returns>The name of the enum value.</returns>
@@ -54,7 +64,7 @@ namespace fastJSON
 			if (a != null) {
 				return a.Name;
 			}
-			return member.Name;
+			return null;
 		}
 
 		/// <summary>
@@ -67,7 +77,7 @@ namespace fastJSON
 		}
 
 		/// <summary>
-		/// Returns the <see cref="IJsonInterceptor"/> for given type. If no interceptor, null should be returned.The interceptor can be set via <see cref="JsonInterceptorAttribute"/>.
+		/// Returns the <see cref="IJsonInterceptor"/> for given type. If no interceptor, null should be returned. The interceptor can be set via <see cref="JsonInterceptorAttribute"/>.
 		/// </summary>
 		/// <param name="type">The type to be checked.</param>
 		/// <returns>The interceptor.</returns>
@@ -75,6 +85,19 @@ namespace fastJSON
 			var ia = AttributeHelper.GetAttribute<JsonInterceptorAttribute> (type, true);
 			if (ia != null) {
 				return ia.Interceptor;
+			}
+			return null;
+		}
+
+		/// <summary>
+		/// This method is called to get the <see cref="IJsonConverter"/> for the type. If no converter, null should be returned. The converter can be set via <see cref="JsonConverterAttribute"/>.
+		/// </summary>
+		/// <param name="type">The type to be checked for <see cref="IJsonConverter"/>.</param>
+		/// <returns>The interceptor.</returns>
+		public virtual IJsonConverter GetConverter (Type type) {
+			var ia = AttributeHelper.GetAttribute<JsonConverterAttribute> (type, true);
+			if (ia != null) {
+				return ia.Converter;
 			}
 			return null;
 		}
@@ -193,6 +216,13 @@ namespace fastJSON
 	public class DefaultReflectionController : IReflectionController
 	{
 		/// <summary>
+		/// This method is called to determine whether the values of the given <see cref="Enum"/> type should be serialized as its numeric form rather than literal form.
+		/// </summary>
+		/// <param name="type">An <see cref="Enum"/> value type.</param>
+		/// <returns>If the type should be serialized numerically, returns true, otherwise, false.</returns>
+		public virtual EnumValueFormat GetEnumValueFormat (Type type) { return EnumValueFormat.Default; }
+
+		/// <summary>
 		/// This method is called to override the serialized name of an enum value. If null or empty string is returned, the original name of the enum value is used.
 		/// </summary>
 		/// <param name="member">The enum value member.</param>
@@ -215,6 +245,13 @@ namespace fastJSON
 		/// <param name="type">The type to be checked.</param>
 		/// <returns>The interceptor.</returns>
 		public virtual IJsonInterceptor GetInterceptor (Type type) { return null; }
+
+		/// <summary>
+		/// This method is called to get the <see cref="IJsonConverter"/> for the type. If no converter, null should be returned.
+		/// </summary>
+		/// <param name="type">The type to be checked for <see cref="IJsonConverter"/>.</param>
+		/// <returns>The interceptor.</returns>
+		public virtual IJsonConverter GetConverter (Type type) { return null; }
 
 		/// <summary>
 		/// This method is called to determine whether a field or a property is serializable.
@@ -270,11 +307,18 @@ namespace fastJSON
 	/// </summary>
 	/// <remarks>
 	/// <para>The interface works in the reflection phase. Its methods are executed typically once and the result will be cached. Consequently, changes occur after the reflection phase will not take effect.</para>
-	/// <para>It is recommended to inherit from <see cref="DefaultReflectionController"/> or <see cref="FastJsonReflectionController"/>.</para>
+	/// <para>It is recommended to inherit from <see cref="DefaultReflectionController"/> or <see cref="JsonReflectionController"/>.</para>
 	/// </remarks>
 	/// <preliminary />
 	public interface IReflectionController
 	{
+		/// <summary>
+		/// This method is called to determine how to format values of the given <see cref="Enum"/> type.
+		/// </summary>
+		/// <param name="type">An <see cref="Enum"/> value type.</param>
+		/// <returns>The format of the enum value.</returns>
+		EnumValueFormat GetEnumValueFormat (Type type);
+
 		/// <summary>
 		/// This method is called to override the serialized name of an enum value. If null or empty string is returned, the original name of the enum value is used.
 		/// </summary>
@@ -295,9 +339,16 @@ namespace fastJSON
 		/// <summary>
 		/// This method is called to get the <see cref="IJsonInterceptor"/> for the type. If no interceptor, null should be returned.
 		/// </summary>
-		/// <param name="type">The type to be checked.</param>
+		/// <param name="type">The type to be checked for <see cref="IJsonInterceptor"/>.</param>
 		/// <returns>The interceptor.</returns>
 		IJsonInterceptor GetInterceptor (Type type);
+
+		/// <summary>
+		/// This method is called to get the <see cref="IJsonConverter"/> for the type. If no converter, null should be returned.
+		/// </summary>
+		/// <param name="type">The type to be checked for <see cref="IJsonConverter"/>.</param>
+		/// <returns>The interceptor.</returns>
+		IJsonConverter GetConverter (Type type);
 
 		/// <summary>
 		/// This method is called to determine whether a field or a property is serializable.

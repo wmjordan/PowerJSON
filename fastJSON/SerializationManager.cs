@@ -30,14 +30,14 @@ namespace fastJSON
 		/// <summary>
 		/// Gets the singleton instance.
 		/// </summary>
-		public static readonly SerializationManager Instance = new SerializationManager (new FastJsonReflectionController ());
+		public static readonly SerializationManager Instance = new SerializationManager (new JsonReflectionController ());
 
 		/// <summary>
 		/// Creates a new instance of <see cref="SerializationManager"/>.
 		/// </summary>
-		/// <remarks>The <see cref="ReflectionController"/> will be initialized to a new instance of <see cref="FastJsonReflectionController"/>.</remarks>
+		/// <remarks>The <see cref="ReflectionController"/> will be initialized to a new instance of <see cref="JsonReflectionController"/>.</remarks>
 		public SerializationManager () {
-			_controller = new FastJsonReflectionController ();
+			_controller = new JsonReflectionController ();
 		}
 
 		/// <summary>
@@ -101,7 +101,7 @@ namespace fastJSON
 		private ReflectionCache CreateReflectionCacheAndRegister (Type type) {
 			var c = _reflections[type] = new ReflectionCache (type, this);
 			if (type.IsClass || type.IsValueType) {
-				c.Getters = Reflection.GetGetters (type, _controller);
+				c.Getters = Reflection.GetGetters (type, _controller, this);
 				c.Properties = Reflection.GetProperties (type, _controller, this);
 			}
 			return c;
@@ -113,10 +113,13 @@ namespace fastJSON
 			var vs = Enum.GetValues (type);
 			var vm = new Dictionary<string, Enum> (ns.Length);
 			var vc = _EnumValueCache;
+			var n = controller.GetEnumValueFormat (type);
+			NamingStrategy s = n != EnumValueFormat.Numeric ? NamingStrategy.GetStrategy ((NamingConvention)n) : null;
 			for (int i = ns.Length - 1; i >= 0; i--) {
 				var en = ns[i];
 				var ev = (Enum)vs.GetValue (i);
 				var m = type.GetMember (en)[0];
+				en = s != null ? s.Rename (en) : null;
 				var sn = controller.GetEnumValueName (m);
 				if (String.IsNullOrEmpty (sn) == false) {
 					en = sn;
@@ -230,6 +233,9 @@ namespace fastJSON
 			var c = purgeExisting ? CreateReflectionCacheAndRegister (type) : GetReflectionCache (type);
 			if (overrideInfo.OverrideInterceptor) {
 				c.Interceptor = overrideInfo.Interceptor;
+			}
+			if (overrideInfo.OverrideConverter) {
+				c.Converter = overrideInfo.Converter;
 			}
 			if (overrideInfo.Deserializable != TriState.Default) {
 				c.AlwaysDeserializable = overrideInfo.Deserializable == TriState.True;
@@ -434,9 +440,9 @@ namespace fastJSON
 		/// Assigns new name mapping for an Enum type <typeparamref name="T"/>.
 		/// </summary>
 		/// <typeparam name="T">The type of the Enum.</typeparam>
-		/// <param name="nameMapper">The Enum value mapper. The key of the dictionary is the original name of the enum value to be overridden, the value is the new serialized name to be specified to the value.</param>
+		/// <param name="nameMapper">The value mapper for the enum type <typeparamref name="T"/>. The key of the dictionary is the original name of the enum value to be overridden, the value is the new serialized name to be specified to the value.</param>
 		/// <exception cref="InvalidOperationException"><typeparamref name="T"/> is not an Enum type.</exception>
-		public void OverrideEnumValueNames<T> (IDictionary<string,string> nameMapper) {
+		public void OverrideEnumValueNames<T> (IDictionary<string, string> nameMapper) {
 			OverrideEnumValueNames (typeof(T), nameMapper);
 		}
 		/// <summary>
@@ -496,12 +502,24 @@ namespace fastJSON
 		internal bool OverrideInterceptor;
 		IJsonInterceptor _Interceptor;
 		/// <summary>
-		/// Gets or sets the <see cref="IJsonInterceptor"/> for the member.
+		/// Gets or sets the <see cref="IJsonInterceptor"/> for the overridden type.
 		/// </summary>
 		public IJsonInterceptor Interceptor {
 			get { return _Interceptor; }
 			set {
 				_Interceptor = value; OverrideInterceptor = true;
+			}
+		}
+
+		internal bool OverrideConverter;
+		IJsonConverter _Converter;
+		/// <summary>
+		/// Gets or sets the <see cref="IJsonConverter"/> for the overridden type.
+		/// </summary>
+		public IJsonConverter Converter {
+			get { return _Converter; }
+			set {
+				_Converter = value; OverrideConverter = true;
 			}
 		}
 

@@ -94,7 +94,7 @@ namespace fastJSON
 
 			ReflectionCache c = manager.GetReflectionCache (obj.GetType ());
 
-			// The following lines were removed for they have been enforced in JsonSerializer
+			// The following lines were removed for they had been enforced in JsonSerializer
 			//if (c.CommonType == ComplexType.Dictionary || c.CommonType == ComplexType.List) {
 			//	param.UsingGlobalTypes = false;
 			//}

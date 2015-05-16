@@ -150,7 +150,7 @@ namespace fastJSON
 			return c;
 		}
 
-		internal static Getters[] GetGetters (Type type, IReflectionController controller) {
+		internal static Getters[] GetGetters (Type type, IReflectionController controller, SerializationManager manager) {
 			var pl = type.GetProperties (BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
 			var fl = type.GetFields (BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static);
 			var getters = new Dictionary<string, Getters> (pl.Length + fl.Length);
@@ -159,12 +159,12 @@ namespace fastJSON
 				if (m.GetIndexParameters ().Length > 0) {// Property is an indexer
 					continue;
 				}
-				AddGetter (getters, m, CreateGetProperty (m), controller);
+				AddGetter (getters, m, CreateGetProperty (m), controller, manager);
 			}
 
 			foreach (var m in fl) {
 				if (m.IsLiteral == false) {
-					AddGetter (getters, m, CreateGetField (m), controller);
+					AddGetter (getters, m, CreateGetField (m), controller, manager);
 				}
 			}
 
@@ -173,11 +173,12 @@ namespace fastJSON
 			return r;
 		}
 
-		internal static void AddGetter (Dictionary<string, Getters> getters, MemberInfo memberInfo, GenericGetter getter, IReflectionController controller) {
+		internal static void AddGetter (Dictionary<string, Getters> getters, MemberInfo memberInfo, GenericGetter getter, IReflectionController controller, SerializationManager manager) {
 			var n = memberInfo.Name;
 			Getters g = new Getters (memberInfo, getter);
 
 			if (controller != null) {
+				g.MemberTypeReflection = manager.GetReflectionCache (g.MemberType);
 				g.Serializable = controller.IsMemberSerializable (memberInfo, g);
 				g.Converter = controller.GetMemberConverter (memberInfo);
 				g.ItemConverter = controller.GetMemberItemConverter (memberInfo);

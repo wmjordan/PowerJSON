@@ -10,7 +10,7 @@ namespace fastJSON
     /// This class encodes and decodes JSON strings.
     /// Spec. details, see http://www.json.org/
     /// </summary>
-    internal sealed class JsonParser
+    sealed class JsonParser
     {
         enum Token
         {
@@ -424,8 +424,8 @@ namespace fastJSON
 		}
     }
 
-	class JsonArray : List<object> { }
-	class JsonDict : Dictionary<string, object> {
+	sealed class JsonArray : List<object> { }
+	sealed class JsonDict : Dictionary<string, object> {
 		internal const string ExtRefIndex = "$i";
 		internal const string ExtTypes = "$types";
 		internal const string ExtType = "$type";
@@ -439,5 +439,10 @@ namespace fastJSON
 		// TODO: Candidate to removal of unknown use of map
 		//internal JsonDict Map;
 		internal object Schema;
+	}
+	sealed class DatasetSchema
+	{
+		public List<string> Info;//{ get; set; }
+		public string Name;//{ get; set; }
 	}
 }

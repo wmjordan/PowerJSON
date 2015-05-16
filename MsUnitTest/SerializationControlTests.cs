@@ -239,5 +239,57 @@ namespace MsUnitTest
 			StringAssert.Contains (s1, "GroupID"); // "GroupID" is visible
 			#endregion
 		}
+
+		class DateTimeConverter : JsonConverter<DateTime, string>
+		{
+			static readonly DateTime RefDate = new DateTime (1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+			static readonly long RefTicks = RefDate.Ticks;
+			public override string Convert (string fieldName, DateTime fieldValue) {
+				return String.Concat ("/Date(", ((long)Math.Round (fieldValue.Subtract (RefDate).TotalMilliseconds)).ToString (System.Globalization.NumberFormatInfo.InvariantInfo), ")/");
+			}
+			public override DateTime Revert (string fieldName, string fieldValue) {
+				var s = fieldValue.IndexOf ('(');
+				var e = fieldValue.IndexOf (')');
+				return new DateTime (RefTicks + Int64.Parse (fieldValue.Substring (++s, e - s)) * 10000L, DateTimeKind.Local);
+			}
+		}
+		public class ConverterSampleClass
+		{
+			public bool Boolean;
+			public DateTime DateTime;
+		}
+		[TestMethod]
+		public void ConverterTest () {
+			var sm = new SerializationManager ();
+			sm.Override<bool> (new TypeOverride () {
+				Converter = new fastJSON.BonusPack.JsonZeroOneBooleanConverter ()
+            });
+			sm.Override<DateTime> (new TypeOverride () { Converter = new DateTimeConverter () });
+
+			var s = JSON.ToJSON (true, JSON.Parameters, sm);
+			Console.WriteLine (s);
+			Assert.AreEqual ("1", s);
+			Assert.IsTrue (JSON.ToObject<bool> (s, JSON.Parameters, sm));
+			s = JSON.ToJSON (false, JSON.Parameters, sm);
+			Console.WriteLine (s);
+			Assert.AreEqual ("0", s);
+			Assert.IsFalse (JSON.ToObject<bool> (s, JSON.Parameters, sm));
+
+			s = JSON.ToJSON (new DateTime (1970, 1, 1), JSON.Parameters, sm);
+			Console.WriteLine (s);
+			Assert.AreEqual ("\"/Date(0)/\"", s);
+			var d = new DateTime (1997, 7, 1, 23, 59, 59);
+			s = JSON.ToJSON (d, JSON.Parameters, sm);
+			Assert.AreEqual ("\"/Date(867801599000)/\"", s);
+			Console.WriteLine (s);
+			Assert.AreEqual (d, JSON.ToObject<DateTime> (s, JSON.Parameters, sm));
+
+			var c = new ConverterSampleClass () { Boolean = true, DateTime = DateTime.Now };
+			s = JSON.ToJSON (c, JSON.Parameters, sm);
+			Console.WriteLine (s);
+			var o = JSON.ToObject<ConverterSampleClass> (s, JSON.Parameters, sm);
+			Assert.AreEqual (c.Boolean, o.Boolean);
+			Assert.AreEqual (c.DateTime.ToString (), o.DateTime.ToString ());
+		}
 	}
 }

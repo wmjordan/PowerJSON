@@ -49,7 +49,7 @@ namespace fastJSON
 		/// <summary>
 		/// Ignores case when processing JSON and deserializing 
 		/// </summary>
-		[Obsolete("Not needed anymore and will always match")]
+		[Obsolete ("Not needed anymore and will always match")]
 		public bool IgnoreCaseOnDeserialize = false;
 		/// <summary>
 		/// Anonymous types have read only properties 
@@ -77,7 +77,7 @@ namespace fastJSON
 		/// Ignores attributes to check for (default : XmlIgnoreAttribute)
 		/// </summary>
 		[Obsolete ("This property is provided for backward compatibility. It returns the FastJsonReflectionController.IgnoreAttributes from the controller instance in SerializationManager.Instance, which is used by JSON.ToJSON and JSON.ToObject methods without SerializationManager parameters. For other method overloads in JSON class with the SerializationManager parameter, this setting will not work.")]
-		public IList<Type> IgnoreAttributes { get { return (SerializationManager.Instance.ReflectionController as FastJsonReflectionController).IgnoreAttributes; } }
+		public IList<Type> IgnoreAttributes { get { return (SerializationManager.Instance.ReflectionController as JsonReflectionController).IgnoreAttributes; } }
 
 		/// <summary>
 		/// If you have parametric and no default constructor for you classes (default = False)
@@ -106,7 +106,7 @@ namespace fastJSON
 			get { return _strategy.Convention == NamingConvention.LowerCase; }
 			set { _strategy = value ? NamingStrategy.LowerCase : NamingStrategy.Default; }
 		}
-	
+
 		/// <summary>
 		/// Controls the case of serialized field names.
 		/// </summary>
@@ -114,17 +114,15 @@ namespace fastJSON
 			get { return _strategy.Convention; }
 			set { _strategy = NamingStrategy.GetStrategy (value); }
 		}
-	
+
 		NamingStrategy _strategy = NamingStrategy.Default;
 		internal NamingStrategy NamingStrategy { get { return _strategy; } }
 
 		/// <summary>
 		/// Fixes conflicting parameters.
 		/// </summary>
-		/// <remarks>This method is automatically called before serialization.</remarks>
 		[Obsolete ("This method is deprecated and the parameter conflict is automatically handled.")]
-		public void FixValues()
-		{
+		public void FixValues () {
 			//if (UseExtensions == false)
 			//{
 			//	UsingGlobalTypes = false;
@@ -137,33 +135,11 @@ namespace fastJSON
 		}
 	}
 
-	/// <summary>
-	/// Controls the letter case of serialized field names.
-	/// </summary>
-	public enum NamingConvention
-	{
-		/// <summary>
-		/// The letter case of the serialized field names will be the same as the field or member name.
-		/// </summary>
-		Default,
-		/// <summary>
-		/// All letters in the serialized field names will be changed to lowercase.
-		/// </summary>
-		LowerCase,
-		/// <summary>
-		/// The first letter of each serialized field names will be changed to lowercase.
-		/// </summary>
-		CamelCase,
-		/// <summary>
-		/// All letters in the serialized field names will be changed to uppercase.
-		/// </summary>
-		UpperCase
-	}
-
 	abstract class NamingStrategy
 	{
 		internal abstract NamingConvention Convention { get; }
 		internal abstract void WriteName (StringBuilder output, string name);
+		internal abstract string Rename (string text);
 
 		internal static readonly NamingStrategy Default = new DefaultNaming ();
 		internal static readonly NamingStrategy LowerCase = new LowerCaseNaming ();
@@ -190,6 +166,9 @@ namespace fastJSON
 				output.Append (name);
 				output.Append ("\":");
 			}
+			internal override string Rename (string name) {
+				return name;
+			}
 		}
 		class LowerCaseNaming : NamingStrategy
 		{
@@ -201,6 +180,9 @@ namespace fastJSON
 				output.Append (name.ToLowerInvariant ());
 				output.Append ("\":");
 			}
+			internal override string Rename (string name) {
+				return name.ToLowerInvariant ();
+			}
 		}
 		class UpperCaseNaming : NamingStrategy
 		{
@@ -211,6 +193,9 @@ namespace fastJSON
 				output.Append ('\"');
 				output.Append (name.ToUpperInvariant ());
 				output.Append ("\":");
+			}
+			internal override string Rename (string name) {
+				return name.ToUpperInvariant ();
 			}
 		}
 		class CamelCaseNaming : NamingStrategy
@@ -234,6 +219,16 @@ namespace fastJSON
 					}
 				}
 				output.Append ("\":");
+			}
+			internal override string Rename (string name) {
+				var l = name.Length;
+				var c = name[0];
+				if (c > 'A' - 1 && c < 'Z' + 1) {
+					var cs = name.ToCharArray ();
+					cs[0] = (char)(c - ('A' - 'a'));
+					return new string (cs);
+				}
+				return name;
 			}
 		}
 	}
