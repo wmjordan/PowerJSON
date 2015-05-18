@@ -87,7 +87,7 @@ namespace fastJSON
 			}
 			if (typeof(IEnumerable).IsAssignableFrom (type)) {
 				if (typeof(Array).IsAssignableFrom (type) == false) {
-					AppendItem = Reflection.CreateDynamicMethod<AddCollectionItem> (Reflection.FindMethod (type, "Add", new Type[1] { null }));
+					AppendItem = Reflection.CreateWrapperMethod<AddCollectionItem> (Reflection.FindMethod (type, "Add", new Type[1] { null }));
 				}
 				if (ArgumentTypes != null && ArgumentTypes.Length == 1) {
 					ItemSerializer = JsonSerializer.GetWriteJsonMethod (ArgumentTypes[0]);

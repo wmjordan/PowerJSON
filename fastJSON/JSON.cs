@@ -71,6 +71,15 @@ namespace fastJSON
 		}
 
 		/// <summary>
+		/// Creates a JSON representation for an object with serialization manager override on this call
+		/// </summary>
+		/// <param name="obj">The object to be serialized.</param>
+		/// <param name="manager">The <see cref="SerializationManager"/> to control advanced JSON serialization.</param>
+		/// <returns>The serialized JSON string.</returns>
+		public static string ToJSON (object obj, SerializationManager manager) {
+			return ToJSON (obj, Parameters, manager);
+		}
+		/// <summary>
 		/// Creates a JSON representation for an object with parameter and serialization manager override on this call.
 		/// </summary>
 		/// <param name="obj">The object to be serialized.</param>
@@ -143,6 +152,16 @@ namespace fastJSON
 		public static T ToObject<T>(string json, JSONParameters param)
 		{
 			return new JsonDeserializer(param, Manager).ToObject<T>(json);
+		}
+		/// <summary>
+		/// Create a typed generic object from the JSON with serialization manager override on this call.
+		/// </summary>
+		/// <typeparam name="T">The type of the expected object after deserialization.</typeparam>
+		/// <param name="json">The JSON string to be deserialized.</param>
+		/// <param name="manager">The <see cref="SerializationManager"/> to control advanced JSON deserialization.</param>
+		/// <returns>The deserialized object of type <typeparamref name="T"/>.</returns>
+		public static T ToObject<T>(string json, SerializationManager manager) {
+			return new JsonDeserializer (Parameters, manager).ToObject<T> (json);
 		}
 		/// <summary>
 		/// Creates a typed generic object from the JSON with parameter and serialization manager override on this call.

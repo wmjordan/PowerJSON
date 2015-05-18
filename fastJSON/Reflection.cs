@@ -436,52 +436,105 @@ namespace fastJSON
 		}
 
 		// TODO: Support method that takes more than 1 arguments
-		internal static T CreateDynamicMethod<T> (MethodInfo method) where T : class {
+		/// <summary>
+		/// Creates a wrapper delegate for the given method. The delegate should have a similar signature as the <paramref name="method"/>, except that an argument in inserted before the method arguments.
+		/// </summary>
+		/// <typeparam name="T">A delegate definition. The first argument of the delegate will be used to invoke the method.</typeparam>
+		/// <param name="method">The method to be converted to the delegate.</param>
+		/// <returns>The wrapper delegate to invoke the method.</returns>
+		/// <example><code><![CDATA[delegate void MyAddMethod (IEnumerable target, object value); Reflection.CreateWrapperMethod<MyAddMethod> (typeof(List<string>).GetMethod("Add"));]]></code></example>
+		internal static T CreateWrapperMethod<T> (MethodInfo method) where T : class {
 			if (method == null)
 				return null;
 
 			var type = method.ReflectedType;
 			var mp = method.GetParameters ();
-			var pt = mp[0].ParameterType;
-			var rt = method.ReturnType;
+			var mr = method.ReturnType;
 
-			var arguments = new Type[2];
-			arguments[0] = arguments[1] = typeof (object);
+			var d = typeof (T).GetMethod ("Invoke");
+			var dp = d.GetParameters ();
+			var dr = d.ReturnType;
+			var da = new Type[dp.Length];
+			for (int i = da.Length - 1; i >= 0; i--) {
+				da[i] = dp[i].ParameterType;
+			}
 
-			var setter = new DynamicMethod (method.Name, null, arguments, true);
-			var il = setter.GetILGenerator ();
+			var m = new DynamicMethod (method.Name, dr, da, true);
+			var il = m.GetILGenerator ();
 
+			var lv = il.DeclareLocal (type);
 			if (!type.IsClass) // structs
 			{
-				var lv = il.DeclareLocal (type);
-				il.Emit (OpCodes.Ldarg_0);
-				il.Emit (OpCodes.Unbox_Any, type);
-				il.Emit (OpCodes.Stloc_0);
-				il.Emit (OpCodes.Ldloca_S, lv);
-				il.Emit (OpCodes.Ldarg_1);
-				if (pt.IsClass)
-					il.Emit (OpCodes.Castclass, pt);
-				else
-					il.Emit (OpCodes.Unbox_Any, pt);
+				if (method.IsStatic == false) {
+					il.Emit (OpCodes.Ldarg_0);
+					il.Emit (OpCodes.Unbox_Any, type);
+					il.Emit (OpCodes.Stloc_0);
+					il.Emit (OpCodes.Ldloca_S, lv);
+				}
+				for (int i = 0; i < mp.Length; i++) {
+					LoadArgument (mp, i, il);
+				}
 				il.EmitCall (method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method, null);
 			}
 			else {
-				il.Emit (OpCodes.Ldarg_0);
-				il.Emit (OpCodes.Castclass, type);
-				il.Emit (OpCodes.Ldarg_1);
-				if (pt.IsClass)
-					il.Emit (OpCodes.Castclass, pt);
-				else
-					il.Emit (OpCodes.Unbox_Any, pt);
+				if (method.IsStatic == false) {
+					il.Emit (OpCodes.Ldarg_0);
+					il.Emit (OpCodes.Castclass, type); 
+				}
+				for (int i = 0; i < mp.Length; i++) {
+					LoadArgument (mp, i, il);
+				}
 				il.EmitCall (method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method, null);
 			}
 
-			if (rt.Equals (typeof (void)) == false) {
-				il.Emit (OpCodes.Pop);
+			var dv = dr.Equals (typeof (void));
+			var mv = mr.Equals (typeof (void));
+			if (mv == false && dv == false) {
+				var rv = il.DeclareLocal (mr);
+			}
+			var dro = dr.Equals (typeof (object));
+			var mro = dr.Equals (typeof (object));
+			// TODO: correctly handles the return value
+			if (dv) {
+				if (mv == false) {
+					il.Emit (OpCodes.Pop);
+				}
+			}
+			else if (dro) {
+				if (mv) {
+					il.Emit (OpCodes.Ldarg_0);
+					il.Emit (OpCodes.Stloc_1);
+					il.Emit (OpCodes.Ldloc_1);
+				}
+				else if (mro) {
+					if (mr.IsValueType) {
+						il.Emit (OpCodes.Box, mr);
+					}
+					il.Emit (OpCodes.Stloc_1);
+					il.Emit (OpCodes.Ldloc_1);
+				}
+			}
+			else {
+				il.Emit (OpCodes.Stloc_1);
+				il.Emit (OpCodes.Ldloc_1);
 			}
 			il.Emit (OpCodes.Ret);
 
-			return setter.CreateDelegate (typeof (T)) as T;
+			return m.CreateDelegate (typeof (T)) as T;
+		}
+
+		private static void LoadArgument (ParameterInfo[] parameters, int index, ILGenerator il) {
+			switch (index) {
+				case 0: il.Emit (OpCodes.Ldarg_1); break;
+				case 1: il.Emit (OpCodes.Ldarg_2); break;
+				case 2: il.Emit (OpCodes.Ldarg_3); break;
+				default: il.Emit (OpCodes.Ldarg_S); break;
+			}
+			var pt = parameters[index].ParameterType;
+			if (pt.IsClass)
+				il.Emit (OpCodes.Castclass, pt);
+			else
+				il.Emit (OpCodes.Unbox_Any, pt);
 		}
 
 		internal static MethodInfo FindMethod (Type type, string methodName, Type[] argumentTypes) {

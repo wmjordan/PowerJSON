@@ -125,7 +125,7 @@ namespace fastJSON
 					en = sn;
 				}
 				vc.Add (ev, en);
-				vm.Add (en, ev);
+				vm.Add (en ?? ns[i], ev);
 			}
 			return vm;
 		}
@@ -378,6 +378,17 @@ namespace fastJSON
 		/// <remarks>If the type has already gotten an <see cref="IJsonInterceptor"/>, the new <paramref name="interceptor"/> will replace it. If the new interceptor is null, existing interceptor will be removed from the type.</remarks>
 		public void OverrideInterceptor (Type type, IJsonInterceptor interceptor) {
 			Override (type, new TypeOverride () { Interceptor = interceptor }, false);
+		}
+
+		/// <summary>
+		/// <para>Assigns an <see cref="IJsonConverter"/> to process a specific type.</para>
+		/// <para>This is a simplified version of <see cref="Override{T}(TypeOverride)"/> method replacing the <see cref="IJsonConverter"/> of a type.</para>
+		/// </summary>
+		/// <typeparam name="T">The type to be processed by the interceptor.</typeparam>
+		/// <param name="converter">The converter to convert instances of type before the serialization and deserialization.</param>
+		/// <remarks>If the type has already gotten an <see cref="IJsonConverter"/>, the new <paramref name="converter"/> will replace it. If the new converter is null, existing converter will be removed from the type.</remarks>
+		public void OverrideConverter<T>(IJsonConverter converter) {
+			Override (typeof(T), new TypeOverride () { Converter = converter }, false);
 		}
 
 		/// <summary>
