@@ -71,21 +71,22 @@ namespace fastJSON
 	}
 
 	/// <summary>
-	/// This attribute is not supported yet. Do not use it at this moment.
+	/// Specifies a value of the annotated member which is hidden from being serialized.
 	/// </summary>
-	internal sealed class JsonFieldOrderAttribute : Attribute
+	[AttributeUsage (AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = true)]
+	public sealed class JsonNonSerializedValueAttribute : Attribute
 	{
 		/// <summary>
-		/// Gets or sets the serialization order of the annotated field or property.
+		/// Gets the non-serialized value.
 		/// </summary>
-		public int Order { get; set; }
+		public object Value { get; private set; }
 
 		/// <summary>
-		/// Specifies the order of the serialized field or property.
+		/// Specifies a value of the annotated member which is hidden from being serialized.
 		/// </summary>
-		/// <param name="order">The name of the serialized field or property.</param>
-		public JsonFieldOrderAttribute (int order) {
-			Order = order;
+		/// <param name="value">The non-serialized value.</param>
+		public JsonNonSerializedValueAttribute (object value) {
+			Value = value;
 		}
 	}
 
@@ -544,7 +545,7 @@ namespace fastJSON
 
 	}
 
-	internal static class AttributeHelper
+	static class AttributeHelper
 	{
 		public static T[] GetAttributes<T> (MemberInfo member, bool inherit) where T : Attribute {
 			return member.GetCustomAttributes (typeof (T), inherit) as T[];

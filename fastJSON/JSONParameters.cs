@@ -73,6 +73,7 @@ namespace fastJSON
 		/// </summary>
 		public bool UseValuesOfEnums = false;
 
+		[System.Diagnostics.CodeAnalysis.SuppressMessage ("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
 		/// <summary>
 		/// Ignores attributes to check for (default : XmlIgnoreAttribute)
 		/// </summary>
@@ -118,6 +119,7 @@ namespace fastJSON
 		NamingStrategy _strategy = NamingStrategy.Default;
 		internal NamingStrategy NamingStrategy { get { return _strategy; } }
 
+		[System.Diagnostics.CodeAnalysis.SuppressMessage ("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
 		/// <summary>
 		/// Fixes conflicting parameters.
 		/// </summary>

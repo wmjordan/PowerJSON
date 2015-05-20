@@ -232,7 +232,7 @@ namespace fastJSON
 			}
 			var ht = new JsonParser(json).Decode() as JsonDict;
 			if (ht == null) return null;
-			return new JsonDeserializer(Parameters, Manager).ParseDictionary(ht, Manager.GetReflectionCache (input.GetType()), input);
+			return new JsonDeserializer(Parameters, Manager).CreateObject(ht, Manager.GetReflectionCache (input.GetType()), input);
 		}
 
 		/// <summary>
@@ -279,7 +279,8 @@ namespace fastJSON
 		/// <param name="type">The type to be handled.</param>
 		/// <param name="serializer">The delegate to be used in serialization.</param>
 		/// <param name="deserializer">The delegate to be used in deserialization.</param>
-		[Obsolete ("The reflection is managed by SerializationManager. Please use the methods provided by that class to register custom serializer.")]
+		/// <remarks>It is recommended to customize serialization with <see cref="IJsonConverter"/>.</remarks>
+		[Obsolete ("The reflection is managed by SerializationManager. Please use methods provided by that class to register custom serializer.")]
 		public static void RegisterCustomType (Type type, Serialize serializer, Deserialize deserializer)
 		{
 			Manager.RegisterCustomType(type, serializer, deserializer);
@@ -287,7 +288,7 @@ namespace fastJSON
 		/// <summary>
 		/// Clears the internal reflection cache so you can start from new (you will loose performance)
 		/// </summary>
-		[Obsolete ("The reflection is managed by SerializationManager. Please use the methods provided by that class to alter the reflection cache.")]
+		[Obsolete ("The reflection is managed by SerializationManager. Please use methods provided by that class to alter the reflection cache.")]
 		public static void ClearReflectionCache()
 		{
 			Manager.ResetCache();

@@ -207,7 +207,7 @@ namespace UnitTests
 		} 
 		#endregion
 
-		#region Polymorphy
+		#region Polymorph
 		public interface IName
 		{
 			string Name { get; set; }
@@ -319,35 +319,35 @@ namespace UnitTests
 		}
 		class TestInterceptor : JsonInterceptor<InterceptorTestSample>
 		{
-			public override bool OnSerializing (InterceptorTestSample obj) {
-				obj.Value = 1;
+			public override bool OnSerializing (InterceptorTestSample data) {
+				data.Value = 1;
 				Console.WriteLine ("serializing.");
 				return true;
 			}
-			public override void OnSerialized (InterceptorTestSample obj) {
-				obj.Value = 2;
+			public override void OnSerialized (InterceptorTestSample data) {
+				data.Value = 2;
 				Console.WriteLine ("serialized.");
 			}
-			public override bool OnSerializing (InterceptorTestSample obj, JsonItem item) {
+			public override bool OnSerializing (InterceptorTestSample data, JsonItem item) {
 				Console.WriteLine ("serializing " + item.Name);
 				if (item.Name == "Text") {
-					obj.Timestamp = DateTime.Now;
-					item.Value = "Changed at " + obj.Timestamp.ToString ();
+					data.Timestamp = DateTime.Now;
+					item.Value = "Changed at " + data.Timestamp.ToString ();
 				}
-				else if (item.Name == "HideWhenToggleTrue" && obj.Toggle) {
+				else if (item.Name == "HideWhenToggleTrue" && data.Toggle) {
 					return false;
 				}
 				return true;
 			}
-			public override void OnDeserializing (InterceptorTestSample obj) {
-				obj.Value = 3;
+			public override void OnDeserializing (InterceptorTestSample data) {
+				data.Value = 3;
 				Console.WriteLine ("deserializing.");
 			}
-			public override void OnDeserialized (InterceptorTestSample obj) {
-				obj.Value = 4;
+			public override void OnDeserialized (InterceptorTestSample data) {
+				data.Value = 4;
 				Console.WriteLine ("deserialized.");
 			}
-			public override bool OnDeserializing (InterceptorTestSample obj, JsonItem item) {
+			public override bool OnDeserializing (InterceptorTestSample data, JsonItem item) {
 				Console.WriteLine ("deserializing " + item.Name);
 				if (item.Name == "Text") {
 					item.Value = "1";
@@ -391,7 +391,7 @@ namespace UnitTests
 			}
 			public void DeserializationConvert (JsonItem item) {
 				var s = item.Value as string;
-				if (s != null && s.StartsWith ("Encrypted: ")) {
+				if (s != null && s.StartsWith ("Encrypted: ", StringComparison.Ordinal)) {
 					item.Value = s.Substring ("Encrypted: ".Length);
 				}
 			}
@@ -729,13 +729,13 @@ namespace UnitTests
 		public class WebExceptionJsonInterceptor : JsonInterceptor<System.Net.WebException>
 		{
 			// Adds extra values to the serialization result
-			public override IEnumerable<JsonItem> SerializeExtraValues (System.Net.WebException obj) {
+			public override IEnumerable<JsonItem> SerializeExtraValues (System.Net.WebException data) {
 				return new JsonItem[] {
 					new JsonItem ("exceptionTime", DateTime.Now),
 					new JsonItem ("machine", Environment.MachineName)
 				};
 			}
-			public override bool OnSerializing (System.Net.WebException obj, JsonItem item) {
+			public override bool OnSerializing (System.Net.WebException data, JsonItem item) {
 				// filter properties
 				switch (item.Name) {
 					case "Status":
@@ -760,7 +760,7 @@ namespace UnitTests
 			// apply the interceptor to WebException
 			manager.OverrideInterceptor<System.Net.WebException> (new WebExceptionJsonInterceptor ());
 			// override the serialized name of the Status property
-			manager.OverrideMemberName<System.Net.WebException> ("Status", "httpstatus");
+			manager.OverrideMemberName<System.Net.WebException> ("Status", "http_status");
 			try {
 				var c = System.Net.WebRequest.Create ("http://inexistent-domain.com");
 				using (var r = c.GetResponse ()) {
@@ -770,7 +770,7 @@ namespace UnitTests
 			catch (System.Net.WebException ex) {
 				string s = JSON.ToJSON (ex, p);
 				Console.WriteLine (s);
-				StringAssert.Contains (s, @"""httpstatus"":");
+				StringAssert.Contains (s, @"""http_status"":");
 				StringAssert.Contains (s, @"""exceptionTime"":");
 				StringAssert.Contains (s, @"""machine"":""" + Environment.MachineName + "\"");
 

@@ -45,7 +45,7 @@ namespace fastJSON
 		}
 
 		/// <summary>
-		/// This method is called to determine whether the values of the given <see cref="Enum"/> type should be serialized as its numeric form rather than literal form. The overriden can be set via the <see cref="JsonEnumFormatAttribute"/>.
+		/// This method is called to determine whether the values of the given <see cref="Enum"/> type should be serialized as its numeric form rather than literal form. The override can be set via the <see cref="JsonEnumFormatAttribute"/>.
 		/// </summary>
 		/// <param name="type">An <see cref="Enum"/> value type.</param>
 		/// <returns>If the type should be serialized numerically, returns true, otherwise, false.</returns>
@@ -176,10 +176,18 @@ namespace fastJSON
 		/// <returns>The values which are not serialized for <paramref name="member"/>.</returns>
 		public virtual IEnumerable GetNonSerializedValues (MemberInfo member) {
 			var a = AttributeHelper.GetAttribute<System.ComponentModel.DefaultValueAttribute> (member, true);
-			if (a != null) {
-				return new object[] { a.Value };
+			var n = AttributeHelper.GetAttributes<JsonNonSerializedValueAttribute> (member, true);
+			if (a == null && n.Length == 0) {
+				return null;
 			}
-			return null;
+			var v = new List<object> ();
+			if (a != null) {
+				v.Add (a.Value);
+			}
+			foreach (var item in n) {
+				v.Add (item.Value);
+			}
+			return v;
 		}
 
 		/// <summary>
@@ -196,7 +204,7 @@ namespace fastJSON
 		}
 
 		/// <summary>
-		/// This method returns an <see cref="IJsonConverter"/> instance to convert item values for a field or a property which is of <see cref="System.Collections.IEnumerable"/> type during serialization and deserialization. If no converter is used, null can be returned. The converter can be set via <see cref="JsonItemConverterAttribute"/>.
+		/// This method returns an <see cref="IJsonConverter"/> instance to convert item values for a field or a property which is of <see cref="IEnumerable"/> type during serialization and deserialization. If no converter is used, null can be returned. The converter can be set via <see cref="JsonItemConverterAttribute"/>.
 		/// </summary>
 		/// <param name="member">The <see cref="MemberInfo"/> of the field or property.</param>
 		/// <returns>The converter.</returns>
@@ -295,7 +303,7 @@ namespace fastJSON
 		public virtual IJsonConverter GetMemberConverter (MemberInfo member) { return null; }
 
 		/// <summary>
-		/// This method returns an <see cref="IJsonConverter"/> instance to convert item values for a field or a property which is of <see cref="System.Collections.IEnumerable"/> type during serialization and deserialization. If no converter is used, null can be returned.
+		/// This method returns an <see cref="IJsonConverter"/> instance to convert item values for a field or a property which is of <see cref="IEnumerable"/> type during serialization and deserialization. If no converter is used, null can be returned.
 		/// </summary>
 		/// <param name="member">The <see cref="MemberInfo"/> of the field or property.</param>
 		/// <returns>The converter.</returns>
@@ -390,7 +398,7 @@ namespace fastJSON
 		IJsonConverter GetMemberConverter (MemberInfo member);
 
 		/// <summary>
-		/// This method returns an <see cref="IJsonConverter"/> instance to convert item values for a field or a property which is of <see cref="System.Collections.IEnumerable"/> type during serialization and deserialization. If no converter is used, null can be returned.
+		/// This method returns an <see cref="IJsonConverter"/> instance to convert item values for a field or a property which is of <see cref="IEnumerable"/> type during serialization and deserialization. If no converter is used, null can be returned.
 		/// </summary>
 		/// <param name="member">The <see cref="MemberInfo"/> of the field or property.</param>
 		/// <returns>The converter.</returns>

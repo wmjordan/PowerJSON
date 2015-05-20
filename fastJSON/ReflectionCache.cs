@@ -46,7 +46,6 @@ namespace fastJSON
 		#region Enum Info
 		internal readonly bool IsFlaggedEnum;
 		internal readonly Dictionary<string, Enum> EnumNames;
-		internal EnumValueFormat EnumValueFormat;
 		#endregion
 
 		internal ReflectionCache (Type type, SerializationManager manager) {
@@ -63,7 +62,6 @@ namespace fastJSON
 			if (JsonDataType == JsonDataType.Enum) {
 				IsFlaggedEnum = AttributeHelper.GetAttribute<FlagsAttribute> (type, false) != null;
 				EnumNames = manager.GetEnumValues (type, controller);
-				EnumValueFormat = controller.GetEnumValueFormat (type);
 				return;
 			}
 
