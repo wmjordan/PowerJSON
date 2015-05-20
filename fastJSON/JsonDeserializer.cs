@@ -8,7 +8,7 @@ using System.Collections.Specialized;
 
 namespace fastJSON
 {
-	class JsonDeserializer
+	sealed class JsonDeserializer
 	{
 		static readonly RevertJsonValue[] _revertMethods = RegisterMethods ();
 
@@ -17,7 +17,7 @@ namespace fastJSON
 		readonly Dictionary<object, int> _circobj = new Dictionary<object, int> ();
 		readonly Dictionary<int, object> _cirrev = new Dictionary<int, object> ();
 		bool _usingglobals = false;
-		JsonDict globaltypes;
+		Dictionary<string,object> globaltypes;
 
 		static RevertJsonValue[] RegisterMethods () {
 			var r = new RevertJsonValue[Enum.GetNames (typeof (JsonDataType)).Length];
@@ -244,7 +244,7 @@ namespace fastJSON
 
 			if (data.Types != null && data.Types.Count > 0) {
 				_usingglobals = true;
-				globaltypes = new JsonDict ();
+				globaltypes = new Dictionary<string,object> ();
 				foreach (var kv in data.Types) {
 					globaltypes.Add ((string)kv.Value, kv.Key);
 				}
@@ -271,10 +271,9 @@ namespace fastJSON
 
 			object o = input;
 			if (o == null) {
-				if (_params.ParametricConstructorOverride)
-					o = System.Runtime.Serialization.FormatterServices.GetUninitializedObject (type.Type);
-				else
-					o = type.Instantiate ();
+				o = _params.ParametricConstructorOverride
+					? System.Runtime.Serialization.FormatterServices.GetUninitializedObject (type.Type)
+					: type.Instantiate ();
 			}
 			int circount = 0;
 			if (_circobj.TryGetValue (o, out circount) == false) {

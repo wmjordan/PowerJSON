@@ -77,7 +77,7 @@ namespace fastJSON
 			return t;
 		}
 
-		private static JsonDataType DetermineExtraDataType (Type type) {
+		static JsonDataType DetermineExtraDataType (Type type) {
 			if (type.IsEnum) {
 				return JsonDataType.Enum;
 			}
@@ -523,7 +523,7 @@ namespace fastJSON
 			return m.CreateDelegate (typeof (T)) as T;
 		}
 
-		private static void LoadArgument (ParameterInfo[] parameters, int index, ILGenerator il) {
+		static void LoadArgument (ParameterInfo[] parameters, int index, ILGenerator il) {
 			switch (index) {
 				case 1: il.Emit (OpCodes.Ldarg_1); break;
 				case 2: il.Emit (OpCodes.Ldarg_2); break;

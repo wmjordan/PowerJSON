@@ -98,7 +98,7 @@ namespace fastJSON
 			return CreateReflectionCacheAndRegister (type);
 		}
 
-		private ReflectionCache CreateReflectionCacheAndRegister (Type type) {
+		ReflectionCache CreateReflectionCacheAndRegister (Type type) {
 			var c = _reflections[type] = new ReflectionCache (type, this);
 			if (type.IsClass || type.IsValueType) {
 				c.Getters = Reflection.GetGetters (type, _controller, this);
@@ -262,7 +262,7 @@ namespace fastJSON
 			}
 		}
 
-		private void OverridePropInfo (Dictionary<string, JsonPropertyInfo> s, MemberOverride mo, Getters g) {
+		void OverridePropInfo (Dictionary<string, JsonPropertyInfo> s, MemberOverride mo, Getters g) {
 			JsonPropertyInfo mp = null;
 			if (mo.OverrideTypedNames) {
 				// remove previous polymorphic deserialization info
@@ -328,7 +328,7 @@ namespace fastJSON
 			}
 		}
 
-		private static void OverrideGetters (Getters getter, MemberOverride mo) {
+		static void OverrideGetters (Getters getter, MemberOverride mo) {
 			if (mo.Serializable != TriState.Default) {
 				getter.Serializable = mo.Serializable;
 			}
@@ -484,7 +484,7 @@ namespace fastJSON
 
 		sealed class RemapEnumValueController : DefaultReflectionController
 		{
-			IDictionary<string, string> _mapper;
+			readonly IDictionary<string, string> _mapper;
 			public RemapEnumValueController (IDictionary<string,string> mapper) {
 				_mapper = mapper;
 			}
@@ -534,11 +534,11 @@ namespace fastJSON
 			}
 		}
 
-		IList<MemberOverride> _MemberOverrides;
+		List<MemberOverride> _MemberOverrides;
 		/// <summary>
 		/// Gets the override information for members.
 		/// </summary>
-		public IList<MemberOverride> MemberOverrides {
+		public List<MemberOverride> MemberOverrides {
 			get {
 				if (_MemberOverrides == null) {
 					_MemberOverrides = new List<MemberOverride> ();

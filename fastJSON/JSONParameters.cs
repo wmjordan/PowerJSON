@@ -73,10 +73,10 @@ namespace fastJSON
 		/// </summary>
 		public bool UseValuesOfEnums = false;
 
-		[System.Diagnostics.CodeAnalysis.SuppressMessage ("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
 		/// <summary>
 		/// Ignores attributes to check for (default : XmlIgnoreAttribute)
 		/// </summary>
+		[System.Diagnostics.CodeAnalysis.SuppressMessage ("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
 		[Obsolete ("This property is provided for backward compatibility. It returns the FastJsonReflectionController.IgnoreAttributes from the controller instance in SerializationManager.Instance, which is used by JSON.ToJSON and JSON.ToObject methods without SerializationManager parameters. For other method overloads in JSON class with the SerializationManager parameter, this setting will not work.")]
 		public IList<Type> IgnoreAttributes { get { return (SerializationManager.Instance.ReflectionController as JsonReflectionController).IgnoreAttributes; } }
 
@@ -119,11 +119,11 @@ namespace fastJSON
 		NamingStrategy _strategy = NamingStrategy.Default;
 		internal NamingStrategy NamingStrategy { get { return _strategy; } }
 
-		[System.Diagnostics.CodeAnalysis.SuppressMessage ("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
 		/// <summary>
 		/// Fixes conflicting parameters.
 		/// </summary>
-		[Obsolete ("This method is deprecated and the parameter conflict is automatically handled.")]
+		[System.Diagnostics.CodeAnalysis.SuppressMessage ("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
+		[Obsolete ("This method is deprecated and parameter conflicts will be automatically handled.")]
 		public void FixValues () {
 			//if (UseExtensions == false)
 			//{
@@ -141,7 +141,7 @@ namespace fastJSON
 	{
 		internal abstract NamingConvention Convention { get; }
 		internal abstract void WriteName (StringBuilder output, string name);
-		internal abstract string Rename (string text);
+		internal abstract string Rename (string name);
 
 		internal static readonly NamingStrategy Default = new DefaultNaming ();
 		internal static readonly NamingStrategy LowerCase = new LowerCaseNaming ();

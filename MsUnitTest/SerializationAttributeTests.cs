@@ -516,7 +516,7 @@ namespace UnitTests
 		class NamedClassConverter : JsonConverter<IName, IName>
 		{
 			public override Type GetReversiveType (JsonItem item) {
-				var d = item.Value as Dictionary<string, object>;
+				var d = item.Value as IDictionary<string, object>;
 				if (d == null) {
 					return null;
 				}

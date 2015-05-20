@@ -12,10 +12,10 @@ namespace MsUnitTest
 		public abstract class abstractClass
 		{
 			public string myConcreteType { get; set; }
-			public abstractClass () {
+			protected abstractClass () {
 			}
 
-			public abstractClass (string type) // : base(type)
+			protected abstractClass (string type) // : base(type)
 			{
 				myConcreteType = type;
 			}

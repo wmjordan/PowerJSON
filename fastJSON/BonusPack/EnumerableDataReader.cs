@@ -23,7 +23,7 @@ namespace fastJSON.BonusPack
 
 	/// <summary>
 	/// Experimental Feature:
-	/// Converts <see cref="IEnumerable&lt;T&gt;"/> instances into <see cref="IDataReader"/> for <see cref="System.Data.SqlClient.SqlBulkCopy.WriteToServer(IDataReader)"/>.
+	/// Converts <see cref="IEnumerable{T}"/> instances into <see cref="IDataReader"/> for <see cref="System.Data.SqlClient.SqlBulkCopy.WriteToServer(IDataReader)"/>.
 	/// </summary>
 	/// <remarks>References:
 	/// 1) https://github.com/matthewschrager/Repository/blob/master/Repository.EntityFramework/EntityDataReader.cs;

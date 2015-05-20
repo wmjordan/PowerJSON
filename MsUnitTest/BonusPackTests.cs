@@ -3,24 +3,26 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using fastJSON;
 using fastJSON.BonusPack;
 using System.Collections.Generic;
+using System.Xml;
 
 namespace MsUnitTest
 {
 	[TestClass]
 	public class BonusPackTests
 	{
+		#region EnumerableDataReader
 		[TestMethod]
 		[ExpectedException (typeof (NotSupportedException))]
 		public void DataReaderInt32NotSupported () {
 			var d = new int[] { 1, 2, 3 };
-			new EnumerableDataReader<int> (d, false);
+			var k = new EnumerableDataReader<int> (d, false);
 		}
 
 		[TestMethod]
 		[ExpectedException (typeof (NotSupportedException))]
 		public void DataReaderStringNotSupported () {
 			var d = new string[] { "1", "2", "3" };
-			new EnumerableDataReader<string> (d, false);
+			var k = new EnumerableDataReader<string> (d, false);
 		}
 
 		public struct TestStruct
@@ -74,5 +76,24 @@ namespace MsUnitTest
 				Assert.AreEqual (1, r.GetValue (0));
 			}
 		}
+		#endregion
+
+		[TestMethod]
+		public void SerializeXmlNode () {
+			var d = new XmlDocument ();
+			d.LoadXml (@"<?xml version=""1.0""?><root xmlns:test=""testURL"" attr=""val1"">
+<test:child attr=""val2"">child1<test:grandson />
+<?pi value is pi?>
+</test:child>text1<child attr=""a1"" attr2=""a2"">&lt;child2&gt;</child>
+<child><![CDATA[markup <html """"> ]]></child>
+</root>");
+			JSON.Manager.Override<XmlDocument> (new TypeOverride () { Converter = new XmlNodeConverter () });
+			JSON.Manager.Override<XmlElement> (new TypeOverride () { Converter = new XmlNodeConverter () });
+			var s = JSON.ToJSON (d);
+			Console.WriteLine (s);
+			s = JSON.ToJSON (d.DocumentElement);
+			Console.WriteLine (s);
+		}
+
 	}
 }

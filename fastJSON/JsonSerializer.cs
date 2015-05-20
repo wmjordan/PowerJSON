@@ -11,7 +11,7 @@ using System.Collections.Specialized;
 
 namespace fastJSON
 {
-	internal sealed class JsonSerializer
+	sealed class JsonSerializer
 	{
 		static readonly WriteJsonValue[] _convertMethods = RegisterMethods ();
 
@@ -85,7 +85,7 @@ namespace fastJSON
 			return _output.ToString ();
 		}
 
-		private static WriteJsonValue[] RegisterMethods () {
+		static WriteJsonValue[] RegisterMethods () {
 			var r = new WriteJsonValue[Enum.GetNames (typeof (JsonDataType)).Length];
 			r[(int)JsonDataType.Array] = WriteArray;
 			r[(int)JsonDataType.Bool] = WriteBoolean;
@@ -113,7 +113,7 @@ namespace fastJSON
 			r[(int)JsonDataType.Undefined] = WriteObject;
 			return r;
 		}
-		private void WriteValue (object obj) {
+		void WriteValue (object obj) {
 			if (obj == null || obj is DBNull)
 				_output.Append ("null");
 
@@ -130,12 +130,13 @@ namespace fastJSON
 			else if (obj is int) {
 				_output.Append (Int32ToString ((int)obj));
 			}
+			else if (obj is long) {
+				_output.Append (Int64ToString ((int)obj));
+			}
 			else if (
-				obj is long || obj is double ||
-				obj is decimal || obj is float ||
-				obj is byte || obj is short ||
-				obj is sbyte || obj is ushort ||
-				obj is uint || obj is ulong
+				obj is double ||
+				obj is float || obj is decimal || 
+				obj is byte
 			)
 				_output.Append (((IConvertible)obj).ToString (NumberFormatInfo.InvariantInfo));
 
@@ -145,50 +146,62 @@ namespace fastJSON
 			else if (obj is Guid)
 				WriteGuid (this, obj);
 
-			else if (obj is TimeSpan) {
-				WriteTimeSpan (this, obj);
+			else {
+				var t = obj.GetType ();
+				var c = _manager.GetReflectionCache (t);
+				if (c.SerializeMethod != null) {
+					c.SerializeMethod (this, obj);
+				}
+				//			else if (obj is TimeSpan) {
+				//				WriteTimeSpan (this, obj);
+				//			}
+				//			else if (_params.KVStyleStringDictionary == false && obj is IDictionary<string, object>) {
+				//				WriteStringDictionary ((IDictionary<string, object>)obj);
+				//			}
+				//			else if (_params.KVStyleStringDictionary == false && obj is IDictionary
+				//				&& obj.GetType ().IsGenericType
+				//				&& typeof (string).Equals (obj.GetType ().GetGenericArguments ()[0])) {
+				//				WriteStringDictionary ((IDictionary)obj);
+				//			}
+				//#if NET_40_OR_GREATER
+				//			else if (_params.KVStyleStringDictionary == false && obj is System.Dynamic.ExpandoObject) {
+				//				WriteStringDictionary ((IDictionary<string, object>)obj);
+				//			}
+				//#endif
+				//			else if (obj is IDictionary)
+				//				WriteKvStyleDictionary ((IDictionary)obj);
+				//#if !SILVERLIGHT
+				//			else if (obj is DataSet)
+				//				WriteDataset ((DataSet)obj);
+
+				//			else if (obj is DataTable)
+				//				WriteDataTable ((DataTable)obj);
+				//#endif
+				//			else if (obj is byte[])
+				//				WriteBytes ((byte[])obj);
+
+				//			else if (obj is StringDictionary)
+				//				WriteSD ((StringDictionary)obj);
+
+				//			else if (obj is NameValueCollection) {
+				//				WriteNameValueCollection ((NameValueCollection)obj);
+				//			}
+
+				//			else if (obj is IEnumerable)
+				//				WriteArray (this, obj);
+
+				//			else if (obj is Enum)
+				//				WriteEnum (this, obj);
+
+				else if (_manager.IsTypeRegistered (obj.GetType ()))
+					WriteCustom (obj);
+
+				else
+					WriteObject (obj);
 			}
-			else if (_params.KVStyleStringDictionary == false && obj is IDictionary &&
-				obj.GetType ().IsGenericType && typeof (string).Equals (obj.GetType ().GetGenericArguments ()[0]))
-
-				WriteStringDictionary ((IDictionary)obj);
-#if NET_40_OR_GREATER
-			else if (_params.KVStyleStringDictionary == false && obj is System.Dynamic.ExpandoObject)
-				WriteStringDictionary ((IDictionary<string, object>)obj);
-#endif
-			else if (obj is IDictionary)
-				WriteKvStyleDictionary ((IDictionary)obj);
-#if !SILVERLIGHT
-			else if (obj is DataSet)
-				WriteDataset ((DataSet)obj);
-
-			else if (obj is DataTable)
-				WriteDataTable ((DataTable)obj);
-#endif
-			else if (obj is byte[])
-				WriteBytes ((byte[])obj);
-
-			else if (obj is StringDictionary)
-				WriteSD ((StringDictionary)obj);
-
-			else if (obj is NameValueCollection) {
-				WriteNameValueCollection ((NameValueCollection)obj);
-			}
-
-			else if (obj is IEnumerable)
-				WriteArray (this, obj);
-
-			else if (obj is Enum)
-				WriteEnum (this, obj);
-
-			else if (_manager.IsTypeRegistered (obj.GetType ()))
-				WriteCustom (obj);
-
-			else
-				WriteObject (obj);
 		}
 
-		private void WriteSD (StringDictionary stringDictionary) {
+		void WriteSD (StringDictionary stringDictionary) {
 			_output.Append ('{');
 
 			var pendingSeparator = false;
@@ -207,12 +220,12 @@ namespace fastJSON
 			_output.Append ('}');
 		}
 
-		private void WriteCustom (object obj) {
+		void WriteCustom (object obj) {
 			Serialize s = _manager.GetCustomSerializer (obj.GetType ());
 			WriteStringFast (s (obj));
 		}
 
-		private void WriteBytes (byte[] bytes) {
+		void WriteBytes (byte[] bytes) {
 #if !SILVERLIGHT
 			WriteStringFast (Convert.ToBase64String (bytes, 0, bytes.Length, Base64FormattingOptions.None));
 #else
@@ -221,7 +234,7 @@ namespace fastJSON
 		}
 
 #if !SILVERLIGHT
-		private static DatasetSchema GetSchema (DataTable ds) {
+		static DatasetSchema GetSchema (DataTable ds) {
 			if (ds == null) return null;
 
 			var m = new DatasetSchema {
@@ -239,7 +252,7 @@ namespace fastJSON
 			return m;
 		}
 
-		private static DatasetSchema GetSchema (DataSet ds) {
+		static DatasetSchema GetSchema (DataSet ds) {
 			if (ds == null) return null;
 
 			var m = new DatasetSchema {
@@ -259,14 +272,14 @@ namespace fastJSON
 			return m;
 		}
 
-		private static string GetXmlSchema (DataTable dt) {
+		static string GetXmlSchema (DataTable dt) {
 			using (var writer = new StringWriter ()) {
 				dt.WriteXmlSchema (writer);
 				return dt.ToString ();
 			}
 		}
 
-		private void WriteDataset (DataSet ds) {
+		void WriteDataset (DataSet ds) {
 			_output.Append ('{');
 			if (_useExtensions) {
 				WritePair (JsonDict.ExtSchema, _params.UseOptimizedDatasetSchema ? (object)GetSchema (ds) : ds.GetXmlSchema ());
@@ -282,7 +295,7 @@ namespace fastJSON
 			_output.Append ('}');
 		}
 
-		private void WriteDataTableData (DataTable table) {
+		void WriteDataTableData (DataTable table) {
 			_output.Append ('\"');
 			_output.Append (table.TableName);
 			_output.Append ("\":[");
@@ -318,9 +331,9 @@ namespace fastJSON
 		}
 #endif
 
-		// HACK: This is a very long function, individual parts in regions are inlined for better performance
-		private void WriteObject (object obj) {
-			#region Detect Circurlar Reference
+		// HACK: This is a very long function, individual parts in regions are made inline for better performance
+		void WriteObject (object obj) {
+			#region Detect Circular Reference
 			var ci = 0;
 			if (_cirobj.TryGetValue (obj, out ci) == false)
 				_cirobj.Add (obj, _cirobj.Count + 1);
@@ -459,19 +472,8 @@ namespace fastJSON
 				}
 				#endregion
 
-				// TODO: Candidate to removal of unknown use of map
-				//if (ji._Value != null && _params.UseExtensions) {
-				//	var tt = ji._Value.GetType ();
-				//	if (typeof (object).Equals (tt))
-				//		map.Add (p.SerializedName, tt.ToString ());
-				//}
 				append = true;
 			}
-			//if (map.Count > 0 && _params.UseExtensions) {
-			//	_output.Append (",\"" + JsonDict.ExtMap + "\":");
-			//	WriteStringDictionary (map);
-			//	append = true;
-			//}
 			if (si != null) {
 				#region Write Extra Values
 				var ev = si.SerializeExtraValues (obj);
@@ -491,13 +493,13 @@ namespace fastJSON
 		}
 
 
-		private void WritePairFast (string name, string value) {
+		void WritePairFast (string name, string value) {
 			WriteStringFast (name);
 			_output.Append (':');
 			WriteStringFast (value);
 		}
 
-		private void WritePair (string name, object value) {
+		void WritePair (string name, object value) {
 			WriteStringFast (name);
 			_output.Append (':');
 			WriteValue (value);
@@ -587,7 +589,7 @@ namespace fastJSON
 			serializer.WriteMultiDimensionalArray (m, a);
 		}
 
-		private void WriteMultiDimensionalArray (WriteJsonValue m, Array md) {
+		void WriteMultiDimensionalArray (WriteJsonValue m, Array md) {
 			var r = md.Rank;
 			var lb = new int[r];
 			var ub = new int[r];
@@ -600,7 +602,7 @@ namespace fastJSON
 			WriteMultiDimensionalArray (m, md, r, lb, ub, mdi, 0);
 		}
 
-		private void WriteMultiDimensionalArray (WriteJsonValue m, Array array, int rank, int[] lowerBounds, int[] upperBounds, int[] indexes, int rankIndex) {
+		void WriteMultiDimensionalArray (WriteJsonValue m, Array array, int rank, int[] lowerBounds, int[] upperBounds, int[] indexes, int rankIndex) {
 			var u = upperBounds[rankIndex];
 			if (rankIndex < rank - 1) {
 				_output.Append ('[');
@@ -637,7 +639,7 @@ namespace fastJSON
 			}
 		}
 
-		private void WriteStringDictionary (IDictionary dic) {
+		void WriteStringDictionary (IDictionary dic) {
 			_output.Append ('{');
 			var pendingSeparator = false;
 			foreach (DictionaryEntry entry in dic) {
@@ -652,7 +654,7 @@ namespace fastJSON
 			_output.Append ('}');
 		}
 
-		private void WriteNameValueCollection (NameValueCollection collection) {
+		void WriteNameValueCollection (NameValueCollection collection) {
 			_output.Append ('{');
 			var pendingSeparator = false;
 			var length = collection.Count;
@@ -704,7 +706,7 @@ namespace fastJSON
 			_output.Append ('}');
 		}
 
-		private void WriteStringDictionary (IDictionary<string, object> dic) {
+		void WriteStringDictionary (IDictionary<string, object> dic) {
 			_output.Append ('{');
 			var pendingSeparator = false;
 			foreach (KeyValuePair<string, object> entry in dic) {
@@ -719,7 +721,7 @@ namespace fastJSON
 			_output.Append ('}');
 		}
 
-		private void WriteKvStyleDictionary (IDictionary dic) {
+		void WriteKvStyleDictionary (IDictionary dic) {
 			_output.Append ('[');
 
 			var pendingSeparator = false;
@@ -737,7 +739,7 @@ namespace fastJSON
 			_output.Append (']');
 		}
 
-		private void WriteStringFast (string s) {
+		void WriteStringFast (string s) {
 			_output.Append ('\"');
 			_output.Append (s);
 			_output.Append ('\"');
@@ -926,30 +928,27 @@ namespace fastJSON
 		#region WriteJsonValue delegate methods
 		internal static WriteJsonValue GetWriteJsonMethod (Type type) {
 			var t = Reflection.GetJsonDataType (type);
-			if (t != JsonDataType.Primitive) {
+			if (t == JsonDataType.Primitive) {
+				return typeof (decimal).Equals (type) ? WriteDecimal
+						: typeof (byte).Equals (type) ? WriteByte
+						: typeof (sbyte).Equals (type) ? WriteSByte
+						: typeof (short).Equals (type) ? WriteInt16
+						: typeof (ushort).Equals (type) ? WriteUInt16
+						: typeof (uint).Equals (type) ? WriteUInt32
+						: typeof (ulong).Equals (type) ? WriteUInt64
+						: typeof (char).Equals (type) ? WriteChar
+						: (WriteJsonValue)WriteUnknown;
+			}
+			else if (t == JsonDataType.Undefined) {
+				return type.IsSubclassOf (typeof (Array)) && type.GetArrayRank () > 1 ? WriteMultiDimensionalArray
+					: type.IsSubclassOf (typeof (Array)) && typeof (byte[]).Equals (type) == false ? WriteArray
+					: typeof (KeyValuePair<string,object>).Equals (type) ? WriteKeyObjectPair
+					: typeof (KeyValuePair<string,string>).Equals (type) ? WriteKeyValuePair
+					: (WriteJsonValue)WriteObject;
+			}
+			else {
 				return _convertMethods[(int)t];
 			}
-			return typeof (int).Equals (type) ? WriteInt32
-					: typeof (long).Equals (type) ? WriteInt64
-					: typeof (string).Equals (type) ? WriteString
-					: typeof (double).Equals (type) ? WriteDouble
-					: typeof (float).Equals (type) ? WriteSingle
-					: typeof (decimal).Equals (type) ? WriteDecimal
-					: typeof (bool).Equals (type) ? WriteBoolean
-					: typeof (byte).Equals (type) ? WriteByte
-					: typeof (DateTime).Equals (type) ? WriteDateTime
-					: typeof (TimeSpan).Equals (type) ? WriteTimeSpan
-					: typeof (Guid).Equals (type) ? WriteGuid
-					: typeof (sbyte).Equals (type) ? WriteSByte
-					: typeof (short).Equals (type) ? WriteInt16
-					: typeof (ushort).Equals (type) ? WriteUInt16
-					: typeof (uint).Equals (type) ? WriteUInt32
-					: typeof (ulong).Equals (type) ? WriteUInt64
-					: typeof (char).Equals (type) ? WriteChar
-					: type.IsSubclassOf (typeof (Enum)) ? WriteEnum
-					: type.IsSubclassOf (typeof (Array)) && type.GetArrayRank () > 1 ? WriteMultiDimensionalArray
-					: type.IsSubclassOf (typeof (Array)) && typeof (byte[]).Equals (type) == false ? WriteArray
-					: (WriteJsonValue)WriteUnknown;
 		}
 
 		static void WriteByte (JsonSerializer serializer, object value) {
@@ -1079,15 +1078,25 @@ namespace fastJSON
 			serializer.WriteDataTable ((DataTable)value);
 		}
 		static void WriteDictionary (JsonSerializer serializer, object value) {
-			if (serializer._params.KVStyleStringDictionary == false && value is IDictionary &&
-				value.GetType ().IsGenericType && typeof (string).Equals (value.GetType ().GetGenericArguments ()[0]))
-
-				serializer.WriteStringDictionary ((IDictionary)value);
+			if (serializer._params.KVStyleStringDictionary == false) {
+				if (value is IDictionary<string, object>) {
+					serializer.WriteStringDictionary ((IDictionary<string, object>)value);
+					return;
+				}
+				else if (value is IDictionary
+					&& value.GetType ().IsGenericType
+					&& typeof (string).Equals (value.GetType ().GetGenericArguments ()[0])) {
+					serializer.WriteStringDictionary ((IDictionary)value);
+					return;
+				}
 #if NET_40_OR_GREATER
-			else if (serializer._params.KVStyleStringDictionary == false && value is System.Dynamic.ExpandoObject)
-				serializer.WriteStringDictionary ((IDictionary<string, object>)value);
+				else if (value is System.Dynamic.ExpandoObject) {
+					serializer.WriteStringDictionary ((IDictionary<string, object>)value);
+					return;
+				}
 #endif
-			else if (value is IDictionary)
+			}
+			if (value is IDictionary)
 				serializer.WriteKvStyleDictionary ((IDictionary)value);
 		}
 		static void WriteStringDictionary (JsonSerializer serializer, object value) {
@@ -1095,6 +1104,22 @@ namespace fastJSON
 		}
 		static void WriteNameValueCollection (JsonSerializer serializer, object value) {
 			serializer.WriteNameValueCollection ((NameValueCollection)value);
+		}
+		static void WriteKeyObjectPair (JsonSerializer serializer, object value) {
+			var p = (KeyValuePair<string, object>)value;
+			serializer._output.Append ('{');
+			serializer.WriteStringFast (p.Key);
+			serializer._output.Append (':');
+			WriteObject (serializer, p.Value);
+			serializer._output.Append ('}');
+		}
+		static void WriteKeyValuePair (JsonSerializer serializer, object value) {
+			var p = (KeyValuePair<string, string>)value;
+			serializer._output.Append ('{');
+			serializer.WriteStringFast (p.Key);
+			serializer._output.Append (':');
+			WriteString (serializer, p.Value);
+			serializer._output.Append ('}');
 		}
 		static void WriteObject (JsonSerializer serializer, object value) {
 			serializer.WriteObject (value);

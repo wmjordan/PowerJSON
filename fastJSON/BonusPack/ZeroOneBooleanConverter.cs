@@ -8,18 +8,18 @@ namespace fastJSON.BonusPack
 	/// <summary>
 	/// A <see cref="IJsonConverter"/> converts boolean values to 1/0 or "1"/"0", rather than the default "true" and "false" values.
 	/// </summary>
-	public class JsonZeroOneBooleanConverter : IJsonConverter
+	public class ZeroOneBooleanConverter : IJsonConverter
 	{
 		/// <summary>
-		/// Creates an instance of <see cref="JsonZeroOneBooleanConverter"/>.
+		/// Creates an instance of <see cref="ZeroOneBooleanConverter"/>.
 		/// </summary>
-		public JsonZeroOneBooleanConverter () { }
+		public ZeroOneBooleanConverter () { }
 
 		/// <summary>
-		/// Creates an instance of <see cref="JsonZeroOneBooleanConverter"/>, specifying whether the boolean values should be serialized to textual "1"/"0" values.
+		/// Creates an instance of <see cref="ZeroOneBooleanConverter"/>, specifying whether the boolean values should be serialized to textual "1"/"0" values.
 		/// </summary>
 		/// <param name="useTextualForm">When this value is true, the boolean values will be serialized to textual "1"/"0" values.</param>
-		public JsonZeroOneBooleanConverter (bool useTextualForm) {
+		public ZeroOneBooleanConverter (bool useTextualForm) {
 			UseTextualForm = useTextualForm;
 		}
 

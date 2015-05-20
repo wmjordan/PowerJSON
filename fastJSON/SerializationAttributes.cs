@@ -443,7 +443,7 @@ namespace fastJSON
 	/// Converts the member value being serialized or deserialized.
 	/// </summary>
 	/// <remarks>
-	/// <para>During deserialization, the JSON string is parsed and converted to primitive data. The data could be of the following six types returned from the JSON Parser: <see cref="Boolean"/>, <see cref="Int64"/>, <see cref="Double"/>, <see cref="String"/>, <see cref="List{Object}"/> and <see cref="Dictionary{String, Object}"/>.</para>
+	/// <para>During deserialization, the JSON string is parsed and converted to primitive data. The data could be of the following six types returned from the JSON Parser: <see cref="Boolean"/>, <see cref="Int64"/>, <see cref="Double"/>, <see cref="String"/>, <see cref="IList{Object}"/> and <see cref="IDictionary{String, Object}"/>.</para>
 	/// <para>The <see cref="DeserializationConvert"/> method should be able to process the above six types, as well as the null value, and convert the value to match the type of the member being deserialized.</para>
 	/// <para>If the <see cref="GetReversiveType"/> method returns a <see cref="Type"/> instead of null or the type of <see cref="Object"/>, the deserializer will firstly attempt to revert the primitive data to match that type, and then pass the reverted value to the <see cref="DeserializationConvert"/> method. By this means, the implementation of <see cref="DeserializationConvert"/> method does not have to cope with primitive data types.</para>
 	/// <para>To implement the <see cref="GetReversiveType"/> method, keep in mind that the <see cref="JsonItem.Value"/> in the <see cref="JsonItem"/> instance will always be primitive data.</para>
@@ -490,8 +490,8 @@ namespace fastJSON
 			var s = typeof (TSerialized);
 			if (s == typeof (bool) || s == typeof (string)
 				|| s == typeof (double) || s == typeof (long)
-				|| s == typeof (List<object>)
-				|| s == typeof (Dictionary<string, object>)
+				|| typeof (IList<object>).IsAssignableFrom (s)
+				|| typeof (IDictionary<string, object>).IsAssignableFrom (s)
 			) {
 				return;
 			}
