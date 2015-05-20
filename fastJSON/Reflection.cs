@@ -481,8 +481,8 @@ namespace fastJSON
 					il.Emit (OpCodes.Ldarg_0);
 					il.Emit (OpCodes.Castclass, type); 
 				}
-				for (int i = 0; i < mp.Length; i++) {
-					LoadArgument (mp, i, il);
+				for (int i = 0; i < mp.Length;) {
+					LoadArgument (mp, ++i, il);
 				}
 				il.EmitCall (method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method, null);
 			}
@@ -525,28 +525,35 @@ namespace fastJSON
 
 		private static void LoadArgument (ParameterInfo[] parameters, int index, ILGenerator il) {
 			switch (index) {
-				case 0: il.Emit (OpCodes.Ldarg_1); break;
-				case 1: il.Emit (OpCodes.Ldarg_2); break;
-				case 2: il.Emit (OpCodes.Ldarg_3); break;
+				case 1: il.Emit (OpCodes.Ldarg_1); break;
+				case 2: il.Emit (OpCodes.Ldarg_2); break;
+				case 3: il.Emit (OpCodes.Ldarg_3); break;
 				default: il.Emit (OpCodes.Ldarg_S); break;
 			}
-			var pt = parameters[index].ParameterType;
-			if (pt.IsClass)
-				il.Emit (OpCodes.Castclass, pt);
-			else
+			var pt = parameters[--index].ParameterType;
+			if (pt.IsValueType)
 				il.Emit (OpCodes.Unbox_Any, pt);
+			else if (typeof(object).Equals (pt) == false)
+				il.Emit (OpCodes.Castclass, pt);
 		}
 
+		/// <summary>
+		/// Finds a public instance method with the same name as <paramref name="methodName"/> and having arguments match the <paramref name="argumentTypes"/> in the given <paramref name="type"/>.
+		/// </summary>
+		/// <param name="type">The type which contains the method.</param>
+		/// <param name="methodName">The method to match.</param>
+		/// <param name="argumentTypes">The types of method arguments. Null value in the array means the corresponding argument can be any type.</param>
+		/// <returns>The method matches the name and argument types.</returns>
 		internal static MethodInfo FindMethod (Type type, string methodName, Type[] argumentTypes) {
 			int ac = argumentTypes != null ? argumentTypes.Length : -1;
-			foreach (var item in type.GetMethods ()) {
-				if (item.Name != methodName || item.IsPublic == false || item.IsStatic) {
+			foreach (var method in type.GetMethods ()) {
+				if (method.Name != methodName || method.IsPublic == false || method.IsStatic) {
 					continue;
 				}
 				if (ac == -1) {
-					return item;
+					return method;
 				}
-				var p = item.GetParameters ();
+				var p = method.GetParameters ();
 				if (p.Length != ac) {
 					continue;
 				}
@@ -558,7 +565,7 @@ namespace fastJSON
 					}
 				}
 				if (m) {
-					return item;
+					return method;
 				}
 			}
 			return null;
