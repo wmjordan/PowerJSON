@@ -95,5 +95,14 @@ namespace MsUnitTest
 			Console.WriteLine (s);
 		}
 
+		[TestMethod]
+		public void ConvertVersion () {
+			JSON.Manager.OverrideConverter<Version> (new VersionConverter ());
+			var v = new Version (1, 2, 3, 1234);
+			var s = JSON.ToJSON (v);
+			Console.WriteLine (s);
+			var o = JSON.ToObject<Version> (s);
+			Assert.AreEqual (v, o);
+		}
 	}
 }

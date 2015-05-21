@@ -37,6 +37,7 @@ The attributes are listed below:
 * **JsonConverterAttribute**: allows transforming data before serialization.
 * **JsonEnumValueAttribute**: controls the serialized literal name of an `Enum` value.
 * **JsonSerializableAttribute**: enables serializing and deserializing private or internal types.
+* **JsonNonSerializedValueAttribute**: prevents specified member value from serializing.
 
 Some .NET built-in attributes are also supported.
 * **DefaultValueAttribute**: values equal to `DefaultValueAttribute.Value` are not serialized.
