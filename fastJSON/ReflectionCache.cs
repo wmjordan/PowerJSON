@@ -34,10 +34,10 @@ namespace fastJSON
 		#region Object Serialization and Deserialization Info
 		internal readonly ConstructorTypes ConstructorInfo;
 		internal readonly CreateObject Constructor;
-		internal Getters[] Getters;
-		internal Dictionary<string, JsonPropertyInfo> Properties;
 		internal readonly WriteJsonValue SerializeMethod;
 		internal readonly RevertJsonValue DeserializeMethod;
+		internal Getters[] Getters;
+		internal Dictionary<string, JsonPropertyInfo> Properties;
 		internal bool AlwaysDeserializable;
 		internal IJsonConverter Converter;
 		internal IJsonInterceptor Interceptor;

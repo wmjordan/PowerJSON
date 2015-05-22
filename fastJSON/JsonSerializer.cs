@@ -131,13 +131,9 @@ namespace fastJSON
 				_output.Append (Int32ToString ((int)obj));
 			}
 			else if (obj is long) {
-				_output.Append (Int64ToString ((int)obj));
+				_output.Append (Int64ToString ((long)obj));
 			}
-			else if (
-				obj is double ||
-				obj is float || obj is decimal || 
-				obj is byte
-			)
+			else if (obj is double || obj is float || obj is decimal || obj is byte)
 				_output.Append (((IConvertible)obj).ToString (NumberFormatInfo.InvariantInfo));
 
 			else if (obj is DateTime)
@@ -301,16 +297,31 @@ namespace fastJSON
 			_output.Append ("\":[");
 			var cols = table.Columns;
 			var rowseparator = false;
+			var cl = cols.Count;
+			var w = new WriteJsonValue[cl];
+			if (table.Rows.Count > 3) {
+				for (int i = w.Length - 1; i >= 0; i--) {
+					w[i] = GetWriteJsonMethod (cols[i].DataType);
+				}
+			}
+			else {
+				w = null;
+			}
 			foreach (DataRow row in table.Rows) {
 				if (rowseparator) _output.Append (',');
 				rowseparator = true;
 				_output.Append ('[');
 
-				var pendingSeperator = false;
-				foreach (DataColumn column in cols) {
-					if (pendingSeperator) _output.Append (',');
-					WriteValue (row[column]);
-					pendingSeperator = true;
+				for (int j = 0; j < cl; j++) {
+					if (j > 0) {
+						_output.Append (',');
+					}
+					if (w != null) {
+						w[j] (this, row[j]);
+					}
+					else {
+						WriteValue (row[j]);
+					}
 				}
 				_output.Append (']');
 			}

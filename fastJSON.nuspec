@@ -1,20 +1,19 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
     <metadata>
-        <id>fastJSON</id>
-        <version>2.1.11.0</version>
-        <title>fastJSON</title>
-        <authors>mgholam</authors>
-        <owners />
-        <projectUrl>http://fastjson.codeplex.com/</projectUrl>
+        <id>PowerJSON</id>
+        <version>2.3.4.0</version>
+        <title>PowerJSON</title>
+        <authors>WMJ</authors>
+        <projectUrl>https://github.com/wmjordan/PowerJSON</projectUrl>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
-        <description>smallest, fastest polymorphic JSON serializer</description>
+        <description>A fork from the fastJSON serializer with power to control various aspects of JSON serialization and deserialization.</description>
+        <summary>PowerJSON is a fork from the fastJSON with many serialization controls and performance enhancements.</summary>
+        <copyright>wmjordan</copyright>
     </metadata>
     <files>
-        <file src="output\net35\fastjson.dll" target="lib\net20\fastjson.dll" />
-        <file src="output\net35\fastjson.dll" target="lib\net35\fastjson.dll" />
-	    <file src="output\net40\fastjson.dll" target="lib\net40\fastjson.dll" />
-		<file src="history.txt" target="lib\history.txt" />
-		<file src="readme.md" target="lib\readme.md" />
+        <file src="output\PowerJSON\fastJSON.XML" target="lib\fastJSON.XML" />
+        <file src="output\PowerJSON\fastJSON.dll" target="lib\fastJSON.dll" />
+        <file src="output\Help\PowerJSON.chm" target="PowerJSON.chm" />
     </files>
 </package>

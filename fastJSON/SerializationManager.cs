@@ -5,10 +5,11 @@ using System.Reflection;
 namespace fastJSON
 {
 	/// <summary>
-	/// The cached serialization information used by the reflection engine during serialization and deserialization.
+	/// A managemental class for serialization control for specified types and members.
 	/// </summary>
 	/// <remarks>
-	/// <para>The reflection overriding methods, such as <seealso cref="Override{T}(TypeOverride)"/>, <seealso cref="OverrideMemberName{T}(string, string)"/>, etc., must be called before serialization or deserialization.</para>
+	/// <para>This class can be used to control serialization and deserialization for specified types and members.</para>
+	/// <para>The overriding methods, such as <seealso cref="Override{T}(TypeOverride)"/>, <seealso cref="OverrideMemberName{T}(string, string)"/>, etc., must be called before serialization or deserialization. Otherwise, inconsitent serialization results may occur between types.</para>
 	/// </remarks>
 	/// <preliminary />
 	public sealed class SerializationManager
@@ -601,7 +602,7 @@ namespace fastJSON
 		/// <summary>
 		/// Gets the values of the member that should not be serialized.
 		/// </summary>
-		public IList<object> NonSerializedValues {
+		public List<object> NonSerializedValues {
 			get {
 				if (_NonSerializedValues == null) {
 					_NonSerializedValues = new List<object> ();

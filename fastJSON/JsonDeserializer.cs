@@ -701,13 +701,13 @@ namespace fastJSON
 			return ds;
 		}
 
-		void ReadDataTable (JsonArray rows, DataTable dt) {
-			dt.BeginInit ();
-			dt.BeginLoadData ();
+		void ReadDataTable (JsonArray rows, DataTable dataTable) {
+			dataTable.BeginInit ();
+			dataTable.BeginLoadData ();
 			List<int> guidcols = new List<int> ();
 			List<int> datecol = new List<int> ();
 
-			foreach (DataColumn c in dt.Columns) {
+			foreach (DataColumn c in dataTable.Columns) {
 				if (typeof (Guid).Equals (c.DataType) || typeof (Guid?).Equals (c.DataType))
 					guidcols.Add (c.Ordinal);
 				if (_params.UseUTCDateTime && (typeof (DateTime).Equals (c.DataType) || typeof (DateTime?).Equals (c.DataType)))
@@ -726,18 +726,18 @@ namespace fastJSON
 							v[i] = new Guid (Convert.FromBase64String (s));
 					}
 				}
-				if (dc && _params.UseUTCDateTime) {
+				if (dc) {
 					foreach (int i in datecol) {
 						var s = v[i];
 						if (s != null)
 							v[i] = CreateDateTime (this, s);
 					}
 				}
-				dt.Rows.Add (v);
+				dataTable.Rows.Add (v);
 			}
 
-			dt.EndLoadData ();
-			dt.EndInit ();
+			dataTable.EndLoadData ();
+			dataTable.EndInit ();
 		}
 
 		DataTable CreateDataTable (JsonDict reader) {
