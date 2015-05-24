@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Xml;
 
-namespace fastJSON.BonusPack
+namespace fastJSON.Converters
 {
 	/// <summary>
 	/// A <see cref="IJsonConverter"/> to convert <see cref="XmlElement"/> to JSON strings. Currently deserialization has not yet been implemented.

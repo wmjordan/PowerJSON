@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace fastJSON.BonusPack
+namespace fastJSON.Converters
 {
 	class RegexConverter : JsonConverter<Regex, RegexConverter.RegexInfo>
 	{
