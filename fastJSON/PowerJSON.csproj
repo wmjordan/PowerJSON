@@ -93,6 +93,7 @@
     <Compile Include="BonusPack\Converters.cs" />
     <Compile Include="BonusPack\IPAddressConverter.cs" />
     <Compile Include="BonusPack\RegexConverter.cs" />
+    <Compile Include="BonusPack\UriConverter.cs" />
     <Compile Include="BonusPack\VersionConverter.cs" />
     <Compile Include="BonusPack\XmlNodeConverter.cs" />
     <Compile Include="BonusPack\ZeroOneBooleanConverter.cs" />

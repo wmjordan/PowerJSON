@@ -22,7 +22,7 @@
 		<section>
 			<content>
 				<para>
-					This article will give a short discription about what <newTerm>PowerJSON</newTerm> offers, along with the features in the original <newTerm>fastJSON</newTerm>.
+					This article will give a short description about what <newTerm>PowerJSON</newTerm> offers, along with the features in the original <newTerm>fastJSON</newTerm>.
 				</para>
 			</content>
 			<sections address="S1">
@@ -75,6 +75,9 @@
 							</listItem>
 							<listItem>
 								<para>Noninvasive control of serialization.</para>
+							</listItem>
+							<listItem>
+								<para>Easiest customized serialization and deserialization. You can implement serialization for unsupported types with the least effort.</para>
 							</listItem>
 						</list>
 					</content>

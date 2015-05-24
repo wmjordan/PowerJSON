@@ -14,23 +14,27 @@ namespace fastJSON.BonusPack
 		/// <summary>
 		/// Gets an <see cref="IJsonConverter"/> to convert <see cref="System.Net.IPAddress"/> instances.
 		/// </summary>
-		public static IJsonConverter IPAddressConverter { get; private set; }
+		public static IJsonConverter IPAddress { get; private set; }
 		/// <summary>
 		/// Gets an <see cref="IJsonConverter"/> to convert <see cref="System.Text.RegularExpressions.Regex"/> instances.
 		/// </summary>
-		public static IJsonConverter RegexConverter { get; private set; }
+		public static IJsonConverter Regex { get; private set; }
 		/// <summary>
 		/// Gets an <see cref="IJsonConverter"/> to convert <see cref="bool"/> instances to numeric 1 or 0 rather than the default "true", "false" values.
 		/// </summary>
-		public static IJsonConverter ZeroOneBooleanConverter { get; private set; }
+		public static IJsonConverter ZeroOneBoolean { get; private set; }
 		/// <summary>
 		/// Gets an <see cref="IJsonConverter"/> to convert <see cref="bool"/> instances to literal "1" or "0" rather than the default "true", "false" values.
 		/// </summary>
-		public static IJsonConverter TextualZeroOneBooleanConverter { get; private set; }
+		public static IJsonConverter TextualZeroOneBoolean { get; private set; }
 		/// <summary>
-		/// Gets an <see cref="IJsonConverter"/> to convert <see cref="Version"/> instances.
+		/// Gets an <see cref="IJsonConverter"/> to convert <see cref="System.Uri"/> instances.
 		/// </summary>
-		public static IJsonConverter VersionConverter { get; private set; }
+		public static IJsonConverter Uri { get; private set; }
+		/// <summary>
+		/// Gets an <see cref="IJsonConverter"/> to convert <see cref="System.Version"/> instances.
+		/// </summary>
+		public static IJsonConverter Version { get; private set; }
 		/// <summary>
 		/// Gets an <see cref="IJsonConverter"/> to serialize <see cref="System.Xml.XmlDocument"/> or <see cref="System.Xml.XmlElement"/> instances. NOTICE: Deserialization is not supported at this moment.
 		/// </summary>
@@ -46,15 +50,16 @@ namespace fastJSON.BonusPack
 		/// <item><term>Comment</term><description>A dictionary in the nodes array with a name "!" and a value as the content of the comment.</description></item>
 		/// </list>
 		/// </remarks>
-		public static IJsonConverter XmlNodeConverter { get; private set; }
+		public static IJsonConverter XmlNode { get; private set; }
 
 		static Converters () {
-			IPAddressConverter = new IPAddressConverter ();
-			RegexConverter = new RegexConverter ();
-			ZeroOneBooleanConverter = new ZeroOneBooleanConverter ();
-			TextualZeroOneBooleanConverter = new ZeroOneBooleanConverter (true);
-			VersionConverter = new VersionConverter ();
-			XmlNodeConverter = new XmlNodeConverter ();
+			IPAddress = new IPAddressConverter ();
+			Regex = new RegexConverter ();
+			ZeroOneBoolean = new ZeroOneBooleanConverter ();
+			TextualZeroOneBoolean = new ZeroOneBooleanConverter (true);
+			Uri = new UriConverter ();
+			Version = new VersionConverter ();
+			XmlNode = new XmlNodeConverter ();
 		}
 	}
 }
