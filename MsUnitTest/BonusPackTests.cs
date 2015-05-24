@@ -3,6 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using fastJSON;
 using fastJSON.BonusPack;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using System.Xml;
 
 namespace MsUnitTest
@@ -10,6 +11,15 @@ namespace MsUnitTest
 	[TestClass]
 	public class BonusPackTests
 	{
+		[TestInitialize]
+		public void Bootstrap () {
+			JSON.Parameters.UseExtensions = false;
+		}
+		[TestCleanup]
+		public void CleanUp () {
+			JSON.Parameters.UseExtensions = true;
+		}
+
 		#region EnumerableDataReader
 		[TestMethod]
 		[ExpectedException (typeof (NotSupportedException))]
@@ -87,8 +97,8 @@ namespace MsUnitTest
 </test:child>text1<child attr=""a1"" attr2=""a2"">&lt;child2&gt;</child>
 <child><![CDATA[markup <html """"> ]]></child>
 </root>");
-			JSON.Manager.Override<XmlDocument> (new TypeOverride () { Converter = new XmlNodeConverter () });
-			JSON.Manager.Override<XmlElement> (new TypeOverride () { Converter = new XmlNodeConverter () });
+			JSON.Manager.OverrideConverter<XmlDocument> (Converters.XmlNodeConverter);
+			JSON.Manager.OverrideConverter<XmlElement> (Converters.XmlNodeConverter);
 			var s = JSON.ToJSON (d);
 			Console.WriteLine (s);
 			s = JSON.ToJSON (d.DocumentElement);
@@ -97,12 +107,23 @@ namespace MsUnitTest
 
 		[TestMethod]
 		public void ConvertVersion () {
-			JSON.Manager.OverrideConverter<Version> (new VersionConverter ());
+			JSON.Manager.OverrideConverter<Version> (Converters.VersionConverter);
 			var v = new Version (1, 2, 3, 1234);
 			var s = JSON.ToJSON (v);
 			Console.WriteLine (s);
 			var o = JSON.ToObject<Version> (s);
 			Assert.AreEqual (v, o);
+		}
+
+		[TestMethod]
+		public void RegexSerialization () {
+			var r = new Regex ("[0-9]+", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+			JSON.Manager.OverrideConverter<Regex> (Converters.RegexConverter);
+			var s = JSON.ToJSON (r);
+			Console.WriteLine (s);
+			var o = JSON.ToObject<Regex> (s);
+			Assert.AreEqual (r.ToString (), o.ToString ());
+			Assert.AreEqual (r.Options, o.Options);
 		}
 	}
 }

@@ -75,7 +75,7 @@ namespace fastJSON
 					sb.Append (pendingSeparator ? ",\"" : "\"");
 					sb.Append (kv.Key);
 					sb.Append ("\":\"");
-					sb.Append (Int32ToString (kv.Value));
+					sb.Append (ValueConverter.Int32ToString (kv.Value));
 					sb.Append ('\"');
 					pendingSeparator = true;
 				}
@@ -128,10 +128,10 @@ namespace fastJSON
 			else if (obj is bool)
 				_output.Append (((bool)obj) ? "true" : "false"); // conform to standard
 			else if (obj is int) {
-				_output.Append (Int32ToString ((int)obj));
+				_output.Append (ValueConverter.Int32ToString ((int)obj));
 			}
 			else if (obj is long) {
-				_output.Append (Int64ToString ((long)obj));
+				_output.Append (ValueConverter.Int64ToString ((long)obj));
 			}
 			else if (obj is double || obj is float || obj is decimal || obj is byte)
 				_output.Append (((IConvertible)obj).ToString (NumberFormatInfo.InvariantInfo));
@@ -148,52 +148,12 @@ namespace fastJSON
 				if (c.SerializeMethod != null) {
 					c.SerializeMethod (this, obj);
 				}
-				//			else if (obj is TimeSpan) {
-				//				WriteTimeSpan (this, obj);
-				//			}
-				//			else if (_params.KVStyleStringDictionary == false && obj is IDictionary<string, object>) {
-				//				WriteStringDictionary ((IDictionary<string, object>)obj);
-				//			}
-				//			else if (_params.KVStyleStringDictionary == false && obj is IDictionary
-				//				&& obj.GetType ().IsGenericType
-				//				&& typeof (string).Equals (obj.GetType ().GetGenericArguments ()[0])) {
-				//				WriteStringDictionary ((IDictionary)obj);
-				//			}
-				//#if NET_40_OR_GREATER
-				//			else if (_params.KVStyleStringDictionary == false && obj is System.Dynamic.ExpandoObject) {
-				//				WriteStringDictionary ((IDictionary<string, object>)obj);
-				//			}
-				//#endif
-				//			else if (obj is IDictionary)
-				//				WriteKvStyleDictionary ((IDictionary)obj);
-				//#if !SILVERLIGHT
-				//			else if (obj is DataSet)
-				//				WriteDataset ((DataSet)obj);
-
-				//			else if (obj is DataTable)
-				//				WriteDataTable ((DataTable)obj);
-				//#endif
-				//			else if (obj is byte[])
-				//				WriteBytes ((byte[])obj);
-
-				//			else if (obj is StringDictionary)
-				//				WriteSD ((StringDictionary)obj);
-
-				//			else if (obj is NameValueCollection) {
-				//				WriteNameValueCollection ((NameValueCollection)obj);
-				//			}
-
-				//			else if (obj is IEnumerable)
-				//				WriteArray (this, obj);
-
-				//			else if (obj is Enum)
-				//				WriteEnum (this, obj);
-
-				else if (_manager.IsTypeRegistered (obj.GetType ()))
+				else if (_manager.IsTypeRegistered (obj.GetType ())) {
 					WriteCustom (obj);
-
-				else
+				}
+				else {
 					WriteObject (obj);
+				}
 			}
 		}
 
@@ -352,7 +312,7 @@ namespace fastJSON
 				if (_currentDepth > 0 && _useExtensions && _params.InlineCircularReferences == false) {
 					//_circular = true;
 					_output.Append ("{\"" + JsonDict.ExtRefIndex + "\":");
-					_output.Append (Int32ToString (ci));
+					_output.Append (ValueConverter.Int32ToString (ci));
 					_output.Append ("}");
 					return;
 				}
@@ -393,7 +353,7 @@ namespace fastJSON
 						dt = _globalTypes.Count + 1;
 						_globalTypes.Add (ct, dt);
 					}
-					WritePairFast (JsonDict.ExtType, Int32ToString (dt));
+					WritePairFast (JsonDict.ExtType, ValueConverter.Int32ToString (dt));
 				}
 				append = true;
 			}
@@ -841,100 +801,6 @@ namespace fastJSON
 			output.Append ('\"');
 		}
 
-		static string ToFixedWidthString (int value, int digits) {
-			var chs = new char[digits];
-			for (int i = chs.Length - 1; i >= 0; i--) {
-				chs[i] = (char)('0' + (value % 10));
-				value /= 10;
-			}
-			return new string (chs);
-		}
-
-		static string Int64ToString (long value) {
-			var n = false;
-			var d = 20;
-			if (value < 0) {
-				if (value == Int64.MinValue) {
-					return "-9223372036854775808";
-				}
-				n = true;
-				value = -value;
-			}
-			if (value < 10L) {
-				d = 2;
-			}
-			else if (value < 1000L) {
-				d = 4;
-			}
-			else if (value < 1000000L) {
-				d = 7;
-			}
-			var chs = new char[d];
-			var i = d;
-			while (--i > 0) {
-				chs[i] = (char)('0' + (value % 10L));
-				value /= 10L;
-				if (value == 0L) {
-					break;
-				}
-			}
-			if (n) {
-				chs[--i] = '-';
-			}
-			return new string (chs, i, d - i);
-		}
-		static string UInt64ToString (ulong value) {
-			var d = 20;
-			if (value < 10UL) {
-				d = 2;
-			}
-			else if (value < 1000UL) {
-				d = 4;
-			}
-			else if (value < 1000000UL) {
-				d = 7;
-			}
-			var chs = new char[d];
-			var i = d;
-			while (--i > 0) {
-				chs[i] = (char)('0' + (value % 10UL));
-				value /= 10UL;
-				if (value == 0UL) {
-					break;
-				}
-			}
-			return new string (chs, i, d - i);
-		}
-		static string Int32ToString (int value) {
-			var n = false;
-			var d = 11;
-			if (value < 0) {
-				if (value == Int32.MinValue) {
-					return "-2147483648";
-				}
-				n = true;
-				value = -value;
-			}
-			if (value < 10) {
-				d = 2;
-			}
-			else if (value < 1000) {
-				d = 4;
-			}
-			var chs = new char[d];
-			var i = d;
-			while (--i > 0) {
-				chs[i] = (char)('0' + (value % 10));
-				value /= 10;
-				if (value == 0) {
-					break;
-				}
-			}
-			if (n) {
-				chs[--i] = '-';
-			}
-			return new string (chs, i, d - i);
-		}
 
 		#region WriteJsonValue delegate methods
 		internal static WriteJsonValue GetWriteJsonMethod (Type type) {
@@ -963,28 +829,28 @@ namespace fastJSON
 		}
 
 		static void WriteByte (JsonSerializer serializer, object value) {
-			serializer._output.Append (Int32ToString ((byte)value));
+			serializer._output.Append (ValueConverter.Int32ToString ((byte)value));
 		}
 		static void WriteSByte (JsonSerializer serializer, object value) {
-			serializer._output.Append (Int32ToString ((sbyte)value));
+			serializer._output.Append (ValueConverter.Int32ToString ((sbyte)value));
 		}
 		static void WriteInt16 (JsonSerializer serializer, object value) {
-			serializer._output.Append (Int32ToString ((short)value));
+			serializer._output.Append (ValueConverter.Int32ToString ((short)value));
 		}
 		static void WriteUInt16 (JsonSerializer serializer, object value) {
-			serializer._output.Append (Int32ToString ((ushort)value));
+			serializer._output.Append (ValueConverter.Int32ToString ((ushort)value));
 		}
 		static void WriteInt32 (JsonSerializer serializer, object value) {
-			serializer._output.Append (Int32ToString ((int)value));
+			serializer._output.Append (ValueConverter.Int32ToString ((int)value));
 		}
 		static void WriteUInt32 (JsonSerializer serializer, object value) {
-			serializer._output.Append (Int64ToString ((uint)value));
+			serializer._output.Append (ValueConverter.Int64ToString ((uint)value));
 		}
 		static void WriteInt64 (JsonSerializer serializer, object value) {
-			serializer._output.Append (Int64ToString ((long)value));
+			serializer._output.Append (ValueConverter.Int64ToString ((long)value));
 		}
 		static void WriteUInt64 (JsonSerializer serializer, object value) {
-			serializer._output.Append (UInt64ToString ((ulong)value));
+			serializer._output.Append (ValueConverter.UInt64ToString ((ulong)value));
 		}
 		static void WriteSingle (JsonSerializer serializer, object value) {
 			serializer._output.Append (((float)value).ToString (NumberFormatInfo.InvariantInfo));
@@ -1010,21 +876,21 @@ namespace fastJSON
 			if (parameter.UseUTCDateTime)
 				dt = dt.ToUniversalTime ();
 
-			output.Append ('\"');
-			output.Append (ToFixedWidthString (dt.Year, 4));
+			output.Append ('"');
+			output.Append (ValueConverter.ToFixedWidthString (dt.Year, 4));
 			output.Append ('-');
-			output.Append (ToFixedWidthString (dt.Month, 2));
+			output.Append (ValueConverter.ToFixedWidthString (dt.Month, 2));
 			output.Append ('-');
-			output.Append (ToFixedWidthString (dt.Day, 2));
+			output.Append (ValueConverter.ToFixedWidthString (dt.Day, 2));
 			output.Append ('T'); // strict ISO date compliance
-			output.Append (ToFixedWidthString (dt.Hour, 2));
+			output.Append (ValueConverter.ToFixedWidthString (dt.Hour, 2));
 			output.Append (':');
-			output.Append (ToFixedWidthString (dt.Minute, 2));
+			output.Append (ValueConverter.ToFixedWidthString (dt.Minute, 2));
 			output.Append (':');
-			output.Append (ToFixedWidthString (dt.Second, 2));
+			output.Append (ValueConverter.ToFixedWidthString (dt.Second, 2));
 			if (parameter.DateTimeMilliseconds) {
 				output.Append ('.');
-				output.Append (ToFixedWidthString (dt.Millisecond, 3));
+				output.Append (ValueConverter.ToFixedWidthString (dt.Millisecond, 3));
 			}
 			if (parameter.UseUTCDateTime)
 				output.Append ('Z');

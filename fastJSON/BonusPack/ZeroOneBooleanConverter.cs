@@ -8,7 +8,7 @@ namespace fastJSON.BonusPack
 	/// <summary>
 	/// A <see cref="IJsonConverter"/> converts boolean values to 1/0 or "1"/"0", rather than the default "true" and "false" values.
 	/// </summary>
-	public class ZeroOneBooleanConverter : IJsonConverter
+	class ZeroOneBooleanConverter : IJsonConverter
 	{
 		/// <summary>
 		/// Creates an instance of <see cref="ZeroOneBooleanConverter"/>.

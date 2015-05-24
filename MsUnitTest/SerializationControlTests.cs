@@ -240,14 +240,14 @@ namespace MsUnitTest
 			#endregion
 		}
 
-		class DateTimeConverter : JsonConverter<DateTime, string>
+		class JavaTimestampConverter : JsonConverter<DateTime, string>
 		{
 			static readonly DateTime RefDate = new DateTime (1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 			static readonly long RefTicks = RefDate.Ticks;
-			public override string Convert (string fieldName, DateTime fieldValue) {
+			protected override string Convert (string fieldName, DateTime fieldValue) {
 				return String.Concat ("/Date(", ((long)Math.Round (fieldValue.Subtract (RefDate).TotalMilliseconds)).ToString (System.Globalization.NumberFormatInfo.InvariantInfo), ")/");
 			}
-			public override DateTime Revert (string fieldName, string fieldValue) {
+			protected override DateTime Revert (string fieldName, string fieldValue) {
 				var s = fieldValue.IndexOf ('(');
 				var e = fieldValue.IndexOf (')');
 				return new DateTime (RefTicks + Int64.Parse (fieldValue.Substring (++s, e - s)) * 10000L, DateTimeKind.Local);
@@ -255,22 +255,22 @@ namespace MsUnitTest
 		}
 		class AddHourConverter : JsonConverter<DateTime, DateTime>
 		{
-			public override DateTime Convert (string fieldName, DateTime fieldValue) {
+			protected override DateTime Convert (string fieldName, DateTime fieldValue) {
 				return fieldValue.AddHours (1);
 			}
 
-			public override DateTime Revert (string fieldName, DateTime fieldValue) {
+			protected override DateTime Revert (string fieldName, DateTime fieldValue) {
 				return fieldValue.AddHours (-1);
 			}
 		}
 		class BaseClassConverter : JsonConverter<baseclass, baseclass>
 		{
-			public override baseclass Convert (string fieldName, baseclass fieldValue) {
+			protected override baseclass Convert (string fieldName, baseclass fieldValue) {
 				fieldValue.Code += "...";
 				return fieldValue;
 			}
 
-			public override baseclass Revert (string fieldName, baseclass fieldValue) {
+			protected override baseclass Revert (string fieldName, baseclass fieldValue) {
 				fieldValue.Code = fieldValue.Code.Substring (0, fieldValue.Code.Length - 3);
 				return fieldValue;
 			}
@@ -284,10 +284,9 @@ namespace MsUnitTest
 		public void ConverterTest () {
 			var sm = new SerializationManager ();
 			sm.Override<bool> (new TypeOverride () {
-				Converter = new fastJSON.BonusPack.ZeroOneBooleanConverter ()
+				Converter = fastJSON.BonusPack.Converters.ZeroOneBooleanConverter
             });
-			sm.Override<DateTime> (new TypeOverride () { Converter = new DateTimeConverter () });
-
+			sm.Override<DateTime> (new TypeOverride () { Converter = new JavaTimestampConverter () });
 			var s = JSON.ToJSON (true, sm);
 			Console.WriteLine (s);
 			Assert.AreEqual ("1", s);

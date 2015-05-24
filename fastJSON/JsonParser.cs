@@ -241,51 +241,14 @@ namespace fastJSON
 
 							// parse the 32 bit hex into an integer code point
 							// skip 4 chars
-							_sb.Append (ParseUnicode (_json[_index], _json[++_index], _json[++_index], _json[++_index]));
+							_sb.Append (ValueConverter.ParseUnicode (_json[_index], _json[++_index], _json[++_index], _json[++_index]));
 							++_index;
 						}
 						break;
 				}
 			}
 
-			throw new JsonParserException ("Unexpectedly reached end of string", _json.Length, GetContextText ());
-		}
-
-		static int ParseSingleChar (char c1) {
-			if (c1 >= '0' && c1 <= '9')
-				return (c1 - '0');
-			else if (c1 >= 'A' && c1 <= 'F')
-				return ((c1 - 'A') + 10);
-			else if (c1 >= 'a' && c1 <= 'f')
-				return ((c1 - 'a') + 10);
-			return 0;
-		}
-
-		static char ParseUnicode (char c1, char c2, char c3, char c4) {
-			return (char)((ParseSingleChar (c1) << 12)
-				+ (ParseSingleChar (c2) << 8)
-				+ (ParseSingleChar (c3) << 4)
-				+ ParseSingleChar (c4));
-		}
-
-		static long CreateLong (string s, int index, int count) {
-			long num = 0;
-			bool neg = false;
-			for (int x = 0; x < count; x++, index++) {
-				char cc = s[index];
-
-				if (cc == '-')
-					neg = true;
-				else if (cc == '+')
-					neg = false;
-				else {
-					num = (num << 3) + (num << 1); // num *= 10
-					num += (cc - '0');
-				}
-			}
-			if (neg) num = -num;
-
-			return num;
+			throw new JsonParserException ("Unexpectedly reached end of string: ", _json.Length, GetContextText ());
 		}
 
 		object ParseNumber () {
@@ -313,7 +276,7 @@ namespace fastJSON
 				string s = _json.Substring (startIndex, _index - startIndex);
 				return double.Parse (s, NumberFormatInfo.InvariantInfo);
 			}
-			return CreateLong (_json, startIndex, _index - startIndex);
+			return ValueConverter.CreateLong (_json, startIndex, _index - startIndex);
 		}
 
 		Token LookAhead () {

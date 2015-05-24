@@ -9,19 +9,7 @@ namespace fastJSON.BonusPack
 	/// <summary>
 	/// A <see cref="IJsonConverter"/> to convert <see cref="XmlElement"/> to JSON strings. Currently deserialization has not yet been implemented.
 	/// </summary>
-	/// <remarks>
-	/// <para>Elements will be serialized as a dictionary which contains the following three items:
-	/// <list type="ordered">
-	/// <item>Element name: the element qualified name surrounded with &lt; and &gt;, the value is its namespace URL.</item>
-	/// <item>Attributes: the attribute name prefixed with an "@" character, and the value of the attribute.</item>
-	/// <item>Nodes: an array contains the child nodes of the element.</item>
-	/// </list>
-	/// <para>Text, CDATA, Entity reference nodes will be serialized as a text in the nodes array.</para>
-	/// <para>Processing Instruction, XML declaration nodes will be serialized as a dictionary containing one name-value pair.</para>
-	/// <para>Comment nodes will be serialized </para>
-	/// </para>
-	/// </remarks>
-	public class XmlNodeConverter : IJsonConverter
+	class XmlNodeConverter : IJsonConverter
 	{
 		void IJsonConverter.DeserializationConvert (JsonItem item) {
 			throw new NotImplementedException ();

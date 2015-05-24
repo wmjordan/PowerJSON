@@ -459,7 +459,7 @@ namespace fastJSON
 		Type GetReversiveType (JsonItem item);
 
 		/// <summary>
-		/// Converts the <paramref name="item" /> to a new value during serialization. Either <see name="JsonItem.Name"/> or <see cref="JsonItem.Value"/> of the <paramref name="item" /> can be changed to another value.
+		/// Converts the <paramref name="item" /> to a new value during serialization. Either <see cref="JsonItem.Name"/> or <see cref="JsonItem.Value"/> of the <paramref name="item" /> can be changed to another value. However, if the name is changed, deserialization is not guaranteed.
 		/// </summary>
 		/// <param name="item">The item to be deserialized.</param>
 		void SerializationConvert (JsonItem item);
@@ -533,7 +533,7 @@ namespace fastJSON
 		/// <param name="fieldName">The name of the annotated member.</param>
 		/// <param name="fieldValue">The value being serialized.</param>
 		/// <returns>The converted value.</returns>
-		public abstract TSerialized Convert (string fieldName, TOriginal fieldValue);
+		protected abstract TSerialized Convert (string fieldName, TOriginal fieldValue);
 
 		/// <summary>
 		/// Reverts the serialized value to the <typeparamref name="TOriginal"/> type.
@@ -541,7 +541,7 @@ namespace fastJSON
 		/// <param name="fieldName">The name of the annotated member.</param>
 		/// <param name="fieldValue">The serialized value.</param>
 		/// <returns>The reverted value which has the same type as the annotated member.</returns>
-		public abstract TOriginal Revert (string fieldName, TSerialized fieldValue);
+		protected abstract TOriginal Revert (string fieldName, TSerialized fieldValue);
 
 	}
 

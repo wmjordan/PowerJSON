@@ -839,38 +839,19 @@ namespace fastJSON
 			string t = (string)value;
 			//                   0123456789012345678 9012 9/3
 			// datetime format = yyyy-MM-ddTHH:mm:ss .nnn  Z
-			int year = CreateInteger (t, 0, 4);
-			int month = CreateInteger (t, 5, 2);
-			int day = CreateInteger (t, 8, 2);
-			int hour = CreateInteger (t, 11, 2);
-			int min = CreateInteger (t, 14, 2);
-			int sec = CreateInteger (t, 17, 2);
-			int ms = (t.Length > 21 && t[19] == '.') ? CreateInteger (t, 20, 3) : 0;
+			int year = ValueConverter.ToInt32 (t, 0, 4);
+			int month = ValueConverter.ToInt32 (t, 5, 2);
+			int day = ValueConverter.ToInt32 (t, 8, 2);
+			int hour = ValueConverter.ToInt32 (t, 11, 2);
+			int min = ValueConverter.ToInt32 (t, 14, 2);
+			int sec = ValueConverter.ToInt32 (t, 17, 2);
+			int ms = (t.Length > 21 && t[19] == '.') ? ValueConverter.ToInt32 (t, 20, 3) : 0;
 			bool utc = (t[t.Length - 1] == 'Z');
 
 			if (deserializer._params.UseUTCDateTime == false || utc == false)
 				return new DateTime (year, month, day, hour, min, sec, ms);
 			else
 				return new DateTime (year, month, day, hour, min, sec, ms, DateTimeKind.Utc).ToLocalTime ();
-		}
-		static int CreateInteger (string s, int index, int count) {
-			int num = 0;
-			bool neg = false;
-			for (int x = 0; x < count; x++, index++) {
-				char cc = s[index];
-
-				if (cc == '-')
-					neg = true;
-				else if (cc == '+')
-					neg = false;
-				else {
-					num = (num << 3) + (num << 1); // *= 10;
-					num += (cc - '0');
-				}
-			}
-			if (neg) num = -num;
-
-			return num;
 		}
 		internal static object RevertUndefined (JsonDeserializer deserializer, object value, ReflectionCache type) {
 			if (value == null) return null;

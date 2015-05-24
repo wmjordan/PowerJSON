@@ -90,7 +90,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="BonusPack\Converters.cs" />
     <Compile Include="BonusPack\IPAddressConverter.cs" />
+    <Compile Include="BonusPack\RegexConverter.cs" />
     <Compile Include="BonusPack\VersionConverter.cs" />
     <Compile Include="BonusPack\XmlNodeConverter.cs" />
     <Compile Include="BonusPack\ZeroOneBooleanConverter.cs" />
@@ -110,6 +112,7 @@
     <Compile Include="SafeDictionary.cs" />
     <Compile Include="SerializationAttributes.cs" />
     <Compile Include="SerializationManager.cs" />
+    <Compile Include="ValueConverter.cs" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.0">

@@ -101,6 +101,7 @@
     <Compile Include="SafeDictionary.cs" />
     <Compile Include="SerializationAttributes.cs" />
     <Compile Include="SerializationManager.cs" />
+    <Compile Include="ValueConverter.cs" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.0">

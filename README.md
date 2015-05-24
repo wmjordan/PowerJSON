@@ -10,13 +10,16 @@ Features of PowerJSON
 
 ### New Features
 
+The following features are added to the original fastJSON.
+
 * Rename serialized members.
 * Rename serialized Enum values.
-* Deserializing non-public members.
+* Deserializing non-public types.
 * Polymorphic serialization without JSON extensions.
 * Write out additional key-value pairs in the serialized JSON.
 * Conditional serialization.
 * Noninvasive control of serialization.
+* Easiest implemetation of customized serialization and deserialization.
 * A comprehensive documentation.
 
 ### New Classes and Interfaces

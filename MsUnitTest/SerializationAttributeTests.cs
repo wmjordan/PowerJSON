@@ -158,11 +158,11 @@ namespace UnitTests
 		}
 		public class NumericEnumConverter : JsonConverter<Fruits, int>
 		{
-			public override Fruits Revert (string fieldName, int fieldValue) {
+			protected override Fruits Revert (string fieldName, int fieldValue) {
 				return (Fruits)fieldValue;
 			}
 
-			public override int Convert (string fieldName, Fruits fieldValue) {
+			protected override int Convert (string fieldName, Fruits fieldValue) {
 				return (int)fieldValue;
 			}
 		}
@@ -472,44 +472,44 @@ namespace UnitTests
 		}
 		class PersonInfoConverter : JsonConverter<string, PersonInfo>
 		{
-			public override PersonInfo Convert (string fieldName, string fieldValue) {
+			protected override PersonInfo Convert (string fieldName, string fieldValue) {
 				return new PersonInfo () {
 					Name = fieldValue.EndsWith ("*") ? fieldValue.Substring (0, fieldValue.Length - 1) : fieldValue,
 					Vip = fieldValue.EndsWith ("*")
 				};
 			}
 
-			public override string Revert (string fieldName, PersonInfo fieldValue) {
+			protected override string Revert (string fieldName, PersonInfo fieldValue) {
 				return fieldValue.Name + (fieldValue.Vip ? "*" : null);
 			}
 		}
 		class DateConverter : JsonConverter<DateTime, DateTime>
 		{
-			public override DateTime Convert (string fieldName, DateTime fieldValue) {
+			protected override DateTime Convert (string fieldName, DateTime fieldValue) {
 				return fieldValue.AddHours (1);
 			}
 
-			public override DateTime Revert (string fieldName, DateTime fieldValue) {
+			protected override DateTime Revert (string fieldName, DateTime fieldValue) {
 				return fieldValue.AddHours (-1);
 			}
 		}
 		class IdConverter : JsonConverter<string, int>
 		{
-			public override int Convert (string fieldName, string fieldValue) {
+			protected override int Convert (string fieldName, string fieldValue) {
 				return Int32.Parse (fieldValue.Substring (2));
 			}
 
-			public override string Revert (string fieldName, int fieldValue) {
+			protected override string Revert (string fieldName, int fieldValue) {
 				return "id" + fieldValue.ToString ();
 			}
 		}
 		class IdListConverter : JsonConverter<List<string>, List<int>>
 		{
-			public override List<int> Convert (string fieldName, List<string> fieldValue) {
+			protected override List<int> Convert (string fieldName, List<string> fieldValue) {
 				return fieldValue.ConvertAll ((s) => { return Int32.Parse (s.Substring (2)); });
 			}
 
-			public override List<string> Revert (string fieldName, List<int> fieldValue) {
+			protected override List<string> Revert (string fieldName, List<int> fieldValue) {
 				return fieldValue.ConvertAll ((i) => { return "id" + i.ToString (); });
 			}
 		}
@@ -535,10 +535,10 @@ namespace UnitTests
 				}
 				return null;
 			}
-			public override IName Convert (string fieldName, IName fieldValue) {
+			protected override IName Convert (string fieldName, IName fieldValue) {
 				return fieldValue;
 			}
-			public override IName Revert (string fieldName, IName fieldValue) {
+			protected override IName Revert (string fieldName, IName fieldValue) {
 				return fieldValue;
 			}
 		}
@@ -606,22 +606,22 @@ namespace UnitTests
 		}
 		class KVConverter : JsonConverter<KeyValuePair<string, string>, string>
 		{
-			public override string Convert (string fieldName, KeyValuePair<string, string> fieldValue) {
+			protected override string Convert (string fieldName, KeyValuePair<string, string> fieldValue) {
 				return fieldValue.Key + ":" + fieldValue.Value;
 			}
 
-			public override KeyValuePair<string, string> Revert (string fieldName, string fieldValue) {
+			protected override KeyValuePair<string, string> Revert (string fieldName, string fieldValue) {
 				var p = fieldValue.IndexOf (':');
 				return new KeyValuePair<string, string> (fieldValue.Substring (0, p), fieldValue.Substring (p + 1));
 			}
 		}
 		class DateNumberConverter : JsonConverter<DateTime, long>
 		{
-			public override long Convert (string fieldName, DateTime fieldValue) {
+			protected override long Convert (string fieldName, DateTime fieldValue) {
 				return fieldValue.Ticks;
 			}
 
-			public override DateTime Revert (string fieldName, long fieldValue) {
+			protected override DateTime Revert (string fieldName, long fieldValue) {
 				return new DateTime (fieldValue);
 			}
 		}

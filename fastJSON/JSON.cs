@@ -8,6 +8,7 @@ namespace fastJSON
 	/// </summary>
 	/// <param name="data">The data to be serialized.</param>
 	/// <returns>The JSON segment representing <paramref name="data"/>.</returns>
+	[Obsolete ("Customized JSON serialization can be replaced by the more advanced JsonConverter<,>.")]
 	public delegate string Serialize(object data);
 
 	/// <summary>
@@ -15,6 +16,7 @@ namespace fastJSON
 	/// </summary>
 	/// <param name="data">The JSON string.</param>
 	/// <returns>The object represented by <paramref name="data"/>.</returns>
+	[Obsolete ("Customized JSON deserialization can be replaced by the more advanced JsonConverter<,>.")]
 	public delegate object Deserialize(string data);
 
 	/// <summary>
@@ -274,13 +276,13 @@ namespace fastJSON
 			return Formatter.PrettyPrint(input, decodeUnicode);
 		}
 		/// <summary>
-		/// Registers custom type handlers for your own types not natively handled by fastJSON.
+		/// Registers custom type handlers for your own types not natively handled by JSON serialization engine.
 		/// </summary>
 		/// <param name="type">The type to be handled.</param>
 		/// <param name="serializer">The delegate to be used in serialization.</param>
 		/// <param name="deserializer">The delegate to be used in deserialization.</param>
-		/// <remarks>It is recommended to customize serialization with <see cref="IJsonConverter"/>.</remarks>
-		[Obsolete ("The reflection is managed by SerializationManager. Please use methods provided by that class to register custom serializer.")]
+		/// <remarks>It is recommended to implement customize serialization with <see cref="IJsonConverter"/> and <see cref="JsonConverter{TOriginal, TSerialized}"/> and apply the implementation with <see cref="SerializationManager.OverrideConverter{T}(IJsonConverter)"/>.</remarks>
+		[Obsolete ("Customized serialization can be easier implemented by JsonConverter<,>.")]
 		public static void RegisterCustomType (Type type, Serialize serializer, Deserialize deserializer)
 		{
 			Manager.RegisterCustomType(type, serializer, deserializer);
