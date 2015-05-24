@@ -90,12 +90,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
-    <Compile Include="Converters\Factory.cs" />
-    <Compile Include="Converters\IPAddressConverter.cs" />
-    <Compile Include="Converters\RegexConverter.cs" />
-    <Compile Include="Converters\VersionConverter.cs" />
-    <Compile Include="Converters\XmlNodeConverter.cs" />
-    <Compile Include="Converters\ZeroOneBooleanConverter.cs" />
+    <Compile Include="BonusPack\Converters.cs" />
+    <Compile Include="BonusPack\IPAddressConverter.cs" />
+    <Compile Include="BonusPack\RegexConverter.cs" />
+    <Compile Include="BonusPack\VersionConverter.cs" />
+    <Compile Include="BonusPack\XmlNodeConverter.cs" />
+    <Compile Include="BonusPack\ZeroOneBooleanConverter.cs" />
     <Compile Include="dynamic.cs" />
     <Compile Include="BonusPack\EnumerableDataReader.cs" />
     <Compile Include="Constants.cs" />

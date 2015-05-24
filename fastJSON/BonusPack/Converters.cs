@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace fastJSON.Converters
+namespace fastJSON.BonusPack
 {
 	/// <summary>
 	/// Contains extra <see cref="IJsonConverter"/>s to help serializing extra types. Those converters will not automatically get effective unless they are applied to corresponding types via the <see cref="SerializationManager.Override{T}(TypeOverride)"/> method or members via the <see cref="SerializationManager.OverrideMemberConverter(Type, string, IJsonConverter)"/> method.
 	/// </summary>
 	/// <preliminary />
-	public static class Factory
+	public static class Converters
 	{
 		/// <summary>
 		/// Gets an <see cref="IJsonConverter"/> to convert <see cref="System.Net.IPAddress"/> instances.
@@ -48,7 +48,7 @@ namespace fastJSON.Converters
 		/// </remarks>
 		public static IJsonConverter XmlNodeConverter { get; private set; }
 
-		static Factory () {
+		static Converters () {
 			IPAddressConverter = new IPAddressConverter ();
 			RegexConverter = new RegexConverter ();
 			ZeroOneBooleanConverter = new ZeroOneBooleanConverter ();

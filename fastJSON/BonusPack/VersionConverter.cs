@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace fastJSON.Converters
+namespace fastJSON.BonusPack
 {
 	/// <summary>
 	/// An <see cref="IJsonConverter"/> which converts between <see cref="Version"/> and string.

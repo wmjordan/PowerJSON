@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace fastJSON.Converters
+namespace fastJSON.BonusPack
 {
 	/// <summary>
 	/// A <see cref="IJsonConverter"/> converts boolean values to 1/0 or "1"/"0", rather than the default "true" and "false" values.

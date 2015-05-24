@@ -284,7 +284,7 @@ namespace MsUnitTest
 		public void ConverterTest () {
 			var sm = new SerializationManager ();
 			sm.Override<bool> (new TypeOverride () {
-				Converter = fastJSON.Converters.Factory.ZeroOneBooleanConverter
+				Converter = fastJSON.BonusPack.Converters.ZeroOneBooleanConverter
             });
 			sm.Override<DateTime> (new TypeOverride () { Converter = new JavaTimestampConverter () });
 			var s = JSON.ToJSON (true, sm);

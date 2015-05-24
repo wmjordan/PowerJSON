@@ -4,7 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 
-namespace fastJSON.Converters
+namespace fastJSON.BonusPack
 {
 	/// <summary>
 	/// An <see cref="IJsonConverter"/> which converts between <see cref="IPAddress"/> and string.
