@@ -11,10 +11,17 @@ namespace fastJSON.BonusPack
 	{
 		void IJsonConverter.DeserializationConvert (JsonItem item) {
 			throw new NotImplementedException ();
+			//var d = new XmlDocument ();
+			//var nl = item.Value as IList<object>;
+			//if (nl != null) {
+			//	foreach (var node in nl) {
+			//		RevertNode (d, node);
+			//	}
+			//}
 		}
 
 		Type IJsonConverter.GetReversiveType (JsonItem item) {
-			throw new NotImplementedException ();
+			return null;
 		}
 
 		void IJsonConverter.SerializationConvert (JsonItem item) {

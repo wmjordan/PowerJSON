@@ -311,7 +311,7 @@ namespace fastJSON
 			}
 
 			if (_index == _json.Length) {
-				throw new JsonParserException ("Reached end of string unexpectedly", _json.Length, GetContextText ());
+				throw new JsonParserException ("Reached end of string unexpectedly: ", _json.Length, GetContextText ());
 			}
 
 			c = _json[_index];

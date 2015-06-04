@@ -35,7 +35,11 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup Condition=" '$(TargetFrameworkVersion.Replace(&quot;v&quot;,&quot;&quot;))' &gt;= '4.0' ">
+    <DefineConstants>$(DefineConstants);NET_40_OR_GREATER</DefineConstants>
+  </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Microsoft.CSharp" />
     <Reference Include="System" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
