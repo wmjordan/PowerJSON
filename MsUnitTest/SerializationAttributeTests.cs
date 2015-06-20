@@ -19,6 +19,8 @@ namespace UnitTests
 		[JsonSerializable]
 		class PrivateClass
 		{
+			[JsonSerializable]
+			int PrivateField = 1;
 			public int Field { get; set; }
 			public PrivateStruct StructData { get; set; }
 
@@ -26,6 +28,7 @@ namespace UnitTests
 				Field = 1;
 				StructData = new PrivateStruct ();
 			}
+			public int GetPrivateField () { return PrivateField; }
 		}
 		[JsonSerializable]
 		struct PrivateStruct
@@ -60,10 +63,13 @@ namespace UnitTests
 			var o = new PrivateClass ();
 			o.StructData = new PrivateStruct () { Field = 4 };
 			var s = JSON.ToJSON (o, _JP);
-			var p = JSON.ToObject<PrivateClass> (s);
 			Console.WriteLine (s);
+			Assert.IsTrue (s.Contains (@"""PrivateField"":1"));
+			s = s.Replace (@"""PrivateField"":1", @"""PrivateField"":2");
+			var p = JSON.ToObject<PrivateClass> (s);
 			Assert.AreEqual (o.Field, p.Field);
 			Assert.AreEqual (4, p.StructData.Field);
+			Assert.AreEqual (2, p.GetPrivateField ());
 
 			var l = new List<PrivateClass> () { new PrivateClass () { Field = 1 } };
 			var sl = JSON.ToJSON (l, _JP);
@@ -130,9 +136,9 @@ namespace UnitTests
 			o.IgnoreThisField = 2;
 			o.IgnoreThisProperty = 3;
 			var s = JSON.ToJSON (o, _JP);
+			Console.WriteLine (s);
 			Assert.IsFalse (s.Contains (@"""ReadonlyProperty"":"));
 			var p = JSON.ToObject<IncludeAttributeTest> (s);
-			Console.WriteLine (s);
 			Assert.AreEqual (1, p.ShowMe);
 			Assert.AreEqual (0, p.IgnoreThisProperty);
 			Assert.AreEqual (0, p.IgnoreThisField);

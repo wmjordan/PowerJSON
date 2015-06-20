@@ -8,6 +8,8 @@ namespace MsUnitTest
 	#region Demo Class
 	internal class DemoClass
 	{
+		private int privateField = 1;
+
 		public string MyProperty { get; set; }
 
 		public MyEnum MyEnumProperty { get; set; }
@@ -43,6 +45,9 @@ namespace MsUnitTest
 		[JsonSerializable]
 		internal class DemoClass
 		{
+			[JsonSerializable]
+			private int privateField = 1;
+
 			// marks MyProperty property to be serialized to a field named "prop"
 			[JsonField ("prop")]
 			public string MyProperty { get; set; }
@@ -133,12 +138,16 @@ namespace MsUnitTest
 			Assert.IsTrue (s.Contains ("\"enum\":\"VIP\""));
 			Assert.IsFalse (s.Contains ("internalValue"));
 			Assert.IsTrue (s.Contains ("\"a\":{\"name\":\"c\"}"));
+			Assert.IsTrue (s.Contains ("\"privateField\":1"));
+			s = s.Replace ("\"privateField\":1", "\"privateField\":2");
 			var o = JSON.ToObject<Demo1.DemoClass> (s);
 			Assert.AreEqual (d.MyProperty, o.MyProperty);
 			Assert.AreEqual (d.Number, o.Number);
 			Assert.AreEqual ((d.Identifier as ClassA).Name, (o.Identifier as ClassA).Name);
 			Assert.AreEqual (0, o.InternalValue);
 			Assert.AreEqual (d.MyEnumProperty, o.MyEnumProperty);
+			s = JSON.ToJSON (o);
+			Assert.IsTrue (s.Contains ("\"privateField\":2"));
 
 			d.Number = 0;
 			s = JSON.ToJSON (d);
@@ -156,6 +165,7 @@ namespace MsUnitTest
 				Deserializable = TriState.True,
 				// override members of the class
 				MemberOverrides = {
+					new MemberOverride ("privateField", TriState.True, TriState.True),
 					// assigns the serialized name "prop" to MyProperty property
 					new MemberOverride ("MyProperty", "prop"),
 					new MemberOverride ("MyEnumProperty", "enum"),
@@ -194,14 +204,18 @@ namespace MsUnitTest
 			Assert.IsTrue (s.Contains ("\"number\":1"));
 			Assert.IsTrue (s.Contains ("\"enum\":\"VIP\""));
 			Assert.IsFalse (s.Contains ("internalValue"));
+			Assert.IsTrue (s.Contains ("\"privateField\":1"));
 			Assert.IsTrue (s.Contains ("\"a\":{\"name\":\"c\"}"));
 
+			s = s.Replace ("\"privateField\":1", "\"privateField\":2");
 			var o = JSON.ToObject<DemoClass> (s);
 			Assert.AreEqual (d.MyProperty, o.MyProperty);
 			Assert.AreEqual (d.Number, o.Number);
 			Assert.AreEqual ((d.Identifier as ClassA).Name, (o.Identifier as ClassA).Name);
 			Assert.AreEqual (0, o.InternalValue);
 			Assert.AreEqual (d.MyEnumProperty, o.MyEnumProperty);
+			s = JSON.ToJSON (o);
+			Assert.IsTrue (s.Contains ("\"privateField\":2"));
 
 			d.Number = 0;
 			s = JSON.ToJSON (d);

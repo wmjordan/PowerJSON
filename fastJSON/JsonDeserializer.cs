@@ -344,7 +344,7 @@ namespace fastJSON
 					case JsonDataType.Guid: oset = CreateGuid (v); break;
 					case JsonDataType.ByteArray: oset = Convert.FromBase64String ((string)v); break;
 					case JsonDataType.List:
-						oset = CreateList ((JsonArray)v, pi.MemberTypeReflection, pi.CanWrite == false ? pi.Getter (o) : null);
+						oset = CreateList ((JsonArray)v, pi.MemberTypeReflection, pi.CanWrite && (pi.IsClass || pi.IsStruct) ? null : pi.Getter (o));
 						break;
 					case JsonDataType.Object: oset = v; break;
 					default:
@@ -611,6 +611,9 @@ namespace fastJSON
 			}
 			var a = listType.AppendItem;
 			if (a != null) {
+				if (l == null) {
+					throw new JsonSerializationException ("The collection member typed \"" + listType.AssemblyName + "\" was null and could not be instantiated");
+				}
 				foreach (var item in data) {
 					a (l, r (this, item, ec));
 				}

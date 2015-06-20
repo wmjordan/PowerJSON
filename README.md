@@ -39,7 +39,7 @@ The attributes are listed below:
 * **JsonIncludeAttribute**: 1) explicitly controls whether a field or property is serialized or not. 2) allows serializing readonly property even when the `ShowReadOnlyProperties` setting is turned off.
 * **JsonConverterAttribute**: allows transforming data before serialization.
 * **JsonEnumValueAttribute**: controls the serialized literal name of an `Enum` value.
-* **JsonSerializableAttribute**: enables serializing and deserializing private or internal types.
+* **JsonSerializableAttribute**: enables serializing and deserializing non-public types or members.
 * **JsonNonSerializedValueAttribute**: prevents specified member value from serializing.
 
 Some .NET built-in attributes are also supported.

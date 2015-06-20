@@ -52,7 +52,7 @@ namespace MsUnitTest
 		public class LazyList
 		{
 			List<int> _LazyGeneric;
-			public List<int> LazyGeneric {
+			public IList<int> LazyGeneric {
 				get {
 					if (_LazyGeneric == null) { _LazyGeneric = new List<int> (); }
 					return _LazyGeneric;
@@ -321,11 +321,11 @@ namespace MsUnitTest
 			var l = new LazyList ();
 			l.LazyGeneric.Add (1);
 			l.LazyGeneric.Add (2);
-			var s = JSON.ToJSON (l);
+			var s = JSON.ToJSON (l, new JSONParameters () { UseExtensions = false });
 			Console.WriteLine (s);
 
 			var o = JSON.ToObject<LazyList> (s);
-			CollectionAssert.AreEqual (l.LazyGeneric, o.LazyGeneric);
+			CollectionAssert.AreEqual ((ICollection)l.LazyGeneric, (ICollection)o.LazyGeneric);
 		}
 
 		[TestMethod]
@@ -557,5 +557,47 @@ namespace MsUnitTest
 		}
 		#endregion
 
+		#region Inherited collection override
+		public class MyCollection : List<int>
+		{
+			public string MyField;
+			[JsonSerializable]
+			internal class WrapperClass
+			{
+				public string MyField;
+				public IEnumerable<int> Items;
+				public WrapperClass () { Items = new List<int> (); }
+				public WrapperClass (MyCollection collection) {
+					Items = collection;
+					MyField = collection.MyField;
+				}
+			}
+			internal class MyCollectionConverter : JsonConverter<MyCollection, MyCollection.WrapperClass>
+			{
+				protected override WrapperClass Convert (string fieldName, MyCollection fieldValue) {
+					return new WrapperClass (fieldValue);
+				}
+
+				protected override MyCollection Revert (string fieldName, WrapperClass fieldValue) {
+					var c = new MyCollection ();
+					c.AddRange (fieldValue.Items);
+					c.MyField = fieldValue.MyField;
+					return c;
+				}
+			}
+		}
+		[TestMethod]
+		public void InheritedCollectionOverrideTest () {
+			var c = new MyCollection () { 1, 2, 3 };
+			c.MyField = "field";
+			JSON.Manager.OverrideConverter<MyCollection> (new MyCollection.MyCollectionConverter ());
+			var s = JSON.ToJSON (c);
+			Console.WriteLine (s);
+
+			var o = JSON.ToObject<MyCollection> (s);
+			Assert.AreEqual (c.MyField, o.MyField);
+			CollectionAssert.AreEqual (c, o);
+		}
+		#endregion
 	}
 }

@@ -10,6 +10,7 @@ namespace fastJSON
 {
 	sealed class Reflection
 	{
+		const BindingFlags __ReflectionFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
 		// Singleton pattern 4 from : http://csharpindepth.com/articles/general/singleton.aspx
 		static readonly Reflection instance = new Reflection();
 		static readonly SafeDictionary<Type, JsonDataType> _jsonTypeCache = InitBuiltInTypes ();
@@ -151,8 +152,8 @@ namespace fastJSON
 		}
 
 		internal static Getters[] GetGetters (Type type, IReflectionController controller, SerializationManager manager) {
-			var pl = type.GetProperties (BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
-			var fl = type.GetFields (BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static);
+			var pl = type.GetProperties (__ReflectionFlags);
+			var fl = type.GetFields (__ReflectionFlags);
 			var getters = new Dictionary<string, Getters> (pl.Length + fl.Length);
 
 			foreach (PropertyInfo m in pl) {
@@ -236,7 +237,7 @@ namespace fastJSON
 		}
 
 		internal static GenericGetter CreateGetProperty (PropertyInfo propertyInfo) {
-			var getMethod = propertyInfo.GetGetMethod ();
+			var getMethod = propertyInfo.GetGetMethod (true);
 			if (getMethod == null)
 				return null;
 
@@ -314,7 +315,7 @@ namespace fastJSON
 		}
 
 		internal static GenericSetter CreateSetProperty (PropertyInfo propertyInfo) {
-			var setMethod = propertyInfo.GetSetMethod ();
+			var setMethod = propertyInfo.GetSetMethod (true);
 			if (setMethod == null)
 				return null;
 
@@ -372,7 +373,7 @@ namespace fastJSON
 		internal static Dictionary<string, JsonPropertyInfo> GetProperties (Type type, IReflectionController controller, SerializationManager manager) {
 			var custType = manager.IsTypeRegistered (type);
 			var sd = new Dictionary<string, JsonPropertyInfo> (StringComparer.OrdinalIgnoreCase);
-			var pr = type.GetProperties (BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+			var pr = type.GetProperties (__ReflectionFlags);
 			foreach (PropertyInfo p in pr) {
 				if (p.GetIndexParameters ().Length > 0) {// Property is an indexer
 					continue;
@@ -382,9 +383,10 @@ namespace fastJSON
 				if (d.Setter != null)
 					d.CanWrite = true;
 				d.Getter = CreateGetProperty (p);
-				AddMyPropInfo (sd, d, p, controller, manager);
+				d.MemberTypeReflection = manager.GetReflectionCache (d.MemberType);
+				AddDeserializingProperty (sd, d, p, controller, manager);
 			}
-			var fi = type.GetFields (BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+			var fi = type.GetFields (__ReflectionFlags);
 			foreach (FieldInfo f in fi) {
 				if (f.IsLiteral || f.IsInitOnly) {
 					continue;
@@ -396,27 +398,51 @@ namespace fastJSON
 					d.CanWrite = true;
 				//}
 				d.Getter = CreateGetField (f);
-				AddMyPropInfo (sd, d, f, controller, manager);
+				d.MemberTypeReflection = manager.GetReflectionCache (d.MemberType);
+				AddDeserializingProperty (sd, d, f, controller, manager);
 			}
 
 			return sd;
 		}
 
-		internal static void AddMyPropInfo (Dictionary<string, JsonPropertyInfo> sd, JsonPropertyInfo d, MemberInfo member, IReflectionController controller, SerializationManager manager) {
-			d.MemberTypeReflection = manager.GetReflectionCache (d.MemberType);
+		internal static JsonPropertyInfo GetPropertyOrField (Type type, string name) {
+			var p = type.GetProperty (name, __ReflectionFlags);
+			if (p != null) {
+				var d = new JsonPropertyInfo (p.PropertyType, name, false);
+				d.Setter = CreateSetProperty (p);
+				if (d.Setter != null)
+					d.CanWrite = true;
+				d.Getter = CreateGetProperty (p);
+				return d;
+			}
+			var f = type.GetField (name, __ReflectionFlags);
+			if (f != null) {
+				var d = new JsonPropertyInfo (f.FieldType, name, false);
+				d.Setter = CreateSetField (f);
+				if (d.Setter != null)
+					d.CanWrite = true;
+				d.Getter = CreateGetField (f);
+				return d;
+			}
+			return null;
+		}
+
+		internal static void AddDeserializingProperty (Dictionary<string, JsonPropertyInfo> sd, JsonPropertyInfo d, MemberInfo member, IReflectionController controller, SerializationManager manager) {
 			if (controller == null) {
-				sd.Add (d.MemberName, d);
+				AddPropertyInfo (sd, d.MemberName, d);
 				return;
 			}
 			if (controller.IsMemberDeserializable (member) == false) {
 				d.CanWrite = false;
-				return;
+				if (d.MemberTypeReflection.AppendItem == null || member is PropertyInfo == false) {
+					return;
+				}
 			}
 			d.Converter = controller.GetMemberConverter (member);
 			d.ItemConverter = controller.GetMemberItemConverter (member);
 			var tn = controller.GetSerializedNames (member);
 			if (tn == null) {
-				sd.Add (d.MemberName, d);
+				AddPropertyInfo (sd, d.MemberName, d);
 				return;
 			}
 			// polymorphic deserialization
@@ -430,11 +456,19 @@ namespace fastJSON
 				dt.ItemConverter = d.ItemConverter;
 				dt.CanWrite = d.CanWrite;
 				dt.MemberTypeReflection = manager.GetReflectionCache (st);
-				sd.Add (sn, dt);
+				AddPropertyInfo (sd, sn, dt);
 			}
-			sd.Add (String.IsNullOrEmpty (tn.DefaultName) ? d.MemberName : tn.DefaultName, d);
+			AddPropertyInfo (sd, String.IsNullOrEmpty (tn.DefaultName) ? d.MemberName : tn.DefaultName, d);
 		}
-
+		static void AddPropertyInfo (Dictionary<string, JsonPropertyInfo> sd, string name, JsonPropertyInfo item) {
+			if (String.IsNullOrEmpty (name)) {
+				throw new JsonSerializationException (item.MemberName + " should not be serialized to an empty name");
+			}
+			if (sd.ContainsKey (name)) {
+				throw new JsonSerializationException (name + " has been used by another member");
+			}
+			sd.Add (name, item);
+		}
 		// TODO: Support method that takes more than 1 arguments
 		/// <summary>
 		/// Creates a wrapper delegate for the given method. The delegate should have a similar signature as the <paramref name="method"/>, except that an argument in inserted before the method arguments.
@@ -471,8 +505,8 @@ namespace fastJSON
 					il.Emit (OpCodes.Stloc_0);
 					il.Emit (OpCodes.Ldloca_S, lv);
 				}
-				for (int i = 0; i < mp.Length; i++) {
-					LoadArgument (mp, i, il);
+				for (int i = 0; i < mp.Length;) {
+					LoadArgument (mp, ++i, il);
 				}
 				il.EmitCall (method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call, method, null);
 			}
@@ -525,6 +559,7 @@ namespace fastJSON
 
 		static void LoadArgument (ParameterInfo[] parameters, int index, ILGenerator il) {
 			switch (index) {
+				case 0: throw new ArgumentException ("index should not be zero");
 				case 1: il.Emit (OpCodes.Ldarg_1); break;
 				case 2: il.Emit (OpCodes.Ldarg_2); break;
 				case 3: il.Emit (OpCodes.Ldarg_3); break;
@@ -546,7 +581,7 @@ namespace fastJSON
 		/// <returns>The method matches the name and argument types.</returns>
 		internal static MethodInfo FindMethod (Type type, string methodName, Type[] argumentTypes) {
 			int ac = argumentTypes != null ? argumentTypes.Length : -1;
-			foreach (var method in type.GetMethods ()) {
+			foreach (var method in type.GetMethods (__ReflectionFlags)) {
 				if (method.Name != methodName || method.IsPublic == false || method.IsStatic) {
 					continue;
 				}
@@ -566,6 +601,14 @@ namespace fastJSON
 				}
 				if (m) {
 					return method;
+				}
+			}
+			if (type.IsInterface) {
+				foreach (var item in type.GetInterfaces ()) {
+					var m = FindMethod (item, methodName, argumentTypes);
+					if (m != null) {
+						return m;
+					}
 				}
 			}
 			return null;

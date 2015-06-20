@@ -27,10 +27,10 @@ namespace fastJSON
 	}
 
 	/// <summary>
-	/// The general implementation of <see cref="IReflectionController"/>.
+	/// The general implementation of <see cref="IReflectionController"/>, which takes custom attributes such as <see cref="JsonFieldAttribute"/>, <see cref="JsonConverterAttribute"/>, etc. into consideration.
 	/// </summary>
 	/// <preliminary />
-	public class JsonReflectionController : IReflectionController
+	public class JsonReflectionController : DefaultReflectionController
 	{
 		/// <summary>
 		/// Ignore attributes to check for (default : XmlIgnoreAttribute).
@@ -49,7 +49,7 @@ namespace fastJSON
 		/// </summary>
 		/// <param name="type">An <see cref="Enum"/> value type.</param>
 		/// <returns>If the type should be serialized numerically, returns true, otherwise, false.</returns>
-		public virtual EnumValueFormat GetEnumValueFormat (Type type) {
+		public override EnumValueFormat GetEnumValueFormat (Type type) {
 			var a = AttributeHelper.GetAttribute<JsonEnumFormatAttribute> (type, false);
 			return a != null ? a.Format : EnumValueFormat.Default;
 		}
@@ -59,7 +59,7 @@ namespace fastJSON
 		/// </summary>
 		/// <param name="member">The enum value member.</param>
 		/// <returns>The name of the enum value.</returns>
-		public virtual string GetEnumValueName (MemberInfo member) {
+		public override string GetEnumValueName (MemberInfo member) {
 			var a = AttributeHelper.GetAttribute<JsonEnumValueAttribute> (member, false);
 			if (a != null) {
 				return a.Name;
@@ -72,7 +72,7 @@ namespace fastJSON
 		/// </summary>
 		/// <param name="type">The type to be deserialized.</param>
 		/// <returns>Whether the type can be deserialized even if it is a non-public type.</returns>
-		public virtual bool IsAlwaysDeserializable (Type type) {
+		public override bool IsAlwaysDeserializable (Type type) {
 			return AttributeHelper.GetAttribute<JsonSerializableAttribute> (type, false) != null;
 		}
 
@@ -81,7 +81,7 @@ namespace fastJSON
 		/// </summary>
 		/// <param name="type">The type to be checked.</param>
 		/// <returns>The interceptor.</returns>
-		public virtual IJsonInterceptor GetInterceptor (Type type) {
+		public override IJsonInterceptor GetInterceptor (Type type) {
 			var ia = AttributeHelper.GetAttribute<JsonInterceptorAttribute> (type, true);
 			if (ia != null) {
 				return ia.Interceptor;
@@ -94,7 +94,7 @@ namespace fastJSON
 		/// </summary>
 		/// <param name="type">The type to be checked for <see cref="IJsonConverter"/>.</param>
 		/// <returns>The interceptor.</returns>
-		public virtual IJsonConverter GetConverter (Type type) {
+		public override IJsonConverter GetConverter (Type type) {
 			var ia = AttributeHelper.GetAttribute<JsonConverterAttribute> (type, true);
 			if (ia != null) {
 				return ia.Converter;
@@ -111,11 +111,14 @@ namespace fastJSON
 		/// <param name="member">The member to be serialized.</param>
 		/// <param name="info">Reflection information for the member.</param>
 		/// <returns>True is returned if the member is serializable, otherwise, false.</returns>
-		public virtual TriState IsMemberSerializable (MemberInfo member, IMemberInfo info) {
-			var s = TriState.Default;
+		public override TriState IsMemberSerializable (MemberInfo member, IMemberInfo info) {
 			var ic = AttributeHelper.GetAttribute<JsonIncludeAttribute> (member, true);
 			if (ic != null) {
-				s = ic.Include ? TriState.True : TriState.False;
+				return ic.Include ? TriState.True : TriState.False;
+			}
+			var s = AttributeHelper.GetAttribute<JsonSerializableAttribute> (member, true);
+			if (s != null) {
+				return TriState.True;
 			}
 			if (IgnoreAttributes != null && IgnoreAttributes.Count > 0) {
 				foreach (var item in IgnoreAttributes) {
@@ -124,7 +127,7 @@ namespace fastJSON
 					}
 				}
 			}
-			return s;
+			return base.IsMemberSerializable (member, info);
 		}
 
 		/// <summary>
@@ -132,12 +135,16 @@ namespace fastJSON
 		/// </summary>
 		/// <param name="member">The member to be serialized.</param>
 		/// <returns>True is returned if the member is serializable, otherwise, false.</returns>
-		public virtual bool IsMemberDeserializable (MemberInfo member) {
+		public override bool IsMemberDeserializable (MemberInfo member) {
 			var ro = AttributeHelper.GetAttribute<System.ComponentModel.ReadOnlyAttribute> (member, true);
 			if (ro != null) {
 				return ro.IsReadOnly == false;
 			}
-			return true;
+			var s = AttributeHelper.GetAttribute<JsonSerializableAttribute> (member, true);
+			if (s != null) {
+				return true;
+			}
+			return base.IsMemberDeserializable (member);
 		}
 
 		/// <summary>
@@ -146,7 +153,7 @@ namespace fastJSON
 		/// <param name="member">The <see cref="MemberInfo"/> of the field or property.</param>
 		/// <returns>The dictionary contains types and their corresponding names.</returns>
 		/// <exception cref="InvalidCastException">The <see cref="JsonFieldAttribute.DataType"/> type does not derive from the member type.</exception>
-		public virtual SerializedNames GetSerializedNames (MemberInfo member) {
+		public override SerializedNames GetSerializedNames (MemberInfo member) {
 			var tn = new SerializedNames ();
 			var jf = AttributeHelper.GetAttributes<JsonFieldAttribute> (member, true);
 			var f = member as FieldInfo;
@@ -174,7 +181,7 @@ namespace fastJSON
 		/// </summary>
 		/// <param name="member">The <see cref="MemberInfo"/> of the field or property.</param>
 		/// <returns>The values which are not serialized for <paramref name="member"/>.</returns>
-		public virtual IEnumerable GetNonSerializedValues (MemberInfo member) {
+		public override IEnumerable GetNonSerializedValues (MemberInfo member) {
 			var a = AttributeHelper.GetAttribute<System.ComponentModel.DefaultValueAttribute> (member, true);
 			var n = AttributeHelper.GetAttributes<JsonNonSerializedValueAttribute> (member, true);
 			if (a == null && n.Length == 0) {
@@ -195,7 +202,7 @@ namespace fastJSON
 		/// </summary>
 		/// <param name="member">The <see cref="MemberInfo"/> of the field or property.</param>
 		/// <returns>The converter.</returns>
-		public virtual IJsonConverter GetMemberConverter (MemberInfo member) {
+		public override IJsonConverter GetMemberConverter (MemberInfo member) {
 			var cv = AttributeHelper.GetAttribute<JsonConverterAttribute> (member, true);
 			if (cv != null) {
 				return cv.Converter;
@@ -208,7 +215,7 @@ namespace fastJSON
 		/// </summary>
 		/// <param name="member">The <see cref="MemberInfo"/> of the field or property.</param>
 		/// <returns>The converter.</returns>
-		public virtual IJsonConverter GetMemberItemConverter (MemberInfo member) {
+		public override IJsonConverter GetMemberItemConverter (MemberInfo member) {
 			var cv = AttributeHelper.GetAttribute<JsonItemConverterAttribute> (member, true);
 			if (cv != null) {
 				return cv.Converter;
@@ -269,17 +276,37 @@ namespace fastJSON
 		/// </summary>
 		/// <param name="member">The member to be serialized.</param>
 		/// <param name="info">Reflection information for the member.</param>
-		/// <returns>True is returned if the member is serializable, otherwise, false.</returns>
+		/// <returns><see cref="TriState.False"/> is returned if the member is private, otherwise, <see cref="TriState.Default"/> is returned.</returns>
 		public virtual TriState IsMemberSerializable (MemberInfo member, IMemberInfo info) {
-			return TriState.Default;
+			var p = member as PropertyInfo;
+			if (p != null) {
+				var g = p.GetGetMethod (true);
+				return (g == null || g.IsPublic == false) ? TriState.False : TriState.Default;
+			}
+			var f = member as FieldInfo;
+			if (f != null) {
+				return f.IsPublic == false ? TriState.False : TriState.Default;
+			}
+			throw new ArgumentException ("member should be property or field", member.Name);
 		}
 
 		/// <summary>
 		/// This method is called to determine whether a field or a property is deserializable. If false is returned, the member will be excluded from deserialization. By default, writable fields or properties are deserializable.
 		/// </summary>
 		/// <param name="member">The member to be serialized.</param>
-		/// <returns>True is returned if the member is serializable, otherwise, false.</returns>
-		public virtual bool IsMemberDeserializable (MemberInfo member) { return true; }
+		/// <returns>True is returned if the member is public, otherwise, false.</returns>
+		public virtual bool IsMemberDeserializable (MemberInfo member) {
+			var p = member as PropertyInfo;
+			if (p != null) {
+				var s = p.GetSetMethod ();
+				return s != null;
+			}
+			var f = member as FieldInfo;
+			if (f != null) {
+				return f.IsPublic;
+			}
+			throw new ArgumentException ("member should be property or field", member.Name);
+		}
 
 		/// <summary>
 		/// This method returns possible names for corresponding types of a field or a property. This enables polymorphic serialization and deserialization for abstract, interface, or object types, with predetermined concrete types. If polymorphic serialization is not used, null or an empty <see cref="SerializedNames"/> could be returned.

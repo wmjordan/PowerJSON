@@ -5,9 +5,9 @@ using System.Reflection;
 namespace fastJSON
 {
 	/// <summary>
-	/// Indicates whether a class or a struct could be deserialized, even if it is not a public one.
+	/// Indicates whether private classes, structs, fields or properties could be serialized and deserialized.
 	/// </summary>
-	[AttributeUsage (AttributeTargets.Class | AttributeTargets.Struct, Inherited=false)]
+	[AttributeUsage (AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Field | AttributeTargets.Property, Inherited = false)]
 	public sealed class JsonSerializableAttribute : Attribute
 	{
 	}

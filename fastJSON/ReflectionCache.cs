@@ -231,7 +231,7 @@ namespace fastJSON
 			}
 			else { // PropertyInfo
 				var p = ((PropertyInfo)memberInfo);
-				s = (p.GetGetMethod () ?? p.GetSetMethod ()).IsStatic;
+				s = (p.GetGetMethod (true) ?? p.GetSetMethod (true)).IsStatic;
 				ro = p.GetSetMethod () == null; // p.CanWrite can return true if the setter is non-public
 				t = p.PropertyType;
 				tp = true;
@@ -241,7 +241,7 @@ namespace fastJSON
 			SerializedName = MemberName;
 			IsStatic = s;
 			IsProperty = tp;
-			IsReadOnly = ro && typeof(IList).IsAssignableFrom (t) == false;
+			IsReadOnly = ro && Reflection.FindMethod (t, "Add", new Type[] { null }) == null;
 			IsCollection = typeof (ICollection).IsAssignableFrom (t) && typeof (byte[]).Equals (t) == false;
 			MemberType = t;
 			WriteValue = JsonSerializer.GetWriteJsonMethod (t);

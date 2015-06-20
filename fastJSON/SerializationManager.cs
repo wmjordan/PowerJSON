@@ -224,6 +224,8 @@ namespace fastJSON
 		/// <para>At this moment, the override only affects the registered type.</para>
 		/// <para>If a class has its subclasses, the override will not be applied to its subclasses.</para>
 		/// </remarks>
+		/// <exception cref="ArgumentNullException">The parameter <paramref name="type"/> or <paramref name="overrideInfo"/> is null.</exception>
+		/// <exception cref="MissingMemberException">No member is found for a <see cref="MemberOverride"/> in <paramref name="overrideInfo"/>.</exception>
 		public void Override (Type type, TypeOverride overrideInfo, bool purgeExisting) {
 			if (type == null) {
 				throw new ArgumentNullException ("type");
@@ -256,14 +258,14 @@ namespace fastJSON
 				}
 
 				OverrideGetters (g, mo);
-				OverridePropInfo (s, mo, g);
+				OverridePropInfo (type, s, mo, g);
 			}
 			if (purgeExisting) {
 				_reflections[type] = c;
 			}
 		}
 
-		void OverridePropInfo (Dictionary<string, JsonPropertyInfo> s, MemberOverride mo, Getters g) {
+		void OverridePropInfo (Type type, Dictionary<string, JsonPropertyInfo> s, MemberOverride mo, Getters g) {
 			JsonPropertyInfo mp = null;
 			if (mo.OverrideTypedNames) {
 				// remove previous polymorphic deserialization info
@@ -273,6 +275,7 @@ namespace fastJSON
 						if (Equals (item.Value.MemberType, g.MemberType) == false) {
 							rt.Add (item.Key);
 						}
+						// find an item with the same member name
 						mp = item.Value;
 					}
 				}
@@ -306,10 +309,26 @@ namespace fastJSON
 				}
 			}
 			else if (mo.OverrideSerializedName && g.SerializedName != mo.SerializedName) {
-				mp = s[g.SerializedName];
-				s.Remove (g.SerializedName);
-				s.Add (mo.SerializedName, mp);
+				if (s.TryGetValue (g.SerializedName, out mp)) {
+					s.Remove (g.SerializedName);
+					s.Add (mo.SerializedName, mp);
+				}
 			}
+			bool ov = OverrideJsonPropertyInfo (s, mo, mp);
+			// TODO: recreates the property info for excluded member
+			//if (ov == false) {
+			//	var p = Reflection.GetPropertyOrField (type, mo.MemberName);
+			//	if (p != null) {
+			//		Reflection.AddDeserializingProperty (s, p, p.MemberType, _controller, this);
+			//	}
+			//}
+			if (mo.OverrideSerializedName) {
+				g.SerializedName = mo.SerializedName;
+			}
+		}
+
+		private static bool OverrideJsonPropertyInfo (Dictionary<string, JsonPropertyInfo> s, MemberOverride mo, JsonPropertyInfo mp) {
+			bool ov = false;
 			foreach (var item in s) {
 				mp = item.Value;
 				if (mp.MemberName == mo.MemberName) {
@@ -322,11 +341,10 @@ namespace fastJSON
 					if (mo.Deserializable != TriState.Default) {
 						mp.CanWrite = mo.Deserializable == TriState.True;
 					}
+					ov = true;
 				}
 			}
-			if (mo.OverrideSerializedName) {
-				g.SerializedName = mo.SerializedName;
-			}
+			return ov;
 		}
 
 		static void OverrideGetters (Getters getter, MemberOverride mo) {
@@ -594,7 +612,7 @@ namespace fastJSON
 		public TriState Serializable { get; set; }
 
 		/// <summary>
-		/// Denotes whether the member can be deserialized (<see cref="TriState.True"/>), never deserialized (<see cref="TriState.False"/>) or compliant to the existing behavior (<see cref="TriState.Default"/>).
+		/// Gets or sets whether the member can be deserialized (<see cref="TriState.True"/>), never deserialized (<see cref="TriState.False"/>) or compliant to the existing behavior (<see cref="TriState.Default"/>).
 		/// </summary>
 		public TriState Deserializable { get; set; }
 
@@ -634,14 +652,18 @@ namespace fastJSON
 		}
 
 		/// <summary>
-		/// Creates an instance of <see cref="MemberOverride"/>. The override info can be set via the properties.
+		/// Creates an instance of <see cref="MemberOverride"/>.
 		/// </summary>
 		/// <param name="memberName">The name of the member.</param>
+		/// <exception cref="ArgumentNullException"><paramref name="memberName"/> is null or an empty string.</exception>
 		public MemberOverride (string memberName) {
+			if (String.IsNullOrEmpty (memberName)) {
+				throw new ArgumentNullException ("memberName");
+			}
 			MemberName = memberName;
 		}
 		/// <summary>
-		/// Creates an instance of <see cref="MemberOverride"/>, setting the <see cref="Serializable"/> property. The other override info can be set via the properties.
+		/// Creates an instance of <see cref="MemberOverride"/>, setting the <see cref="Serializable"/> property.
 		/// </summary>
 		/// <param name="memberName">The name of the member.</param>
 		/// <param name="serializable">How the member is serialized.</param>
@@ -649,7 +671,18 @@ namespace fastJSON
 			Serializable = serializable;
 		}
 		/// <summary>
-		/// Creates an instance of <see cref="MemberOverride"/>, setting the <see cref="Converter"/> property. The other override info can be set via the properties.
+		/// Creates an instance of <see cref="MemberOverride"/>, setting the <see cref="Serializable"/> property and <see cref="Deserializable"/> property.
+		/// </summary>
+		/// <param name="memberName">The name of the member.</param>
+		/// <param name="serializable">How the member is serialized.</param>
+		/// <param name="deserializable">How the member is deserialized.</param>
+		public MemberOverride (string memberName, TriState serializable, TriState deserializable)
+			: this (memberName) {
+			Serializable = serializable;
+			Deserializable = deserializable;
+		}
+		/// <summary>
+		/// Creates an instance of <see cref="MemberOverride"/>, setting the <see cref="Converter"/> property.
 		/// </summary>
 		/// <param name="memberName">The name of the member.</param>
 		/// <param name="converter">The converter.</param>
@@ -657,7 +690,7 @@ namespace fastJSON
 			Converter = converter;
 		}
 		/// <summary>
-		/// Creates an instance of <see cref="MemberOverride"/>, setting the <see cref="SerializedName"/> property. The other override info can be set via the properties.
+		/// Creates an instance of <see cref="MemberOverride"/>, setting the <see cref="SerializedName"/> property.
 		/// </summary>
 		/// <param name="memberName">The name of the member.</param>
 		/// <param name="serializedName">The serialized name of the member.</param>
