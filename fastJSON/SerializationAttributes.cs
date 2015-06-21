@@ -553,5 +553,8 @@ namespace fastJSON
 		public static T GetAttribute<T> (MemberInfo member, bool inherit) where T : Attribute {
 			return Attribute.GetCustomAttribute (member, typeof (T), inherit) as T;
 		}
+		public static bool HasAttribute<T> (MemberInfo member, bool inherit) where T : Attribute {
+			return Attribute.GetCustomAttribute (member, typeof (T), inherit) is T;
+		}
 	}
 }

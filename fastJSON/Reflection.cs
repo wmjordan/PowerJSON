@@ -14,6 +14,7 @@ namespace fastJSON
 		// Singleton pattern 4 from : http://csharpindepth.com/articles/general/singleton.aspx
 		static readonly Reflection instance = new Reflection();
 		static readonly SafeDictionary<Type, JsonDataType> _jsonTypeCache = InitBuiltInTypes ();
+		//static readonly SafeDictionary<Type, byte> _pocoCache = InitPocoCache ();
 		// TODO: Commented for invisible benefit
 		// Explicit static constructor to tell C# compiler
 		// not to mark type as beforefieldinit
@@ -57,6 +58,24 @@ namespace fastJSON
 			};
 			return new SafeDictionary<Type, JsonDataType> (d);
 		}
+		//static SafeDictionary<Type, byte> InitPocoCache () {
+		//	var d = new Dictionary<Type, byte> {
+		//		{ typeof(int), 0 },
+		//		{ typeof(long), 0 },
+		//		{ typeof(float), 0 },
+		//		{ typeof(double), 0 },
+		//		{ typeof(bool), 0 },
+		//		{ typeof(byte), 0 },
+		//		{ typeof(sbyte), 0 },
+		//		{ typeof(char), 0 },
+		//		{ typeof(short), 0 },
+		//		{ typeof(ushort), 0 },
+		//		{ typeof(uint), 0 },
+		//		{ typeof(ulong), 0 },
+		//		{ typeof(decimal), 0 }
+		//	};
+		//	return new SafeDictionary<Type, byte> (d);
+		//}
         internal static JsonDataType GetJsonDataType (Type type) {
 			JsonDataType t;
 			if (_jsonTypeCache.TryGetValue (type, out t)) {
@@ -151,39 +170,39 @@ namespace fastJSON
 			return c;
 		}
 
-		internal static Getters[] GetGetters (Type type, IReflectionController controller, SerializationManager manager) {
+		internal static MemberCache[] GetMembers (Type type) {
 			var pl = type.GetProperties (__ReflectionFlags);
 			var fl = type.GetFields (__ReflectionFlags);
-			var getters = new Dictionary<string, Getters> (pl.Length + fl.Length);
-
-			foreach (PropertyInfo m in pl) {
+			var c = new List<MemberCache> (pl.Length + fl.Length);
+			foreach (var m in pl) {
 				if (m.GetIndexParameters ().Length > 0) {// Property is an indexer
 					continue;
 				}
-				AddGetter (getters, m, CreateGetProperty (m), controller, manager);
+				c.Add (new MemberCache (m));
 			}
-
 			foreach (var m in fl) {
 				if (m.IsLiteral == false) {
-					AddGetter (getters, m, CreateGetField (m), controller, manager);
+					c.Add (new MemberCache (m));
 				}
 			}
-
-			var r = new Getters[getters.Count];
-			getters.Values.CopyTo (r, 0);
+			var r = new MemberCache[c.Count];
+			c.CopyTo (r, 0);
 			return r;
 		}
 
-		internal static void AddGetter (Dictionary<string, Getters> getters, MemberInfo memberInfo, GenericGetter getter, IReflectionController controller, SerializationManager manager) {
-			var n = memberInfo.Name;
-			Getters g = new Getters (memberInfo, getter);
-
-			if (controller != null) {
-				g.MemberTypeReflection = manager.GetReflectionCache (g.MemberType);
-				g.Serializable = controller.IsMemberSerializable (memberInfo, g);
-				g.Converter = controller.GetMemberConverter (memberInfo);
-				g.ItemConverter = controller.GetMemberItemConverter (memberInfo);
-				var dv = controller.GetNonSerializedValues (memberInfo);
+		internal static Getters[] GetGetters (Type type, MemberCache[] members, IReflectionController controller) {
+			var r = new Getters[members.Length];
+			for (int i = r.Length - 1; i >= 0; i--) {
+				var m = members[i];
+				var g = r[i] = new Getters (m);
+				if (controller == null) {
+					continue;
+				}
+				var mi = m.MemberInfo;
+				g.Serializable = controller.IsMemberSerializable (mi, m);
+				g.Converter = controller.GetMemberConverter (mi);
+				g.ItemConverter = controller.GetMemberItemConverter (mi);
+				var dv = controller.GetNonSerializedValues (mi);
 				if (dv != null) {
 					var v = new List<object> ();
 					foreach (var item in dv) {
@@ -192,7 +211,7 @@ namespace fastJSON
 					g.NonSerializedValues = v.ToArray ();
 				}
 				g.HasNonSerializedValue = g.NonSerializedValues != null;
-				var tn = controller.GetSerializedNames (memberInfo);
+				var tn = controller.GetSerializedNames (mi);
 				if (tn != null) {
 					if (String.IsNullOrEmpty (tn.DefaultName) == false && tn.DefaultName != g.SerializedName) {
 						g.SpecificName = true;
@@ -204,7 +223,7 @@ namespace fastJSON
 					}
 				}
 			}
-			getters.Add (n, g);
+			return r;
 		}
 
 		internal static GenericGetter CreateGetField (FieldInfo fieldInfo) {
@@ -370,105 +389,6 @@ namespace fastJSON
 			return (GenericSetter)setter.CreateDelegate (typeof(GenericSetter));
 		}
 
-		internal static Dictionary<string, JsonPropertyInfo> GetProperties (Type type, IReflectionController controller, SerializationManager manager) {
-			var custType = manager.IsTypeRegistered (type);
-			var sd = new Dictionary<string, JsonPropertyInfo> (StringComparer.OrdinalIgnoreCase);
-			var pr = type.GetProperties (__ReflectionFlags);
-			foreach (PropertyInfo p in pr) {
-				if (p.GetIndexParameters ().Length > 0) {// Property is an indexer
-					continue;
-				}
-				var d = new JsonPropertyInfo (p.PropertyType, p.Name, custType);
-				d.Setter = CreateSetProperty (p);
-				if (d.Setter != null)
-					d.CanWrite = true;
-				d.Getter = CreateGetProperty (p);
-				d.MemberTypeReflection = manager.GetReflectionCache (d.MemberType);
-				AddDeserializingProperty (sd, d, p, controller, manager);
-			}
-			var fi = type.GetFields (__ReflectionFlags);
-			foreach (FieldInfo f in fi) {
-				if (f.IsLiteral || f.IsInitOnly) {
-					continue;
-				}
-				var d = new JsonPropertyInfo (f.FieldType, f.Name, custType);
-				//if (f.IsInitOnly == false) {
-				d.Setter = CreateSetField (f);
-				if (d.Setter != null)
-					d.CanWrite = true;
-				//}
-				d.Getter = CreateGetField (f);
-				d.MemberTypeReflection = manager.GetReflectionCache (d.MemberType);
-				AddDeserializingProperty (sd, d, f, controller, manager);
-			}
-
-			return sd;
-		}
-
-		internal static JsonPropertyInfo GetPropertyOrField (Type type, string name) {
-			var p = type.GetProperty (name, __ReflectionFlags);
-			if (p != null) {
-				var d = new JsonPropertyInfo (p.PropertyType, name, false);
-				d.Setter = CreateSetProperty (p);
-				if (d.Setter != null)
-					d.CanWrite = true;
-				d.Getter = CreateGetProperty (p);
-				return d;
-			}
-			var f = type.GetField (name, __ReflectionFlags);
-			if (f != null) {
-				var d = new JsonPropertyInfo (f.FieldType, name, false);
-				d.Setter = CreateSetField (f);
-				if (d.Setter != null)
-					d.CanWrite = true;
-				d.Getter = CreateGetField (f);
-				return d;
-			}
-			return null;
-		}
-
-		internal static void AddDeserializingProperty (Dictionary<string, JsonPropertyInfo> sd, JsonPropertyInfo d, MemberInfo member, IReflectionController controller, SerializationManager manager) {
-			if (controller == null) {
-				AddPropertyInfo (sd, d.MemberName, d);
-				return;
-			}
-			if (controller.IsMemberDeserializable (member) == false) {
-				d.CanWrite = false;
-				if (d.MemberTypeReflection.AppendItem == null || member is PropertyInfo == false) {
-					return;
-				}
-			}
-			d.Converter = controller.GetMemberConverter (member);
-			d.ItemConverter = controller.GetMemberItemConverter (member);
-			var tn = controller.GetSerializedNames (member);
-			if (tn == null) {
-				AddPropertyInfo (sd, d.MemberName, d);
-				return;
-			}
-			// polymorphic deserialization
-			foreach (var item in tn) {
-				var st = item.Key;
-				var sn = item.Value;
-				var dt = new JsonPropertyInfo (st, member.Name, manager.IsTypeRegistered (st));
-				dt.Getter = d.Getter;
-				dt.Setter = d.Setter;
-				dt.Converter = d.Converter;
-				dt.ItemConverter = d.ItemConverter;
-				dt.CanWrite = d.CanWrite;
-				dt.MemberTypeReflection = manager.GetReflectionCache (st);
-				AddPropertyInfo (sd, sn, dt);
-			}
-			AddPropertyInfo (sd, String.IsNullOrEmpty (tn.DefaultName) ? d.MemberName : tn.DefaultName, d);
-		}
-		static void AddPropertyInfo (Dictionary<string, JsonPropertyInfo> sd, string name, JsonPropertyInfo item) {
-			if (String.IsNullOrEmpty (name)) {
-				throw new JsonSerializationException (item.MemberName + " should not be serialized to an empty name");
-			}
-			if (sd.ContainsKey (name)) {
-				throw new JsonSerializationException (name + " has been used by another member");
-			}
-			sd.Add (name, item);
-		}
 		// TODO: Support method that takes more than 1 arguments
 		/// <summary>
 		/// Creates a wrapper delegate for the given method. The delegate should have a similar signature as the <paramref name="method"/>, except that an argument in inserted before the method arguments.

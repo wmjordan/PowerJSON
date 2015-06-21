@@ -363,22 +363,23 @@ namespace fastJSON
 			var c = g.Length;
 			for (int ii = 0; ii < c; ii++) {
 				var p = g[ii];
+				var m = p.Member;
 				#region Skip Members Not For Serialization
 				if (p.Serializable == TriState.False) {
 					continue;
 				}
 				if (p.Serializable == TriState.Default) {
-					if (p.IsStatic && _params.SerializeStaticMembers == false
-						|| p.IsReadOnly && (p.IsProperty && _showReadOnlyProperties == false || p.IsProperty == false && _showReadOnlyFields == false)) {
+					if (m.IsStatic && _params.SerializeStaticMembers == false
+						|| m.IsReadOnly && m.MemberTypeReflection.AppendItem == null && (m.IsProperty && _showReadOnlyProperties == false || m.IsProperty == false && _showReadOnlyFields == false)) {
 						continue;
 					}
 				}
 				#endregion
-				var ji = new JsonItem (p.MemberName, p.Getter (obj), true);
+				var ji = new JsonItem (m.MemberName, m.Getter (obj), true);
 				if (si != null && si.OnSerializing (obj, ji) == false) {
 					continue;
 				}
-				var cv = p.Converter ?? p.MemberTypeReflection.Converter;
+				var cv = p.Converter ?? m.MemberTypeReflection.Converter;
 				if (cv != null) {
 					cv.SerializationConvert (ji);
 				}
@@ -412,7 +413,7 @@ namespace fastJSON
 					// ignore fields with default value
 					continue;
 				}
-				if (p.IsCollection && _params.SerializeEmptyCollections == false && ji._Value is ICollection && (ji._Value as ICollection).Count == 0) {
+				if (m.IsCollection && _params.SerializeEmptyCollections == false && ji._Value is ICollection && (ji._Value as ICollection).Count == 0) {
 					continue;
 				}
 				#endregion
@@ -429,13 +430,13 @@ namespace fastJSON
 				}
 				#endregion
 				#region Write Value
-				if (p.WriteValue != null && cv == null) {
+				if (m.SerializeMethod != null && cv == null) {
 					var v = ji._Value;
 					if (v == null || v is DBNull) {
 						_output.Append ("null");
 					}
 					else {
-						p.WriteValue (this, v);
+						m.SerializeMethod (this, v);
 					}
 				}
 				else {

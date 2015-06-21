@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection;
 
 namespace fastJSON
@@ -96,16 +97,34 @@ namespace fastJSON
 			if (_reflections.TryGetValue (type, out c)) {
 				return c;
 			}
-			return CreateReflectionCacheAndRegister (type);
+
+			c = _reflections[type] = new ReflectionCache (type, this);
+			ControlTypeSerializationSettings (type, c);
+			return c;
 		}
 
-		ReflectionCache CreateReflectionCacheAndRegister (Type type) {
-			var c = _reflections[type] = new ReflectionCache (type, this);
-			if (type.IsClass || type.IsValueType) {
-				c.Getters = Reflection.GetGetters (type, _controller, this);
-				c.Properties = Reflection.GetProperties (type, _controller, this);
+		private void ControlTypeSerializationSettings (Type type, ReflectionCache c) {
+			if (c.JsonDataType == JsonDataType.Enum) {
+				c.EnumNames = GetEnumValues (type, _controller);
 			}
-			return c;
+			else if (type.IsClass || type.IsValueType) {
+				c.Converter = _controller.GetConverter (type);
+				c.AlwaysDeserializable = _controller.IsAlwaysDeserializable (type) || type.Namespace == typeof (JSON).Namespace;
+				c.Interceptor = _controller.GetInterceptor (type);
+			}
+			if (c.Members != null) {
+				foreach (var item in c.Members) {
+					item.MemberTypeReflection = GetReflectionCache (item.MemberType);
+				}
+				c.Getters = Reflection.GetGetters (type, c.Members, _controller);
+				c.Properties = GetProperties (type, c.Members, _controller);
+				foreach (var item in c.Properties) {
+					var m = item.Value.Member;
+					if (m.MemberTypeReflection == null) {
+						m.MemberTypeReflection = GetReflectionCache (m.MemberType);
+					}
+				}
+			}
 		}
 
 		#region Enum Cache
@@ -125,7 +144,7 @@ namespace fastJSON
 				if (String.IsNullOrEmpty (sn) == false) {
 					en = sn;
 				}
-				vc.Add (ev, en);
+				vc[ev] = en;
 				vm.Add (en ?? ns[i], ev);
 			}
 			return vm;
@@ -233,7 +252,10 @@ namespace fastJSON
 			if (overrideInfo == null) {
 				throw new ArgumentNullException ("overrideInfo");
 			}
-			var c = purgeExisting ? CreateReflectionCacheAndRegister (type) : GetReflectionCache (type);
+			var c = GetReflectionCache (type);
+			if (purgeExisting) {
+				ControlTypeSerializationSettings (type, c);
+			}
 			if (overrideInfo.OverrideInterceptor) {
 				c.Interceptor = overrideInfo.Interceptor;
 			}
@@ -243,26 +265,102 @@ namespace fastJSON
 			if (overrideInfo.Deserializable != TriState.Default) {
 				c.AlwaysDeserializable = overrideInfo.Deserializable == TriState.True;
 			}
-			MemberOverride mo;
+			if (overrideInfo._MemberOverrides == null || overrideInfo._MemberOverrides.Count == 0) {
+				return;
+			}
 			var s = c.Properties;
-			foreach (var g in c.Getters) {
-				mo = null;
-				foreach (var item in overrideInfo.MemberOverrides) {
-					if (item.MemberName == g.MemberName) {
-						mo = item;
-						break;
-					}
-				}
-				if (mo == null) {
+			// add properties ignored by _controller in GetProperties method
+			foreach (var ov in overrideInfo._MemberOverrides) {
+				if (ov.Deserializable != TriState.True) {
 					continue;
 				}
+				var p = c.FindProperties (ov.MemberName);
+				if (p.Count == 0) {
+					var m = c.FindMemberCache (ov.MemberName);
+					if (m == null) {
+						throw new MissingMemberException (c.TypeName, ov.MemberName);
+					}
+					var pi = new JsonPropertyInfo (m);
+					// TODO: load serialization control settings
+					var ds = LoadMemberDeserializationSettings (pi, _controller);
+					if (ds != null) {
+						foreach (var item in ds) {
+							item.Value.Member.MemberTypeReflection = GetReflectionCache (item.Value.Member.MemberType);
+							AddPropertyInfo (c.Properties, item.Key, item.Value);
+						}
+					}
+				}
+			}
+			foreach (var ov in overrideInfo._MemberOverrides) {
+				var g = c.FindGetters (ov.MemberName);
+				if (g == null) {
+					throw new MissingMemberException (type.FullName, ov.MemberName);
+				}
+				OverrideGetters (g, ov);
+				OverridePropInfo (type, s, ov, g);
+			}
+		}
 
-				OverrideGetters (g, mo);
-				OverridePropInfo (type, s, mo, g);
+		static Dictionary<string, JsonPropertyInfo> GetProperties (Type type, MemberCache[] members, IReflectionController controller) {
+			var sd = new Dictionary<string, JsonPropertyInfo> (StringComparer.OrdinalIgnoreCase);
+			foreach (var p in members) {
+				var d = new JsonPropertyInfo (p);
+				var dp = GetDeserializingProperties (d, controller);
+				if (dp == null) {
+					continue;
+				}
+				foreach (var item in dp) {
+					AddPropertyInfo (sd, item.Key, item.Value);
+				}
 			}
-			if (purgeExisting) {
-				_reflections[type] = c;
+			return sd;
+		}
+
+		static Dictionary<string, JsonPropertyInfo> GetDeserializingProperties (JsonPropertyInfo d, IReflectionController controller) {
+			var member = d.Member.MemberInfo;
+			if (controller == null) {
+				return new Dictionary<string, JsonPropertyInfo> () { { d.MemberName, d } };
 			}
+			if (controller.IsMemberDeserializable (member, d.Member) == false) {
+				d.CanWrite = false;
+				if (d.Member.MemberTypeReflection.AppendItem == null || member is PropertyInfo == false) {
+					return null;
+				}
+			}
+			return LoadMemberDeserializationSettings (d, controller);
+		}
+
+		static Dictionary<string, JsonPropertyInfo> LoadMemberDeserializationSettings (JsonPropertyInfo d, IReflectionController controller) {
+			var member = d.Member.MemberInfo;
+			var sd = new Dictionary<string, JsonPropertyInfo> ();
+			d.Converter = controller.GetMemberConverter (member);
+			d.ItemConverter = controller.GetMemberItemConverter (member);
+			var tn = controller.GetSerializedNames (member);
+			if (tn == null) {
+				sd.Add (d.MemberName, d);
+				return sd;
+			}
+			sd.Add (String.IsNullOrEmpty (tn.DefaultName) ? d.MemberName : tn.DefaultName, d);
+			// polymorphic deserialization
+			foreach (var item in tn) {
+				var st = item.Key;
+				var sn = item.Value;
+				var dt = new JsonPropertyInfo (new MemberCache (st, d.MemberName, d.Member));
+				dt.Converter = d.Converter;
+				dt.ItemConverter = d.ItemConverter;
+				sd.Add (sn, dt);
+			}
+			return sd;
+		}
+
+		static void AddPropertyInfo (Dictionary<string, JsonPropertyInfo> sd, string name, JsonPropertyInfo item) {
+			if (String.IsNullOrEmpty (name)) {
+				throw new JsonSerializationException (item.MemberName + " should not be serialized to an empty name");
+			}
+			if (sd.ContainsKey (name)) {
+				throw new JsonSerializationException (name + " has been used by another member");
+			}
+			sd.Add (name, item);
 		}
 
 		void OverridePropInfo (Type type, Dictionary<string, JsonPropertyInfo> s, MemberOverride mo, Getters g) {
@@ -272,7 +370,7 @@ namespace fastJSON
 				var rt = new List<string> ();
 				foreach (var item in s) {
 					if (item.Value.MemberName == mo.MemberName) {
-						if (Equals (item.Value.MemberType, g.MemberType) == false) {
+						if (Equals (item.Value.Member.MemberType, g.Member.MemberType) == false) {
 							rt.Add (item.Key);
 						}
 						// find an item with the same member name
@@ -280,7 +378,7 @@ namespace fastJSON
 					}
 				}
 				if (mp == null) {
-					throw new MissingMemberException (g.MemberType.FullName, mo.MemberName);
+					throw new MissingMemberException (g.Member.MemberType.FullName, mo.MemberName);
 				}
 				foreach (var item in rt) {
 					s.Remove (item);
@@ -289,17 +387,13 @@ namespace fastJSON
 				if (mo.TypedNames.Count > 0) {
 					foreach (var item in mo.TypedNames) {
 						var t = item.Key;
-						if (g.MemberType.IsAssignableFrom (t) == false) {
-							throw new InvalidCastException ("The type (" + t.FullName + ") does not derive from the member type (" + g.MemberType.FullName + ")");
+						if (g.Member.MemberType.IsAssignableFrom (t) == false) {
+							throw new InvalidCastException ("The type (" + t.FullName + ") does not derive from the member type (" + g.Member.MemberType.FullName + ")");
 						}
 						var n = item.Value;
-						var p = new JsonPropertyInfo (t, g.MemberName, IsTypeRegistered (t));
-						p.Getter = mp.Getter;
-						p.Setter = mp.Setter;
-						p.CanWrite = mp.CanWrite;
-						p.MemberTypeReflection = GetReflectionCache (t);
+						var p = new JsonPropertyInfo (new MemberCache (t, g.MemberName, mp.Member) { MemberTypeReflection = GetReflectionCache (t) });
 						JsonPropertyInfo tp;
-						if (s.TryGetValue (n, out tp) && Equals (tp.MemberType, g.MemberType)) {
+						if (s.TryGetValue (n, out tp) && Equals (tp.Member.MemberType, g.Member.MemberType)) {
 							s[n] = p;
 						}
 						else {
@@ -314,21 +408,13 @@ namespace fastJSON
 					s.Add (mo.SerializedName, mp);
 				}
 			}
-			bool ov = OverrideJsonPropertyInfo (s, mo, mp);
-			// TODO: recreates the property info for excluded member
-			//if (ov == false) {
-			//	var p = Reflection.GetPropertyOrField (type, mo.MemberName);
-			//	if (p != null) {
-			//		Reflection.AddDeserializingProperty (s, p, p.MemberType, _controller, this);
-			//	}
-			//}
+			OverrideJsonPropertyInfo (s, mo, mp);
 			if (mo.OverrideSerializedName) {
 				g.SerializedName = mo.SerializedName;
 			}
 		}
 
-		private static bool OverrideJsonPropertyInfo (Dictionary<string, JsonPropertyInfo> s, MemberOverride mo, JsonPropertyInfo mp) {
-			bool ov = false;
+		private static void OverrideJsonPropertyInfo (Dictionary<string, JsonPropertyInfo> s, MemberOverride mo, JsonPropertyInfo mp) {
 			foreach (var item in s) {
 				mp = item.Value;
 				if (mp.MemberName == mo.MemberName) {
@@ -341,10 +427,8 @@ namespace fastJSON
 					if (mo.Deserializable != TriState.Default) {
 						mp.CanWrite = mo.Deserializable == TriState.True;
 					}
-					ov = true;
 				}
 			}
-			return ov;
 		}
 
 		static void OverrideGetters (Getters getter, MemberOverride mo) {
@@ -352,9 +436,9 @@ namespace fastJSON
 				getter.Serializable = mo.Serializable;
 			}
 			if (mo._NonSerializedValues != null) {
-				getter.HasNonSerializedValue = true;
 				getter.NonSerializedValues = new object[mo.NonSerializedValues.Count];
 				mo.NonSerializedValues.CopyTo (getter.NonSerializedValues, 0);
+				getter.HasNonSerializedValue = getter.NonSerializedValues.Length > 0;
 			}
 			if (mo.OverrideTypedNames) {
 				getter.TypedNames = mo.TypedNames;
@@ -446,24 +530,9 @@ namespace fastJSON
 		/// <remarks>If the member has already gotten an <see cref="IJsonConverter"/>, the new <paramref name="converter"/> will replace it. If the new converter is null, existing converter will be removed from the type.</remarks>
 		/// <exception cref="MissingMemberException">No field or property matches <paramref name="memberName"/> in <paramref name="type"/>.</exception>
 		public void OverrideMemberConverter (Type type, string memberName, IJsonConverter converter) {
-			if (type == null) {
-				throw new ArgumentNullException ("type");
-			}
-			if (memberName == null) {
-				throw new ArgumentNullException ("memberName");
-			}
-			var c = GetReflectionCache (type);
-			string n = null;
-			var g = c.FindGetters (memberName);
-			if (g == null) {
-				throw new MissingMemberException (type.Name, memberName);
-			}
-			g.Converter = converter;
-			n = g.SerializedName;
-			JsonPropertyInfo p;
-			if (c.Properties.TryGetValue (n, out p)) {
-				p.Converter = converter;
-			}
+			Override (type, new TypeOverride () {
+				MemberOverrides = { new MemberOverride (memberName, converter) }
+			}, false);
 		}
 
 		/// <summary>
@@ -553,7 +622,7 @@ namespace fastJSON
 			}
 		}
 
-		List<MemberOverride> _MemberOverrides;
+		internal List<MemberOverride> _MemberOverrides;
 		/// <summary>
 		/// Gets the override information for members.
 		/// </summary>
@@ -573,6 +642,7 @@ namespace fastJSON
 	/// <seealso cref="SerializationManager"/>
 	/// <seealso cref="TypeOverride"/>
 	/// <preliminary />
+	[DebuggerDisplay ("{MemberName} ({_SerializedName})")]
 	public sealed class MemberOverride
 	{
 		/// <summary>

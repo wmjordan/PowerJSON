@@ -295,25 +295,26 @@ namespace fastJSON
 				var n = kv.Key;
 				var v = kv.Value;
 				JsonPropertyInfo pi;
-				if (props.TryGetValue (n, out pi) == false || pi.CanWrite == false && pi.JsonDataType != JsonDataType.List)
+				if (props.TryGetValue (n, out pi) == false || pi.CanWrite == false && pi.Member.JsonDataType != JsonDataType.List)
 					continue;
+				MemberCache m = pi.Member;
 				var ji = new JsonItem (n, v, false);
 				bool converted = false;
 				// TODO: Convert items for types implements IEnumerable and Add(?) method
 				if (v is IList && pi.ItemConverter != null) {
 					converted = ConvertItems (pi, ji);
 				}
-				if (pi.Converter != null || pi.MemberTypeReflection.Converter != null) {
+				if (pi.Converter != null || m.MemberTypeReflection.Converter != null) {
 					ConvertProperty (o, pi, ji);
 				}
 
 				object oset = null;
 				// use the converted value
 				if (converted || ReferenceEquals (ji._Value, v) == false) {
-					if (pi.CanWrite == false && pi.JsonDataType == JsonDataType.List) {
-						ji._Value = CreateList ((JsonArray)ji._Value, pi.MemberTypeReflection, pi.Getter (o));
+					if (pi.CanWrite == false && m.JsonDataType == JsonDataType.List) {
+						ji._Value = CreateList ((JsonArray)ji._Value, m.MemberTypeReflection, m.Getter (o));
 					}
-					if (ji._Value != null || pi.IsClass || pi.IsNullable) {
+					if (ji._Value != null || m.IsClass || m.IsNullable) {
 						oset = ji._Value;
 						goto SET_VALUE;
 					}
@@ -325,14 +326,14 @@ namespace fastJSON
 					if (si != null && si.OnDeserializing (o, i) == false) {
 						continue;
 					}
-					if (i.Value != null || pi.IsClass || pi.IsNullable) {
-						o = pi.Setter (o, i.Value);
+					if (i.Value != null || m.IsClass || m.IsNullable) {
+						o = m.Setter (o, i.Value);
 					}
 					continue;
 				}
 				v = ji._Value;
 				// set member value
-				switch (pi.JsonDataType) {
+				switch (m.JsonDataType) {
 					case JsonDataType.Undefined: goto default;
 					case JsonDataType.Int: oset = (int)(long)v; break;
 					case JsonDataType.String:
@@ -344,22 +345,22 @@ namespace fastJSON
 					case JsonDataType.Guid: oset = CreateGuid (v); break;
 					case JsonDataType.ByteArray: oset = Convert.FromBase64String ((string)v); break;
 					case JsonDataType.List:
-						oset = CreateList ((JsonArray)v, pi.MemberTypeReflection, pi.CanWrite && (pi.IsClass || pi.IsStruct) ? null : pi.Getter (o));
+						oset = CreateList ((JsonArray)v, m.MemberTypeReflection, pi.CanWrite && (m.IsClass || m.IsStruct) ? null : m.Getter (o));
 						break;
 					case JsonDataType.Object: oset = v; break;
 					default:
-						if (pi.DeserializeMethod != null) {
-							oset = pi.DeserializeMethod (this, ji._Value, pi.MemberTypeReflection);
+						if (m.DeserializeMethod != null) {
+							oset = m.DeserializeMethod (this, ji._Value, m.MemberTypeReflection);
 							goto SET_VALUE;
 						}
-						if ((pi.IsClass || pi.IsStruct) && v is JsonDict)
-							oset = CreateObject ((JsonDict)v, pi.MemberTypeReflection, pi.Getter (o));
+						if ((m.IsClass || m.IsStruct) && v is JsonDict)
+							oset = CreateObject ((JsonDict)v, m.MemberTypeReflection, m.Getter (o));
 
 						else if (v is JsonArray)
 							oset = CreateArray ((JsonArray)v, _manager.GetReflectionCache (typeof (object[])));
 
-						else if (pi.IsValueType)
-							oset = ChangeType (v, pi.ChangeType);
+						else if (m.IsValueType)
+							oset = ChangeType (v, m.ChangeType);
 
 						else
 							oset = v;
@@ -373,8 +374,8 @@ namespace fastJSON
 						continue;
 					}
 				}
-				if (pi.Setter != null) {
-					o = pi.Setter (o, ji.Value);
+				if (m.Setter != null) {
+					o = m.Setter (o, ji.Value);
 				}
 			}
 			if (si != null) {
@@ -384,10 +385,10 @@ namespace fastJSON
 		}
 
 		void ConvertProperty (object o, JsonPropertyInfo pi, JsonItem ji) {
-			var pc = pi.Converter ?? pi.MemberTypeReflection.Converter;
+			var pc = pi.Converter ?? pi.Member.MemberTypeReflection.Converter;
 			var rt = pc.GetReversiveType (ji);
 			var xv = ji._Value;
-			if (xv != null && rt != null && pi.MemberType.Equals (xv.GetType ()) == false) {
+			if (xv != null && rt != null && pi.Member.MemberType.Equals (xv.GetType ()) == false) {
 				var c = _manager.GetReflectionCache (rt);
 				var jt = Reflection.GetJsonDataType (rt);
 				if (jt != JsonDataType.Undefined) {
@@ -395,7 +396,7 @@ namespace fastJSON
 					xv = m (this, xv, c);
 				}
 				else if (xv is JsonDict) {
-					xv = CreateObject ((JsonDict)xv, c, pi.Getter (o));
+					xv = CreateObject ((JsonDict)xv, c, pi.Member.Getter (o));
 				}
 			}
 			ji._Value = xv;
@@ -417,12 +418,12 @@ namespace fastJSON
 				}
 			}
 			if (converted) {
-				if (pi.JsonDataType == JsonDataType.Array) {
-					ji._Value = Array.CreateInstance (pi.ElementType, l);
+				if (pi.Member.JsonDataType == JsonDataType.Array) {
+					ji._Value = Array.CreateInstance (pi.Member.ElementType, l);
 					vl.CopyTo ((Array)ji._Value, 0);
 				}
-				else if (pi.JsonDataType == JsonDataType.List) {
-					ji._Value = pi.MemberTypeReflection.Instantiate ();
+				else if (pi.Member.JsonDataType == JsonDataType.List) {
+					ji._Value = pi.Member.MemberTypeReflection.Instantiate ();
 					var gl = ji._Value as IList;
 					for (int i = 0; i < l; i++) {
 						gl.Add (vl[i]);

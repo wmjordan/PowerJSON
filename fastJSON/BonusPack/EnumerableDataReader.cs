@@ -74,7 +74,7 @@ namespace fastJSON.BonusPack
 		IEnumerator<T> _enumerator;
 		readonly int _fieldCount;
 		readonly string[] _memberNames;
-		readonly Getters[] _accessors;
+		readonly MemberCache[] _members;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="EnumerableDataReader{T}"/> class.
@@ -101,7 +101,7 @@ namespace fastJSON.BonusPack
 			var p = SerializationManager.Instance.GetReflectionCache (t).Getters;
 			_fieldCount = p.Length;
 			_memberNames = new string[_fieldCount];
-			_accessors = new Getters[_fieldCount];
+			_members = new MemberCache[_fieldCount];
 			int c = 0;
 			for (int i = 0; i < _fieldCount; i++) {
 				var g = p[i];
@@ -109,13 +109,13 @@ namespace fastJSON.BonusPack
 					continue;
 				}
 				_memberNames[c] = p[i].SerializedName;
-				_accessors[c] = p[i];
+				_members[c] = p[i].Member;
 				++c;
 			}
 			if (c < _fieldCount) {
 				_fieldCount = c;
 				Array.Resize (ref _memberNames, c);
-				Array.Resize (ref _accessors, c);
+				Array.Resize (ref _members, c);
 			}
 		}
 
@@ -286,7 +286,7 @@ namespace fastJSON.BonusPack
 		/// <param name="i">The index of the field.</param>
 		/// <returns></returns>
 		public string GetDataTypeName (int i) {
-			var a = _accessors[i];
+			var a = _members[i];
 			return a.MemberType.Name;
 		}
 
@@ -323,7 +323,7 @@ namespace fastJSON.BonusPack
 		/// <param name="i">The index of the field.</param>
 		/// <returns>The <see cref="Type"/> of the member at specific field index.</returns>
 		public Type GetFieldType (int i) {
-			var a = _accessors[i];
+			var a = _members[i];
 			return a.MemberType;
 		}
 
@@ -415,7 +415,7 @@ namespace fastJSON.BonusPack
 		/// <param name="i">The index of the field.</param>
 		/// <returns>The value.</returns>
 		public object GetValue (int i) {
-			return _accessors[i].Getter (_enumerator.Current);
+			return _members[i].Getter (_enumerator.Current);
 		}
 
 		/// <summary>

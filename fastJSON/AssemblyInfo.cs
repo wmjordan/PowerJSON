@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyProduct("PowerJSON")]
 [assembly: AssemblyCopyright ("2010-2015, copyright by Mehdi Gholam, forked by wmjordan")]
 
-[assembly: AssemblyVersion ("2.3.0.0")]
-[assembly: AssemblyFileVersion ("2.3.5.0")]
+[assembly: AssemblyVersion ("2.4.0.0")]
+[assembly: AssemblyFileVersion ("2.4.0.1")]
 [assembly: System.CLSCompliant (true)]
 [assembly: ComVisible(false)]

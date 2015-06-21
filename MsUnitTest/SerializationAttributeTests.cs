@@ -828,8 +828,7 @@ namespace UnitTests
 						}
 					},
 					new MemberOverride ("ID", "myID"),
-					new MemberOverride ("Array", new Int32ArrayConverter ()),
-					new MemberOverride ("inexistent", "shouldBeIgnored")
+					new MemberOverride ("Array", new Int32ArrayConverter ())
 				}
 			});
 			m.OverrideEnumValueNames<OverrideEnumSample> (new Dictionary<string, string> {

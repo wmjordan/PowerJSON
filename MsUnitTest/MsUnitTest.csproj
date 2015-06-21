@@ -45,6 +45,7 @@
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
     <Reference Include="System.Data" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.XML" />
   </ItemGroup>
   <Choose>
@@ -60,6 +61,7 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
+    <Compile Include="DataContractAttributesTests.cs" />
     <Compile Include="SampleClasses.cs" />
     <Compile Include="SerializationControlTests.cs" />
     <Compile Include="SerializationAttributeTests.cs" />

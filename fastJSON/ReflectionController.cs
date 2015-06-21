@@ -32,6 +32,13 @@ namespace fastJSON
 	/// <preliminary />
 	public class JsonReflectionController : DefaultReflectionController
 	{
+#if NET_40_OR_GREATER
+		HashSet<Type> _ContractualTypes = new HashSet<Type> ();
+		/// <summary>
+		/// Gets whether <see cref="DataContractAttribute"/>, <see cref="DataMemberAttribute"/>, etc. attributes in <see cref="System.Runtime.Serialization"/> namespace are supported.
+		/// </summary>
+		public bool SupportContractualAttributes { get; private set; }
+#endif
 		/// <summary>
 		/// Ignore attributes to check for (default : XmlIgnoreAttribute).
 		/// </summary>
@@ -43,7 +50,13 @@ namespace fastJSON
 		public JsonReflectionController () {
 			IgnoreAttributes = new List<Type> { typeof (System.Xml.Serialization.XmlIgnoreAttribute) };
 		}
-
+		/// <summary>
+		/// Creates an instance of <see cref="JsonReflectionController"/> and sets whether <see cref="SupportContractualAttributes"/> option is turned on. For backward compatibility, <see cref="System.Xml.Serialization.XmlIgnoreAttribute"/> is added into <see cref="IgnoreAttributes"/>.
+		/// </summary>
+		public JsonReflectionController (bool supportContractualAttributes)
+			: this () {
+			SupportContractualAttributes = supportContractualAttributes;
+		}
 		/// <summary>
 		/// This method is called to determine whether the values of the given <see cref="Enum"/> type should be serialized as its numeric form rather than literal form. The override can be set via the <see cref="JsonEnumFormatAttribute"/>.
 		/// </summary>
@@ -64,6 +77,14 @@ namespace fastJSON
 			if (a != null) {
 				return a.Name;
 			}
+#if NET_40_OR_GREATER
+			if (SupportContractualAttributes) {
+				var m = AttributeHelper.GetAttribute<EnumMemberAttribute> (member, true);
+				if (m != null && String.IsNullOrEmpty (m.Value) == false) {
+					return m.Value;
+				}
+			}
+#endif
 			return null;
 		}
 
@@ -73,7 +94,7 @@ namespace fastJSON
 		/// <param name="type">The type to be deserialized.</param>
 		/// <returns>Whether the type can be deserialized even if it is a non-public type.</returns>
 		public override bool IsAlwaysDeserializable (Type type) {
-			return AttributeHelper.GetAttribute<JsonSerializableAttribute> (type, false) != null;
+			return AttributeHelper.HasAttribute<JsonSerializableAttribute> (type, false);
 		}
 
 		/// <summary>
@@ -82,6 +103,11 @@ namespace fastJSON
 		/// <param name="type">The type to be checked.</param>
 		/// <returns>The interceptor.</returns>
 		public override IJsonInterceptor GetInterceptor (Type type) {
+#if NET_40_OR_GREATER
+			if (SupportContractualAttributes && AttributeHelper.HasAttribute<DataContractAttribute> (type, false)) {
+				_ContractualTypes.Add (type);
+			}
+#endif
 			var ia = AttributeHelper.GetAttribute<JsonInterceptorAttribute> (type, true);
 			if (ia != null) {
 				return ia.Interceptor;
@@ -116,10 +142,17 @@ namespace fastJSON
 			if (ic != null) {
 				return ic.Include ? TriState.True : TriState.False;
 			}
-			var s = AttributeHelper.GetAttribute<JsonSerializableAttribute> (member, true);
-			if (s != null) {
+			if (AttributeHelper.HasAttribute<JsonSerializableAttribute> (member, true)) {
 				return TriState.True;
 			}
+#if NET_40_OR_GREATER
+			if (SupportContractualAttributes && _ContractualTypes.Contains (member.DeclaringType)) {
+				return AttributeHelper.HasAttribute<DataMemberAttribute> (member, true) ? TriState.True : TriState.False;
+			}
+			if (SupportContractualAttributes && AttributeHelper.HasAttribute<IgnoreDataMemberAttribute> (member, true)) {
+				return TriState.False;
+			}
+#endif
 			if (IgnoreAttributes != null && IgnoreAttributes.Count > 0) {
 				foreach (var item in IgnoreAttributes) {
 					if (member.IsDefined (item, false)) {
@@ -134,8 +167,9 @@ namespace fastJSON
 		/// Gets whether a field or a property is deserializable. If false is returned, the member will be excluded from deserialization. By default, writable fields or properties are deserializable. The value can be set via <see cref="System.ComponentModel.ReadOnlyAttribute"/>.
 		/// </summary>
 		/// <param name="member">The member to be serialized.</param>
+		/// <param name="info">Reflection information for the member.</param>
 		/// <returns>True is returned if the member is serializable, otherwise, false.</returns>
-		public override bool IsMemberDeserializable (MemberInfo member) {
+		public override bool IsMemberDeserializable (MemberInfo member, IMemberInfo info) {
 			var ro = AttributeHelper.GetAttribute<System.ComponentModel.ReadOnlyAttribute> (member, true);
 			if (ro != null) {
 				return ro.IsReadOnly == false;
@@ -144,7 +178,15 @@ namespace fastJSON
 			if (s != null) {
 				return true;
 			}
-			return base.IsMemberDeserializable (member);
+#if NET_40_OR_GREATER
+			if (SupportContractualAttributes && _ContractualTypes.Contains (member.DeclaringType)) {
+				return AttributeHelper.HasAttribute<DataMemberAttribute> (member, true);
+			}
+			if (SupportContractualAttributes && AttributeHelper.HasAttribute<IgnoreDataMemberAttribute> (member, true)) {
+				return false;
+			}
+#endif
+			return base.IsMemberDeserializable (member, info);
 		}
 
 		/// <summary>
@@ -173,6 +215,14 @@ namespace fastJSON
 					tn.Add (item.DataType, item.Name);
 				}
 			}
+#if NET_40_OR_GREATER
+			if (SupportContractualAttributes && jf.Length == 0) {
+				var m = AttributeHelper.GetAttribute<DataMemberAttribute> (member, true);
+				if (m != null && String.IsNullOrEmpty (m.Name) == false) {
+					tn.DefaultName = m.Name;
+				}
+			}
+#endif
 			return tn;
 		}
 
@@ -294,18 +344,10 @@ namespace fastJSON
 		/// This method is called to determine whether a field or a property is deserializable. If false is returned, the member will be excluded from deserialization. By default, writable fields or properties are deserializable.
 		/// </summary>
 		/// <param name="member">The member to be serialized.</param>
+		/// <param name="info">Reflection information for the member.</param>
 		/// <returns>True is returned if the member is public, otherwise, false.</returns>
-		public virtual bool IsMemberDeserializable (MemberInfo member) {
-			var p = member as PropertyInfo;
-			if (p != null) {
-				var s = p.GetSetMethod ();
-				return s != null;
-			}
-			var f = member as FieldInfo;
-			if (f != null) {
-				return f.IsPublic;
-			}
-			throw new ArgumentException ("member should be property or field", member.Name);
+		public virtual bool IsMemberDeserializable (MemberInfo member, IMemberInfo info) {
+			return info.IsReadOnly == false && info.IsPublic;
 		}
 
 		/// <summary>
@@ -400,8 +442,9 @@ namespace fastJSON
 		/// This method is called to determine whether a field or a property is deserializable. If false is returned, the member will be excluded from deserialization. By default, writable fields or properties are deserializable.
 		/// </summary>
 		/// <param name="member">The member to be serialized.</param>
+		/// <param name="info">Reflection information for the member.</param>
 		/// <returns>True is returned if the member is serializable, otherwise, false.</returns>
-		bool IsMemberDeserializable (MemberInfo member);
+		bool IsMemberDeserializable (MemberInfo member, IMemberInfo info);
 
 		/// <summary>
 		/// This method returns possible names for corresponding types of a field or a property. This enables polymorphic serialization and deserialization for abstract, interface, or object types, with predetermined concrete types. If polymorphic serialization is not used, null or an empty dictionary could be returned.

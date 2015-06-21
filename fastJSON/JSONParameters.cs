@@ -77,8 +77,16 @@ namespace fastJSON
 		/// Ignores attributes to check for (default : XmlIgnoreAttribute)
 		/// </summary>
 		[System.Diagnostics.CodeAnalysis.SuppressMessage ("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
-		[Obsolete ("This property is provided for backward compatibility. It returns the FastJsonReflectionController.IgnoreAttributes from the controller instance in SerializationManager.Instance, which is used by JSON.ToJSON and JSON.ToObject methods without SerializationManager parameters. For other method overloads in JSON class with the SerializationManager parameter, this setting will not work.")]
-		public IList<Type> IgnoreAttributes { get { return (SerializationManager.Instance.ReflectionController as JsonReflectionController).IgnoreAttributes; } }
+		[Obsolete ("This property is provided for backward compatibility. It returns the JsonReflectionController.IgnoreAttributes from the controller instance in SerializationManager.Instance, which is used by JSON.ToJSON and JSON.ToObject methods without SerializationManager parameters. For other method overloads in JSON class with the SerializationManager parameter, this setting will not work.")]
+		public IList<Type> IgnoreAttributes {
+			get {
+				var c = SerializationManager.Instance.ReflectionController as JsonReflectionController;
+				if (c == null) {
+					throw new InvalidOperationException ("The SerializationManager.Instance.ReflectionController is not JsonReflectionController");
+				}
+				return c.IgnoreAttributes;
+			}
+		}
 
 		/// <summary>
 		/// If you have parametric and no default constructor for you classes (default = False)
