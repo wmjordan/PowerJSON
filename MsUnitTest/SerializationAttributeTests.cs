@@ -788,7 +788,7 @@ namespace UnitTests
 				StringAssert.Contains (s, @"""code"":");
 
 				manager.Override<System.Net.WebException> (new TypeOverride () {
-					MemberOverrides = { new MemberOverride ("TargetSite") { Serializable = TriState.False } }
+					MemberOverrides = { new MemberOverride ("TargetSite") { Serializable = false } }
 				}, true);
 				s = JSON.ToJSON (ex, p);
 				Console.WriteLine (s);

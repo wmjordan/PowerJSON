@@ -199,7 +199,7 @@ namespace fastJSON
 					continue;
 				}
 				var mi = m.MemberInfo;
-				g.Serializable = controller.IsMemberSerializable (mi, m);
+				g.Serializable = Constants.ToTriState (controller.IsMemberSerializable (mi, m));
 				g.Converter = controller.GetMemberConverter (mi);
 				g.ItemConverter = controller.GetMemberItemConverter (mi);
 				var dv = controller.GetNonSerializedValues (mi);

@@ -9,6 +9,6 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCopyright ("2010-2015, copyright by Mehdi Gholam, forked by wmjordan")]
 
 [assembly: AssemblyVersion ("2.4.0.0")]
-[assembly: AssemblyFileVersion ("2.4.0.1")]
+[assembly: AssemblyFileVersion ("2.4.0.2")]
 [assembly: System.CLSCompliant (true)]
 [assembly: ComVisible(false)]

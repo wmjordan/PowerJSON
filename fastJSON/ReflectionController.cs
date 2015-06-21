@@ -8,25 +8,6 @@ using System.Security.Permissions;
 namespace fastJSON
 {
 	/// <summary>
-	/// Indicates the state of a setting.
-	/// </summary>
-	public enum TriState
-	{
-		/// <summary>
-		/// Represents the normal behavior.
-		/// </summary>
-		Default,
-		/// <summary>
-		/// Represents a positive setting. Actions should be taken to the object.
-		/// </summary>
-		True,
-		/// <summary>
-		/// Represents a negative setting. Actions may not be taken to the object.
-		/// </summary>
-		False
-	}
-
-	/// <summary>
 	/// The general implementation of <see cref="IReflectionController"/>, which takes custom attributes such as <see cref="JsonFieldAttribute"/>, <see cref="JsonConverterAttribute"/>, etc. into consideration.
 	/// </summary>
 	/// <preliminary />
@@ -35,7 +16,7 @@ namespace fastJSON
 #if NET_40_OR_GREATER
 		HashSet<Type> _ContractualTypes = new HashSet<Type> ();
 		/// <summary>
-		/// Gets whether <see cref="DataContractAttribute"/>, <see cref="DataMemberAttribute"/>, etc. attributes in <see cref="System.Runtime.Serialization"/> namespace are supported.
+		/// Gets whether <see cref="DataContractAttribute"/>, <see cref="DataMemberAttribute"/>, etc. attributes in <see cref="System.Runtime.Serialization"/> namespace are supported. (default: true)
 		/// </summary>
 		public bool SupportContractualAttributes { get; private set; }
 #endif
@@ -47,16 +28,22 @@ namespace fastJSON
 		/// <summary>
 		/// Creates an instance of <see cref="JsonReflectionController"/>. For backward compatibility, <see cref="System.Xml.Serialization.XmlIgnoreAttribute"/> is added into <see cref="IgnoreAttributes"/>.
 		/// </summary>
-		public JsonReflectionController () {
-			IgnoreAttributes = new List<Type> { typeof (System.Xml.Serialization.XmlIgnoreAttribute) };
+		public JsonReflectionController ()
+#if NET_40_OR_GREATER
+			: this (true)
+#endif
+		{
 		}
+
+#if NET_40_OR_GREATER
 		/// <summary>
 		/// Creates an instance of <see cref="JsonReflectionController"/> and sets whether <see cref="SupportContractualAttributes"/> option is turned on. For backward compatibility, <see cref="System.Xml.Serialization.XmlIgnoreAttribute"/> is added into <see cref="IgnoreAttributes"/>.
 		/// </summary>
-		public JsonReflectionController (bool supportContractualAttributes)
-			: this () {
+		public JsonReflectionController (bool supportContractualAttributes) {
+			IgnoreAttributes = new List<Type> { typeof (System.Xml.Serialization.XmlIgnoreAttribute) };
 			SupportContractualAttributes = supportContractualAttributes;
 		}
+#endif
 		/// <summary>
 		/// This method is called to determine whether the values of the given <see cref="Enum"/> type should be serialized as its numeric form rather than literal form. The override can be set via the <see cref="JsonEnumFormatAttribute"/>.
 		/// </summary>
@@ -137,26 +124,26 @@ namespace fastJSON
 		/// <param name="member">The member to be serialized.</param>
 		/// <param name="info">Reflection information for the member.</param>
 		/// <returns>True is returned if the member is serializable, otherwise, false.</returns>
-		public override TriState IsMemberSerializable (MemberInfo member, IMemberInfo info) {
+		public override bool? IsMemberSerializable (MemberInfo member, IMemberInfo info) {
 			var ic = AttributeHelper.GetAttribute<JsonIncludeAttribute> (member, true);
 			if (ic != null) {
-				return ic.Include ? TriState.True : TriState.False;
+				return ic.Include ? true : false;
 			}
 			if (AttributeHelper.HasAttribute<JsonSerializableAttribute> (member, true)) {
-				return TriState.True;
+				return true;
 			}
 #if NET_40_OR_GREATER
 			if (SupportContractualAttributes && _ContractualTypes.Contains (member.DeclaringType)) {
-				return AttributeHelper.HasAttribute<DataMemberAttribute> (member, true) ? TriState.True : TriState.False;
+				return AttributeHelper.HasAttribute<DataMemberAttribute> (member, true);
 			}
 			if (SupportContractualAttributes && AttributeHelper.HasAttribute<IgnoreDataMemberAttribute> (member, true)) {
-				return TriState.False;
+				return false;
 			}
 #endif
 			if (IgnoreAttributes != null && IgnoreAttributes.Count > 0) {
 				foreach (var item in IgnoreAttributes) {
 					if (member.IsDefined (item, false)) {
-						return TriState.False;
+						return false;
 					}
 				}
 			}
@@ -320,22 +307,26 @@ namespace fastJSON
 
 		/// <summary>
 		/// This method is called to determine whether a field or a property is serializable.
-		/// If <see cref="TriState.False"/> is returned, the member will be excluded from serialization.
-		/// If <see cref="TriState.True"/> is returned, the member will always get serialized.
-		/// If <see cref="TriState.Default"/> is returned, the serialization of the member will be determined by the settings in <see cref="JSONParameters"/>.
+		/// If false is returned, the member will be excluded from serialization.
+		/// If true is returned, the member will always get serialized.
+		/// If null is returned, the serialization of the member will be determined by the settings in <see cref="JSONParameters"/>.
 		/// </summary>
 		/// <param name="member">The member to be serialized.</param>
 		/// <param name="info">Reflection information for the member.</param>
-		/// <returns><see cref="TriState.False"/> is returned if the member is private, otherwise, <see cref="TriState.Default"/> is returned.</returns>
-		public virtual TriState IsMemberSerializable (MemberInfo member, IMemberInfo info) {
+		/// <returns>False is returned if the member is private, otherwise, null is returned.</returns>
+		public virtual bool? IsMemberSerializable (MemberInfo member, IMemberInfo info) {
 			var p = member as PropertyInfo;
 			if (p != null) {
 				var g = p.GetGetMethod (true);
-				return (g == null || g.IsPublic == false) ? TriState.False : TriState.Default;
+				if (g == null || g.IsPublic == false)
+					return false;
+				return null;
 			}
 			var f = member as FieldInfo;
 			if (f != null) {
-				return f.IsPublic == false ? TriState.False : TriState.Default;
+				if (f.IsPublic == false)
+					return false;
+				return null;
 			}
 			throw new ArgumentException ("member should be property or field", member.Name);
 		}
@@ -429,14 +420,14 @@ namespace fastJSON
 
 		/// <summary>
 		/// This method is called to determine whether a field or a property is serializable.
-		/// If <see cref="TriState.False"/> is returned, the member will be excluded from serialization.
-		/// If <see cref="TriState.True"/> is returned, the member will always get serialized.
-		/// If <see cref="TriState.Default"/> is returned, the serialization of the member will be determined by the settings in <see cref="JSONParameters"/>.
+		/// If false is returned, the member will be excluded from serialization.
+		/// If true is returned, the member will always get serialized.
+		/// If null is returned, the serialization of the member will be determined by the settings in <see cref="JSONParameters"/>.
 		/// </summary>
 		/// <param name="member">The member to be serialized.</param>
 		/// <param name="info">Reflection information for the member.</param>
 		/// <returns>True is returned if the member is serializable, otherwise, false.</returns>
-		TriState IsMemberSerializable (MemberInfo member, IMemberInfo info);
+		bool? IsMemberSerializable (MemberInfo member, IMemberInfo info);
 
 		/// <summary>
 		/// This method is called to determine whether a field or a property is deserializable. If false is returned, the member will be excluded from deserialization. By default, writable fields or properties are deserializable.

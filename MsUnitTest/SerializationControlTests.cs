@@ -163,10 +163,10 @@ namespace MsUnitTest
 			// overrides the serialization behavior of DemoClass
 			JSON.Manager.Override<DemoClass> (new TypeOverride () {
 				// makes DemoClass always deserializable
-				Deserializable = TriState.True,
+				Deserializable = true,
 				// override members of the class
 				MemberOverrides = {
-					new MemberOverride ("privateField", TriState.True, TriState.True) { SerializedName = "private" },
+					new MemberOverride ("privateField", true, true) { SerializedName = "private" },
 					// assigns the serialized name "prop" to MyProperty property
 					new MemberOverride ("MyProperty", "prop"),
 					new MemberOverride ("MyEnumProperty", "enum"),
@@ -181,8 +181,8 @@ namespace MsUnitTest
 					},
 					// denotes the InternalValue property is neither serialized nor deserialized
 					new MemberOverride ("InternalValue") {
-						Deserializable = TriState.False,
-						Serializable = TriState.False
+						Deserializable = false,
+						Serializable = false
 					}
 				}
 			});
@@ -240,7 +240,7 @@ namespace MsUnitTest
 
 			var gsm = new SerializationManager (new DefaultReflectionController ());
 			gsm.Override<Member> (new TypeOverride () {
-				MemberOverrides = { new MemberOverride ("GroupID", TriState.False) }
+				MemberOverrides = { new MemberOverride ("GroupID", false) }
 			});
 
 			// use the alternated SerializationManager

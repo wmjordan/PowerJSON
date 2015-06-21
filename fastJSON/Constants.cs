@@ -85,6 +85,17 @@ namespace fastJSON
 		Object
 	}
 
+	/// <summary>Indicates the state of a setting.</summary>
+	enum TriState
+	{
+		/// <summary>Represents the normal behavior.</summary>
+		Default,
+		/// <summary>Represents a positive setting. Actions should be taken to the object.</summary>
+		True,
+		/// <summary>Represents a negative setting. Actions may not be taken to the object.</summary>
+		False
+	}
+
 	[Flags]
 	enum ConstructorTypes
 	{
@@ -102,5 +113,19 @@ namespace fastJSON
 		Dictionary,
 		List,
 		Nullable
+	}
+
+	static class Constants
+	{
+		internal static TriState ToTriState (bool? value) {
+			return value.HasValue
+				? (bool)value ? TriState.True : TriState.False
+				: TriState.Default;
+		}
+		internal static bool? ToBoolean (TriState value) {
+			return value == TriState.True ? true
+				: value == TriState.False ? false
+				: (bool?)null;
+		}
 	}
 }

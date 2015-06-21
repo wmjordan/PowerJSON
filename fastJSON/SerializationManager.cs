@@ -262,8 +262,8 @@ namespace fastJSON
 			if (overrideInfo.OverrideConverter) {
 				c.Converter = overrideInfo.Converter;
 			}
-			if (overrideInfo.Deserializable != TriState.Default) {
-				c.AlwaysDeserializable = overrideInfo.Deserializable == TriState.True;
+			if (overrideInfo.Deserializable.HasValue) {
+				c.AlwaysDeserializable = overrideInfo.Deserializable == true;
 			}
 			if (overrideInfo._MemberOverrides == null || overrideInfo._MemberOverrides.Count == 0) {
 				return;
@@ -271,7 +271,7 @@ namespace fastJSON
 			var s = c.Properties;
 			// add properties ignored by _controller in GetProperties method
 			foreach (var ov in overrideInfo._MemberOverrides) {
-				if (ov.Deserializable != TriState.True) {
+				if (ov.Deserializable != true) {
 					continue;
 				}
 				var p = c.FindProperties (ov.MemberName);
@@ -424,16 +424,16 @@ namespace fastJSON
 					if (mo.OverrideItemConverter) {
 						mp.ItemConverter = mo.ItemConverter;
 					}
-					if (mo.Deserializable != TriState.Default) {
-						mp.CanWrite = mo.Deserializable == TriState.True;
+					if (mo.Deserializable.HasValue) {
+						mp.CanWrite = mo.Deserializable == true;
 					}
 				}
 			}
 		}
 
 		static void OverrideGetters (Getters getter, MemberOverride mo) {
-			if (mo.Serializable != TriState.Default) {
-				getter.Serializable = mo.Serializable;
+			if (mo.Serializable.HasValue) {
+				getter.Serializable = Constants.ToTriState (mo.Serializable);
 			}
 			if (mo._NonSerializedValues != null) {
 				getter.NonSerializedValues = new object[mo.NonSerializedValues.Count];
@@ -596,7 +596,7 @@ namespace fastJSON
 		/// <summary>
 		/// Specifies whether the type is deserializable disregarding its visibility.
 		/// </summary>
-		public TriState Deserializable { get; set; }
+		public bool? Deserializable { get; set; }
 
 		internal bool OverrideInterceptor;
 		IJsonInterceptor _Interceptor;
@@ -676,15 +676,23 @@ namespace fastJSON
 			}
 		}
 
+		internal TriState _Serializable;
 		/// <summary>
-		/// Denotes whether the member is always serialized (<see cref="TriState.True"/>), never serialized (<see cref="TriState.False"/>) or compliant to the existing behavior (<see cref="TriState.Default"/>).
+		/// Gets or sets whether the member is always serialized (true), never serialized (false) or compliant to the existing behavior (null).
 		/// </summary>
-		public TriState Serializable { get; set; }
+		public bool? Serializable {
+			get { return Constants.ToBoolean (_Serializable); }
+			set { _Serializable = Constants.ToTriState (value); }
+		}
 
+		internal TriState _Deserializable;
 		/// <summary>
-		/// Gets or sets whether the member can be deserialized (<see cref="TriState.True"/>), never deserialized (<see cref="TriState.False"/>) or compliant to the existing behavior (<see cref="TriState.Default"/>).
+		/// Gets or sets whether the member can be deserialized (true), never deserialized (false) or compliant to the existing behavior (null).
 		/// </summary>
-		public TriState Deserializable { get; set; }
+		public bool? Deserializable {
+			get { return Constants.ToBoolean (_Deserializable); }
+			set { _Deserializable = Constants.ToTriState (value); }
+		}
 
 		internal List<object> _NonSerializedValues;
 		/// <summary>
@@ -736,8 +744,8 @@ namespace fastJSON
 		/// Creates an instance of <see cref="MemberOverride"/>, setting the <see cref="Serializable"/> property.
 		/// </summary>
 		/// <param name="memberName">The name of the member.</param>
-		/// <param name="serializable">How the member is serialized.</param>
-		public MemberOverride (string memberName, TriState serializable) : this(memberName) {
+		/// <param name="serializable">Whether the member should be serialized.</param>
+		public MemberOverride (string memberName, bool? serializable) : this(memberName) {
 			Serializable = serializable;
 		}
 		/// <summary>
@@ -745,8 +753,8 @@ namespace fastJSON
 		/// </summary>
 		/// <param name="memberName">The name of the member.</param>
 		/// <param name="serializable">How the member is serialized.</param>
-		/// <param name="deserializable">How the member is deserialized.</param>
-		public MemberOverride (string memberName, TriState serializable, TriState deserializable)
+		/// <param name="deserializable">Whether the member should be deserialized.</param>
+		public MemberOverride (string memberName, bool? serializable, bool? deserializable)
 			: this (memberName) {
 			Serializable = serializable;
 			Deserializable = deserializable;
