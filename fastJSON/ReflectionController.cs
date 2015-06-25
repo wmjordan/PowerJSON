@@ -117,9 +117,9 @@ namespace fastJSON
 
 		/// <summary>
 		/// Returns whether the specific member is serializable. This value can be set via <see cref="JsonIncludeAttribute"/> and <see cref="IgnoreAttributes"/>.
-		/// If <see cref="TriState.True"/> is returned, the member will always get serialized.
-		/// If <see cref="TriState.False"/> is returned, the member will be excluded from serialization.
-		/// If <see cref="TriState.Default"/> is returned, the serialization of the member will be determined by the settings in <see cref="JSONParameters"/>.
+		/// If true is returned, the member will always get serialized.
+		/// If false is returned, the member will be excluded from serialization.
+		/// If null is returned, the serialization of the member will be determined by the settings in <see cref="JSONParameters"/>.
 		/// </summary>
 		/// <param name="member">The member to be serialized.</param>
 		/// <param name="info">Reflection information for the member.</param>

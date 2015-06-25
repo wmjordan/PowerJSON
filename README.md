@@ -45,6 +45,10 @@ The attributes are listed below:
 Some .NET built-in attributes are also supported.
 * **DefaultValueAttribute**: values equal to `DefaultValueAttribute.Value` are not serialized.
 * **ReadOnlyAttribute**: values are not deserialized when `ReadOnlyAttribute.IsReadOnly` is set to true.
+* **DataContractAttribute**
+* **DataMemberAttribute**: Currently only the Name setting is supported, other settings such as Order, IsRequired are not supported.
+* **EnumMemberAttribute**
+* **IgnoreDataMemberAttribute**
 
 ### New Settings in JSONParameters
 

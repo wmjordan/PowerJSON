@@ -45,6 +45,10 @@
 						<para>All properties should have camel-case serialized names.</para>
 					</listItem>
 					<listItem>
+						<para>The private field <codeInline>privateField</codeInline> is serialized to the name "field".
+						</para>
+					</listItem>
+					<listItem>
 						<para>
 							<codeInline>MyProperty</codeInline> is serialized to the name "prop".
 						</para>
@@ -109,7 +113,7 @@
 				<para>Finally, call the <codeEntityReference>M:fastJSON.JSON.ToJSON(System.Object)</codeEntityReference> method to get the serialization result.</para>
 				<code language="c#" source="..\MsUnitTest\SerializationControlTests.cs" region="Print Result"/>
 				<para>The above example gives the following result.</para>
-				<code language="javascript"><![CDATA[{"prop":"p","enum":"VIP","number":1,"a":{"name":"c"}}]]></code>
+				<code language="javascript"><![CDATA[{"prop":"p","enum":"VIP","number":1,"a":{"name":"c"},"field":1}]]></code>
 				<para>To deserialize the JSON string back to an instance of <codeInline>DemoClass</codeInline>, use the <codeEntityReference>M:fastJSON.JSON.ToObject``1(System.String)</codeEntityReference> method.</para>
 				<code language="c#"><![CDATA[var o = JSON.ToObject<Demo1.DemoClass> (s);]]></code>
 				<para>The basic custom attributes used in this example are listed below.</para>
