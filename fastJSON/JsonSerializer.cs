@@ -384,15 +384,18 @@ namespace fastJSON
 					cv.SerializationConvert (ji);
 				}
 				#region Convert Items
-				if (p.ItemConverter != null && ji._Value is IEnumerable) {
-					var ai = new JsonItem (ji.Name, null, false);
-					var ol = new List<object> ();
-					foreach (var item in (ji._Value as IEnumerable)) {
-						ai.Value = item;
-						p.ItemConverter.SerializationConvert (ai);
-						ol.Add (ai.Value);
+				if (p.ItemConverter != null) {
+					var ev = ji._Value as IEnumerable;
+					if (ev != null) {
+						var ai = new JsonItem (ji.Name, null, false);
+						var ol = new List<object> ();
+						foreach (var item in ev) {
+							ai.Value = item;
+							p.ItemConverter.SerializationConvert (ai);
+							ol.Add (ai.Value);
+						}
+						ji._Value = ol;
 					}
-					ji._Value = ol;
 				}
 				#endregion
 				#region Determine Serialized Field Name
@@ -413,8 +416,11 @@ namespace fastJSON
 					// ignore fields with default value
 					continue;
 				}
-				if (m.IsCollection && _params.SerializeEmptyCollections == false && ji._Value is ICollection && (ji._Value as ICollection).Count == 0) {
-					continue;
+				if (m.IsCollection && _params.SerializeEmptyCollections == false) {
+					var vc = ji._Value as ICollection;
+					if (vc != null && vc.Count == 0) {
+						continue;
+					}
 				}
 				#endregion
 				if (append)

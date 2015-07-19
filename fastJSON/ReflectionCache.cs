@@ -36,8 +36,9 @@ namespace fastJSON
 		internal readonly WriteJsonValue SerializeMethod;
 		internal readonly RevertJsonValue DeserializeMethod;
 		internal readonly MemberCache[] Members;
-		internal Getters[] Getters;
-		internal Dictionary<string, JsonPropertyInfo> Properties;
+		internal JsonMemberGetter[] Getters;
+		// a member could have several setters because of the result of typed serialization
+		internal Dictionary<string, JsonMemberSetter> Setters;
 		internal bool AlwaysDeserializable;
 		internal IJsonConverter Converter;
 		internal IJsonInterceptor Interceptor;
@@ -130,6 +131,10 @@ namespace fastJSON
 			//}
 		}
 
+		/// <summary>
+		/// Creates an instance of the type by calling its parameterless constructor.
+		/// </summary>
+		/// <returns>The created instance.</returns>
 		public object Instantiate () {
 			if (Constructor == null) {
 				return null;
@@ -145,7 +150,7 @@ namespace fastJSON
 			}
 		}
 
-		internal Getters FindGetters (string memberName) {
+		internal JsonMemberGetter FindGetters (string memberName) {
 			return Array.Find (Getters, (i) => { return i.MemberName == memberName; });
 		}
 
@@ -153,9 +158,9 @@ namespace fastJSON
 			return Array.Find (Members, (i) => { return i.MemberName == memberName; });
 		}
 
-		internal List<JsonPropertyInfo> FindProperties (string memberName) {
-			var r = new List<JsonPropertyInfo> ();
-			foreach (var item in Properties) {
+		internal List<JsonMemberSetter> FindProperties (string memberName) {
+			var r = new List<JsonMemberSetter> ();
+			foreach (var item in Setters) {
 				if (item.Value.Member.MemberName == memberName) {
 					r.Add (item.Value);
 				}
@@ -196,6 +201,9 @@ namespace fastJSON
 		bool IsPublic { get; }
 	}
 
+	/// <summary>
+	/// Caches reflection information for a member
+	/// </summary>
 	[DebuggerDisplay ("{MemberName} ({MemberType.Name}, public={HasPublicGetter},{HasPublicSetter})")]
 	sealed class MemberCache : IMemberInfo
 	{
@@ -287,7 +295,7 @@ namespace fastJSON
 	}
 
 	[DebuggerDisplay ("{MemberName} ({SerializedName})")]
-	sealed class Getters
+	sealed class JsonMemberGetter
 	{
 		internal readonly MemberCache Member;
 		internal readonly string MemberName;
@@ -304,7 +312,7 @@ namespace fastJSON
 		internal IJsonConverter Converter;
 		internal IJsonConverter ItemConverter;
 
-		public Getters (MemberCache cache) {
+		public JsonMemberGetter (MemberCache cache) {
 			Member = cache;
 			MemberName = cache.MemberName;
 			SerializedName = cache.MemberName;
@@ -312,7 +320,7 @@ namespace fastJSON
 	}
 
 	[DebuggerDisplay ("{MemberName} ({JsonDataType})")]
-	sealed class JsonPropertyInfo // myPropInfo
+	sealed class JsonMemberSetter // myPropInfo
 	{
 		internal readonly string MemberName;
 		internal readonly MemberCache Member;
@@ -321,7 +329,7 @@ namespace fastJSON
 		internal IJsonConverter Converter;
 		internal IJsonConverter ItemConverter;
 
-		public JsonPropertyInfo (MemberCache member) {
+		public JsonMemberSetter (MemberCache member) {
 			MemberName = member.MemberName;
 			Member = member;
 			CanWrite = member.IsReadOnly == false;

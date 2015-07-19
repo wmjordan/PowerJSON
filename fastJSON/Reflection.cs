@@ -190,11 +190,11 @@ namespace fastJSON
 			return r;
 		}
 
-		internal static Getters[] GetGetters (Type type, MemberCache[] members, IReflectionController controller) {
-			var r = new Getters[members.Length];
+		internal static JsonMemberGetter[] GetGetters (Type type, MemberCache[] members, IReflectionController controller) {
+			var r = new JsonMemberGetter[members.Length];
 			for (int i = r.Length - 1; i >= 0; i--) {
 				var m = members[i];
-				var g = r[i] = new Getters (m);
+				var g = r[i] = new JsonMemberGetter (m);
 				if (controller == null) {
 					continue;
 				}

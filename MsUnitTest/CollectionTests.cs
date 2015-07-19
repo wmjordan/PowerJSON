@@ -195,12 +195,27 @@ namespace MsUnitTest
 			Assert.AreEqual (typeof (class1[]), d.GetType ());
 		}
 
+		public class TestObject
+		{
+			public string Name { get; set; }
+			public int Number { get; set; }
+		}
+
 		[TestMethod]
 		public void ObjectArray () {
-			var o = new object[] { 1, "sdaffs", DateTime.Now };
+			TestObject t = new TestObject () { Name = "MyName", Number = 77 };
+			var n = DateTime.Now;
+			var o = new object[] { 1, "test", n, t };
 			var s = JSON.ToJSON (o);
-			var p = JSON.ToObject (s);
-		} 
+			Console.WriteLine (s);
+			object[] result = JSON.ToObject<object[]> (s);
+			// TODO: polymorphic support for primitive types when serializing object[]
+			Assert.AreEqual (1, (int)(long)result[0]);
+			Assert.AreEqual ("test", result[1]);
+			// Assert.AreEqual (n, result[2]);
+			Assert.AreEqual (t.Name, ((TestObject)result[3]).Name);
+			Assert.AreEqual (t.Number, ((TestObject)result[3]).Number);
+		}
 		#endregion
 
 		#region List Tests

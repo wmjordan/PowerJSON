@@ -286,7 +286,7 @@ namespace fastJSON
 			if (si != null) {
 				si.OnDeserializing (o);
 			}
-			Dictionary<string, JsonPropertyInfo> props = type.Properties;
+			Dictionary<string, JsonMemberSetter> props = type.Setters;
 			//TODO: Candidate to removal of unknown use of map
 			//if (data.Map != null) {
 			//	ProcessMap (o, props, data.Map);
@@ -294,7 +294,7 @@ namespace fastJSON
 			foreach (var kv in data) {
 				var n = kv.Key;
 				var v = kv.Value;
-				JsonPropertyInfo pi;
+				JsonMemberSetter pi;
 				if (props.TryGetValue (n, out pi) == false || pi.CanWrite == false && pi.Member.JsonDataType != JsonDataType.List)
 					continue;
 				MemberCache m = pi.Member;
@@ -384,7 +384,7 @@ namespace fastJSON
 			return o;
 		}
 
-		void ConvertProperty (object o, JsonPropertyInfo pi, JsonItem ji) {
+		void ConvertProperty (object o, JsonMemberSetter pi, JsonItem ji) {
 			var pc = pi.Converter ?? pi.Member.MemberTypeReflection.Converter;
 			var rt = pc.GetReversiveType (ji);
 			var xv = ji._Value;
@@ -403,7 +403,7 @@ namespace fastJSON
 			pc.DeserializationConvert (ji);
 		}
 
-		static bool ConvertItems (JsonPropertyInfo pi, JsonItem ji) {
+		static bool ConvertItems (JsonMemberSetter pi, JsonItem ji) {
 			var vl = ji._Value as IList;
 			var l = vl.Count;
 			var converted = false;
@@ -867,7 +867,7 @@ namespace fastJSON
 			if (a != null) {
 				return deserializer.CreateList (a, type, null);
 			}
-			return d;
+			return value;
 		}
 		internal static object RevertArray (JsonDeserializer deserializer, object value, ReflectionCache type) {
 			return deserializer.CreateArray ((JsonArray)value, type);
