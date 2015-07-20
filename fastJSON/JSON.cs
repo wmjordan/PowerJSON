@@ -27,14 +27,14 @@ namespace fastJSON
 		static JSONParameters _Parameters = new JSONParameters();
 		static SerializationManager _Manager = SerializationManager.Instance;
 		/// <summary>
-		/// Global parameters for controlling the serializer.
+		/// Gets or sets global parameters for the serializer.
 		/// </summary>
 		public static JSONParameters Parameters {
 			get { return _Parameters; }
 			set { _Parameters = value; }
 		}
 		/// <summary>
-		/// The default serialization manager for controlling the serializer.
+		/// Gets the default serialization manager for controlling the serializer.
 		/// </summary>
 		public static SerializationManager Manager {
 			get { return _Manager; }
@@ -90,7 +90,6 @@ namespace fastJSON
 		/// <returns>The serialized JSON string.</returns>
 		public static string ToJSON(object obj, JSONParameters param, SerializationManager manager)
 		{
-			
 			//param.FixValues();
 
 			if (obj == null)
@@ -104,13 +103,6 @@ namespace fastJSON
 			}
 
 			ReflectionCache c = manager.GetReflectionCache (obj.GetType ());
-
-			// The following lines were removed for they had been enforced in JsonSerializer
-			//if (c.CommonType == ComplexType.Dictionary || c.CommonType == ComplexType.List) {
-			//	param.UsingGlobalTypes = false;
-			//}
-			// -FEATURE : enable extensions when you can deserialize anon types
-			//if (param.EnableAnonymousTypes) { param.UseExtensions = false; param.UsingGlobalTypes = false; }
 			return new JsonSerializer(param, manager).ConvertToJSON(obj, c);
 		}
 

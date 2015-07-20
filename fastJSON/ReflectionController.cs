@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Security.Permissions;
+using System.Xml.Serialization;
 
 namespace fastJSON
 {
@@ -18,30 +19,46 @@ namespace fastJSON
 		/// <summary>
 		/// Gets whether <see cref="DataContractAttribute"/>, <see cref="DataMemberAttribute"/>, etc. attributes in <see cref="System.Runtime.Serialization"/> namespace are supported. (default: true)
 		/// </summary>
-		public bool SupportContractualAttributes { get; private set; }
+		public bool UseDataContractAttributes { get; private set; }
 #endif
+		/// <summary>
+		/// Gets a value indicating whether XML serialization attributes should be used to control serialized field names. (default: false)
+		/// </summary>
+		public bool UseXmlSerializationAttributes { get; private set; }
 		/// <summary>
 		/// Ignore attributes to check for (default : XmlIgnoreAttribute).
 		/// </summary>
 		public IList<Type> IgnoreAttributes { get; private set; }
 
 		/// <summary>
-		/// Creates an instance of <see cref="JsonReflectionController"/>. For backward compatibility, <see cref="System.Xml.Serialization.XmlIgnoreAttribute"/> is added into <see cref="IgnoreAttributes"/>.
+		/// Creates an instance of <see cref="JsonReflectionController"/>. For backward compatibility, <see cref="XmlIgnoreAttribute"/> is added into <see cref="IgnoreAttributes"/>.
 		/// </summary>
 		public JsonReflectionController ()
 #if NET_40_OR_GREATER
-			: this (true)
+			: this (true, false)
 #endif
 		{
 		}
 
+		/// <summary>
+		/// Creates an instance of <see cref="JsonReflectionController"/> and sets whether <see cref="UseXmlSerializationAttributes"/> option is turned on. For backward compatibility, <see cref="XmlIgnoreAttribute"/> is added into <see cref="IgnoreAttributes"/>.
+		/// </summary>
+		/// <param name="useXmlSerializationAttributes">Controls whether <see cref="XmlElementAttribute"/> and other serialization attributes should be supported to control serialized field names.</param>
+		public JsonReflectionController (bool useXmlSerializationAttributes) {
+			IgnoreAttributes = new List<Type> { typeof (XmlIgnoreAttribute) };
+			UseXmlSerializationAttributes = useXmlSerializationAttributes;
+		}
+
 #if NET_40_OR_GREATER
 		/// <summary>
-		/// Creates an instance of <see cref="JsonReflectionController"/> and sets whether <see cref="SupportContractualAttributes"/> option is turned on. For backward compatibility, <see cref="System.Xml.Serialization.XmlIgnoreAttribute"/> is added into <see cref="IgnoreAttributes"/>.
+		/// Creates an instance of <see cref="JsonReflectionController"/> and sets whether <see cref="UseDataContractAttributes"/> and <see cref="UseXmlSerializationAttributes"/> options are turned on. For backward compatibility, <see cref="XmlIgnoreAttribute"/> is added into <see cref="IgnoreAttributes"/>.
 		/// </summary>
-		public JsonReflectionController (bool supportContractualAttributes) {
-			IgnoreAttributes = new List<Type> { typeof (System.Xml.Serialization.XmlIgnoreAttribute) };
-			SupportContractualAttributes = supportContractualAttributes;
+		/// <param name="supportContractualAttributes">Controls whether <see cref="DataContractAttribute"/> should be supported.</param>
+		/// <param name="useXmlSerializationAttributes">Controls whether <see cref="XmlElementAttribute"/> and other serialization attributes should be supported to control serialized field names.</param>
+		public JsonReflectionController (bool supportContractualAttributes, bool useXmlSerializationAttributes) {
+			IgnoreAttributes = new List<Type> { typeof (XmlIgnoreAttribute) };
+			UseDataContractAttributes = supportContractualAttributes;
+			UseXmlSerializationAttributes = useXmlSerializationAttributes;
 		}
 #endif
 		/// <summary>
@@ -65,13 +82,19 @@ namespace fastJSON
 				return a.Name;
 			}
 #if NET_40_OR_GREATER
-			if (SupportContractualAttributes) {
+			if (UseDataContractAttributes) {
 				var m = AttributeHelper.GetAttribute<EnumMemberAttribute> (member, true);
 				if (m != null && String.IsNullOrEmpty (m.Value) == false) {
 					return m.Value;
 				}
 			}
 #endif
+			if (UseXmlSerializationAttributes) {
+				var m = AttributeHelper.GetAttribute<XmlEnumAttribute> (member, true);
+				if (m != null) {
+					return m.Name;
+				}
+			}
 			return null;
 		}
 
@@ -91,7 +114,7 @@ namespace fastJSON
 		/// <returns>The interceptor.</returns>
 		public override IJsonInterceptor GetInterceptor (Type type) {
 #if NET_40_OR_GREATER
-			if (SupportContractualAttributes && AttributeHelper.HasAttribute<DataContractAttribute> (type, false)) {
+			if (UseDataContractAttributes && AttributeHelper.HasAttribute<DataContractAttribute> (type, false)) {
 				_ContractualTypes.Add (type);
 			}
 #endif
@@ -133,13 +156,16 @@ namespace fastJSON
 				return true;
 			}
 #if NET_40_OR_GREATER
-			if (SupportContractualAttributes && _ContractualTypes.Contains (member.DeclaringType)) {
+			if (UseDataContractAttributes && _ContractualTypes.Contains (member.DeclaringType)) {
 				return AttributeHelper.HasAttribute<DataMemberAttribute> (member, true);
 			}
-			if (SupportContractualAttributes && AttributeHelper.HasAttribute<IgnoreDataMemberAttribute> (member, true)) {
+			if (UseDataContractAttributes && AttributeHelper.HasAttribute<IgnoreDataMemberAttribute> (member, true)) {
 				return false;
 			}
 #endif
+			if (UseXmlSerializationAttributes && AttributeHelper.HasAttribute<XmlIgnoreAttribute> (member, false)) {
+				return false;
+			}
 			if (IgnoreAttributes != null && IgnoreAttributes.Count > 0) {
 				foreach (var item in IgnoreAttributes) {
 					if (member.IsDefined (item, false)) {
@@ -166,13 +192,16 @@ namespace fastJSON
 				return true;
 			}
 #if NET_40_OR_GREATER
-			if (SupportContractualAttributes && _ContractualTypes.Contains (member.DeclaringType)) {
+			if (UseDataContractAttributes && _ContractualTypes.Contains (member.DeclaringType)) {
 				return AttributeHelper.HasAttribute<DataMemberAttribute> (member, true);
 			}
-			if (SupportContractualAttributes && AttributeHelper.HasAttribute<IgnoreDataMemberAttribute> (member, true)) {
+			if (UseDataContractAttributes && AttributeHelper.HasAttribute<IgnoreDataMemberAttribute> (member, true)) {
 				return false;
 			}
 #endif
+			if (UseXmlSerializationAttributes && AttributeHelper.HasAttribute<XmlIgnoreAttribute> (member, false)) {
+				return false;
+			}
 			return base.IsMemberDeserializable (member, info);
 		}
 
@@ -203,13 +232,37 @@ namespace fastJSON
 				}
 			}
 #if NET_40_OR_GREATER
-			if (SupportContractualAttributes && jf.Length == 0) {
+			if (UseDataContractAttributes && jf.Length == 0) {
 				var m = AttributeHelper.GetAttribute<DataMemberAttribute> (member, true);
 				if (m != null && String.IsNullOrEmpty (m.Name) == false) {
 					tn.DefaultName = m.Name;
 				}
 			}
 #endif
+			if (UseXmlSerializationAttributes) {
+				var ar = AttributeHelper.GetAttribute<XmlArrayAttribute> (member, true);
+				if (ar != null) {
+					tn.DefaultName = ar.ElementName;
+				}
+				foreach (var item in AttributeHelper.GetAttributes<XmlElementAttribute> (member, true)) {
+					if (String.IsNullOrEmpty (item.ElementName)) {
+						continue;
+					}
+					if (item.DataType == null) {
+						tn.DefaultName = item.ElementName;
+					}
+					else {
+						if (t.IsAssignableFrom (item.Type) == false) {
+							throw new InvalidCastException ("The override type (" + item.Type.FullName + ") does not derive from the member type (" + t.FullName + ")");
+						}
+						tn.Add (item.Type, item.ElementName);
+					}
+				}
+				var an = AttributeHelper.GetAttribute<XmlAttributeAttribute> (member, true);
+				if (an != null) {
+					tn.DefaultName = an.AttributeName;
+				}
+			}
 			return tn;
 		}
 

@@ -1,7 +1,7 @@
 About PowerJSON
 ========
 
-PowerJSON is a fork of the smallest, fastest polymorphic JSON serializer--fastJSON.
+[PowerJSON](http://www.codeproject.com/Articles/888604/PowerJSON-A-Powerful-and-Fast-JSON-Serializer) is a fork of the smallest, fastest polymorphic JSON serializer--fastJSON.
 
 Please read the article [about fastJSON](http://www.codeproject.com/Articles/159450/fastJSON) here.
 
@@ -15,20 +15,22 @@ The following features are added to the original fastJSON.
 * Rename serialized members.
 * Rename serialized Enum values.
 * Deserializing non-public types.
+* Serializing and deserializing non-public members.
 * Polymorphic serialization without JSON extensions.
 * Write out additional key-value pairs in the serialized JSON.
 * Conditional serialization.
-* Noninvasive control of serialization.
+* Noninvasive control over serialization.
 * Easiest implemetation of customized serialization and deserialization.
 * A comprehensive documentation.
 
 ### New Classes and Interfaces
 
 The newly introduced classes and interfaces have brought more control onto each aspect in serialization.
-* **SerializationManager**: Caches the reflection result and controls the serialization.
+* **SerializationManager**: Caches the reflection result and controls the serialization. Supports non-invasive control over serialization.
 * **IReflectionController**: Controls every possible aspect in reflection for serialization.
 * **IJsonInterceptor**: Intercepts JSON serialization and enables conditional serialization.
 * **IJsonConverter**: Converts between various value types.
+* **JsonConverter&lt;TOriginal,TSerialized>**: A base class which implements `IJsonConverter` and simplifies the data conversion.
 
 ### Extensive Attributes
 
@@ -46,9 +48,16 @@ Some .NET built-in attributes are also supported.
 * **DefaultValueAttribute**: values equal to `DefaultValueAttribute.Value` are not serialized.
 * **ReadOnlyAttribute**: values are not deserialized when `ReadOnlyAttribute.IsReadOnly` is set to true.
 * **DataContractAttribute**
-* **DataMemberAttribute**: Currently only the Name setting is supported, other settings such as Order, IsRequired are not supported.
+* **DataMemberAttribute**: Currently only the `Name` setting is supported, other settings such as `Order`, `IsRequired` are not supported.
 * **EnumMemberAttribute**
 * **IgnoreDataMemberAttribute**
+
+XML serialization attributes are optionally supported. By default, the support is disabled and can be accessed by creating a new `SerializationManager` with a `JsonReflectionController` which has that option turned on.
+* **XmlElementAttribute**
+* **XmlAttributeAttribute**
+* **XmlArrayAttribute**
+* **XmlEnumAttribute**
+* **XmlIgnoreAttribute**
 
 ### New Settings in JSONParameters
 
@@ -71,8 +80,8 @@ This fork also fixed some issues in the original fastJSON project:
 * Deserialization on `Dictionary<N, List<V>>` type could fail. (2015-4-9)
 * "Release" compiled edition did not support `dynamic` types.
 * Multi-demensional arrays could not be deserialized. (2015-4-25)
-* List<T[]> list could not be deserialized. (2015-4-27)
-* HashSet<T> could not be serialized. (2015-5-13)
+* `List<T[]>` list could not be deserialized. (2015-4-27)
+* `HashSet<T>` could not be serialized. (2015-5-13)
 
 ### Other Enhancements
 
