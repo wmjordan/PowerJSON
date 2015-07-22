@@ -185,6 +185,7 @@ namespace fastJSON
 					c.Add (new MemberCache (m));
 				}
 			}
+			c = c.FindAll (m => { return (m.HasPublicGetter || m.HasPublicSetter) || AttributeHelper.HasAttribute<System.Runtime.CompilerServices.CompilerGeneratedAttribute> (m.MemberInfo, true) == false; });
 			var r = new MemberCache[c.Count];
 			c.CopyTo (r, 0);
 			return r;

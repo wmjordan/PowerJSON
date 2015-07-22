@@ -87,7 +87,9 @@
     <Compile Include="Constants.cs" />
     <Compile Include="dynamic.cs" />
     <Compile Include="Formatter.cs" />
+    <Compile Include="JsonConverter.cs" />
     <Compile Include="JsonDeserializer.cs" />
+    <Compile Include="JsonInterceptor.cs" />
     <Compile Include="JSONParameters.cs" />
     <Compile Include="JsonSerializationException.cs" />
     <Compile Include="JsonSerializer.cs" />

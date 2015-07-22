@@ -145,6 +145,9 @@ namespace fastJSON
 			if (d != JsonDataType.Primitive) {
 				return GetRevertMethod (d);
 			}
+			if (type.IsGenericType && type.GetGenericTypeDefinition ().Equals (typeof (Nullable<>))) {
+				type = type.GetGenericArguments ()[0];
+			}
 			return typeof (byte).Equals (type) ? RevertByte
 				: typeof (decimal).Equals (type) ? RevertDecimal
 				: typeof (char).Equals (type) ? RevertChar

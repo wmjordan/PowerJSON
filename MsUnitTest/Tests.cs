@@ -657,6 +657,8 @@ namespace MsUnitTest
 			Assert.AreEqual (100L, l);
 			var d = JSON.ToObject<DateTime?> ("\"2000-01-01 10:10:10\"");
 			Assert.AreEqual (2000, d.Value.Year);
+			var m = JSON.ToObject<decimal?> ("3.14");
+			Assert.AreEqual (3.14m, m);
 		}
 
 		public class readonlyclass

@@ -102,6 +102,8 @@
     <Compile Include="BonusPack\EnumerableDataReader.cs" />
     <Compile Include="Constants.cs" />
     <Compile Include="Formatter.cs" />
+    <Compile Include="JsonInterceptor.cs" />
+    <Compile Include="JsonConverter.cs" />
     <Compile Include="JsonDeserializer.cs" />
     <Compile Include="JSONParameters.cs" />
     <Compile Include="JsonSerializationException.cs" />
