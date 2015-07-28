@@ -10,7 +10,7 @@ namespace fastJSON
 	/// </summary>
 	/// <remarks>
 	/// <para>This class can be used to control serialization and deserialization for specified types and members.</para>
-	/// <para>The overriding methods, such as <seealso cref="Override{T}(TypeOverride)"/>, <seealso cref="OverrideMemberName{T}(string, string)"/>, etc., must be called before serialization or deserialization. Otherwise, inconsistent serialization results may occur between types.</para>
+	/// <para>The overriding methods, such as <see cref="Override{T}(TypeOverride)"/>, <see cref="OverrideMemberName{T}(string, string)"/>, etc., must be called before serialization or deserialization. Otherwise, inconsistent serialization results may occur between types.</para>
 	/// </remarks>
 	/// <preliminary />
 	public sealed class SerializationManager

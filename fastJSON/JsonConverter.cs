@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
 
 namespace fastJSON
 {
@@ -8,7 +7,7 @@ namespace fastJSON
 	/// Converts the member value being serialized or deserialized.
 	/// </summary>
 	/// <remarks>
-	/// <para>During deserialization, the JSON string is parsed and converted to primitive data. The data could be of the following six types returned from the JSON Parser: <see cref="Boolean"/>, <see cref="Int64"/>, <see cref="Double"/>, <see cref="String"/>, <see cref="IList{Object}"/> and <see cref="IDictionary{String, Object}"/>.</para>
+	/// <para>During deserialization, the JSON string is parsed and converted to primitive data. The data could be one of the following six types returned from the JSON Parser: <see cref="Boolean"/>, <see cref="Int64"/>, <see cref="Double"/>, <see cref="String"/>, <see cref="IList{Object}"/> and <see cref="IDictionary{String, Object}"/>.</para>
 	/// <para>The <see cref="DeserializationConvert"/> method should be able to process the above six types, as well as the null value, and convert the value to match the type of the member being deserialized.</para>
 	/// <para>If the <see cref="GetReversiveType"/> method returns a <see cref="Type"/> instead of null or the type of <see cref="Object"/>, the deserializer will firstly attempt to revert the primitive data to match that type, and then pass the reverted value to the <see cref="DeserializationConvert"/> method. By this means, the implementation of <see cref="DeserializationConvert"/> method does not have to cope with primitive data types.</para>
 	/// <para>To implement the <see cref="GetReversiveType"/> method, keep in mind that the <see cref="JsonItem.Value"/> in the <see cref="JsonItem"/> instance will always be primitive data.</para>
@@ -139,7 +138,7 @@ namespace fastJSON
 
 		internal object _Value;
 		/// <summary>
-		/// The value of the item. The type and value of this property is changed. The serializer and deserializer will take the changed value.
+		/// Gets or sets the value of the item. The type and value of this property can be changed. The serializer and deserializer will take the changed value.
 		/// </summary>
 		public object Value {
 			get { return _Value; }
