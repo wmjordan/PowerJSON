@@ -1,37 +1,36 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 
 namespace fastJSON
 {
-    /// <summary>
-    /// This class encodes and decodes JSON strings.
-    /// Spec. details, see http://www.json.org/
-    /// </summary>
-    sealed class JsonParser
-    {
-        enum Token
-        {
-            None,           // Used to denote no Lookahead available
-            Curly_Open,
-            Curly_Close,
-            Squared_Open,
-            Squared_Close,
-            Colon,
-            Comma,
-            String,
-            Number,
-            True,
-            False,
-            Null
-        }
+	/// <summary>
+	/// This class encodes and decodes JSON strings.
+	/// Spec. details, see http://www.json.org/
+	/// </summary>
+	sealed class JsonParser
+	{
+		enum Token
+		{
+			None,           // Used to denote no Lookahead available
+			Curly_Open,
+			Curly_Close,
+			Squared_Open,
+			Squared_Close,
+			Colon,
+			Comma,
+			String,
+			Number,
+			True,
+			False,
+			Null
+		}
 		readonly static Token[] _CharTokenMap = InitCharTokenMap ();
-        readonly string _json;
-        readonly StringBuilder _sb = new StringBuilder();
-        Token _lookAheadToken = Token.None;
-        int _index;
+		readonly string _json;
+		readonly StringBuilder _sb = new StringBuilder ();
+		Token _lookAheadToken = Token.None;
+		int _index;
 
 		static Token[] InitCharTokenMap () {
 			var t = new Token[0x7F];
@@ -49,15 +48,13 @@ namespace fastJSON
 			t['-'] = t['+'] = t['.'] = Token.Number;
 			return t;
 		}
-        internal JsonParser(string json)
-        {
-           _json = json;
-        }
+		internal JsonParser (string json) {
+			_json = json;
+		}
 
-        public object Decode()
-        {
-            return ParseValue();
-        }
+		public object Decode () {
+			return ParseValue ();
+		}
 
 		JsonDict ParseObject () {
 			var table = new JsonDict ();
@@ -358,7 +355,8 @@ namespace fastJSON
 	}
 
 	sealed class JsonArray : List<object> { }
-	sealed class JsonDict : List<KeyValuePair<string,object>>, IDictionary<string, object> {
+	sealed class JsonDict : List<KeyValuePair<string, object>>, IDictionary<string, object>
+	{
 		internal const string ExtRefIndex = "$i";
 		internal const string ExtTypes = "$types";
 		internal const string ExtType = "$type";
@@ -394,13 +392,21 @@ namespace fastJSON
 
 		ICollection<string> IDictionary<string, object>.Keys {
 			get {
-				throw new NotImplementedException ();
+				var k = new string[Count];
+				for (int i = Count - 1; i >= 0; i--) {
+					k[i] = this[i].Key;
+				}
+				return k;
 			}
 		}
 
 		ICollection<object> IDictionary<string, object>.Values {
 			get {
-				throw new NotImplementedException ();
+				var v = new object[Count];
+				for (int i = Count - 1; i >= 0; i--) {
+					v[i] = this[i].Value;
+				}
+				return v;
 			}
 		}
 
@@ -434,7 +440,7 @@ namespace fastJSON
 			return false;
 		}
 
-		public static explicit operator Dictionary<string, object> (JsonDict dict) {
+		public static explicit operator Dictionary<string, object>(JsonDict dict) {
 			return new Dictionary<string, object> (dict);
 		}
 	}

@@ -269,7 +269,7 @@ namespace MsUnitTest
         }
 
 		[TestMethod]
-        public static void GetDynamicMemberNamesTests()
+        public void GetDynamicMemberNamesTests()
         {
             string s = "{\"Name\":\"aaaaaa\",\"Age\":10,\"dob\":\"2000-01-01 00:00:00Z\",\"inner\":{\"prop\":30},\"arr\":[1,{\"a\":2},3,4,5,6]}";
             dynamic d = fastJSON.JSON.ToDynamic(s);

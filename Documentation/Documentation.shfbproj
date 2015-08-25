@@ -92,6 +92,7 @@ To gain full control over the serialization, please read the documentation on th
   <ItemGroup>
     <None Include="Content\Usage\ControllingSerialization.aml" />
     <None Include="Content\Usage\GettingStarted.aml" />
+    <None Include="Content\Usage\SerializeIEnumerable.aml" />
     <None Include="Content\VersionHistory\v2.1.11.aml" />
     <None Include="Content\VersionHistory\VersionHistory.aml" />
     <None Include="Content\Welcome.aml" />

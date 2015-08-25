@@ -5,8 +5,9 @@
       <HelpKeyword index="K" term="Welcome" />
     </HelpKeywords>
   </Topic>
-  <Topic id="cf5512a6-56c4-4892-aa3e-d25b4395d111" visible="True" title="Getting Started" />
-  <Topic id="cdb88b9f-5c60-4e72-8a96-009906d6d990" visible="True" isSelected="true" title="Controlling Serialization" />
+  <Topic id="cf5512a6-56c4-4892-aa3e-d25b4395d111" visible="True" isSelected="true" title="Getting Started" />
+  <Topic id="cdb88b9f-5c60-4e72-8a96-009906d6d990" visible="True" title="Controlling Serialization" />
+  <Topic id="e778b228-9cf2-4212-b5c9-8bf23da8dc21" visible="True" title="Serializing Types Implementing IEnumerable" />
   <Topic id="07899cb8-f4d9-4e46-bbb6-6ba8518de804" visible="True" isExpanded="true" title="Version History">
     <HelpKeywords>
       <HelpKeyword index="K" term="version, history" />

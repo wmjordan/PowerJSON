@@ -13,7 +13,8 @@ namespace fastJSON
 	}
 
 	/// <summary>
-	/// Indicates whether a field or property should be included in serialization. To control whether a field or property should be deserialized, use the <see cref="System.ComponentModel.ReadOnlyAttribute"/>.
+	/// Indicates whether a field or property should be included in serialization.
+	/// To control whether a field or property should be deserialized, use the <see cref="System.ComponentModel.ReadOnlyAttribute"/>.
 	/// </summary>
 	[AttributeUsage (AttributeTargets.Field | AttributeTargets.Property)]
 	public sealed class JsonIncludeAttribute : Attribute
@@ -36,13 +37,15 @@ namespace fastJSON
 	}
 
 	/// <summary>
-	/// Indicates the name and data type of a field or property. The same field or property with multiple <see cref="JsonFieldAttribute"/> can have various names mapped to various types.
+	/// Indicates the name and data type of a field or property.
+	/// The same field or property with multiple <see cref="JsonFieldAttribute"/> can have various names mapped to various types.
 	/// </summary>
 	[AttributeUsage (AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = true)]
 	public sealed class JsonFieldAttribute : Attribute
 	{
 		/// <summary>
-		/// Gets the name of the serialized field or property. The case of the serialized name defined in this attribute will not be changed by <see cref="JSONParameters.NamingConvention"/> setting in <see cref="JSONParameters"/>.
+		/// Gets the name of the serialized field or property.
+		/// The case of the serialized name defined in this attribute will not be changed by <see cref="JSONParameters.NamingConvention"/> setting in <see cref="JSONParameters"/>.
 		/// </summary>
 		public string Name { get; private set; }
 
@@ -141,7 +144,8 @@ namespace fastJSON
 	public sealed class JsonInterceptorAttribute : Attribute
 	{
 		/// <summary>
-		/// The type of interceptor. The instance of the type should implement <see cref="IJsonInterceptor"/>. During serialization and deserialization, an instance of <see cref="IJsonInterceptor"/> will be created to process values of the object being serialized or deserialized.
+		/// The type of interceptor. The instance of the type should implement <see cref="IJsonInterceptor"/>.
+		/// During serialization and deserialization, an instance of <see cref="IJsonInterceptor"/> will be created to process values of the object being serialized or deserialized.
 		/// </summary>
 		public Type InterceptorType {
 			get { return Interceptor == null ? null : Interceptor.GetType (); }
@@ -155,14 +159,14 @@ namespace fastJSON
 		/// <param name="interceptorType">The type of <see cref="IJsonInterceptor"/></param>
 		/// <exception cref="JsonSerializationException">The exception will be thrown if the type does not implements <see cref="IJsonInterceptor"/>.</exception>
 		public JsonInterceptorAttribute (Type interceptorType) {
-            if (interceptorType == null) {
-                throw new ArgumentNullException ("interceptorType");
-            }
+			if (interceptorType == null) {
+				throw new ArgumentNullException ("interceptorType");
+			}
 			if (interceptorType.IsInterface || typeof (IJsonInterceptor).IsAssignableFrom (interceptorType) == false) {
 				throw new JsonSerializationException (String.Concat ("The type ", interceptorType.FullName, " defined in ", typeof (JsonInterceptorAttribute).FullName, " does not implement interface ", typeof (IJsonInterceptor).FullName));
 			}
 			Interceptor = Activator.CreateInstance (interceptorType) as IJsonInterceptor;
-        }
+		}
 	}
 
 	/// <summary>
@@ -232,6 +236,26 @@ namespace fastJSON
 			}
 			Converter = Activator.CreateInstance (converterType) as IJsonConverter;
 
+		}
+	}
+
+	/// <summary>
+	/// Denotes a type which implements <see cref="System.Collections.IEnumerable"/> should be serialized with its members and items being placed to a field named by this attribute.
+	/// </summary>
+	[AttributeUsage (AttributeTargets.Class | AttributeTargets.Struct)]
+	public sealed class JsonCollectionAttribute : Attribute
+	{
+		/// <summary>
+		/// Gets the name of the container.
+		/// </summary>
+		public string Name { get; private set; }
+
+		/// <summary>
+		/// Initializes a new instance of the <see cref="JsonCollectionAttribute"/> class.
+		/// </summary>
+		/// <param name="name">The name of the container.</param>
+		public JsonCollectionAttribute (string name) {
+			Name = name;
 		}
 	}
 

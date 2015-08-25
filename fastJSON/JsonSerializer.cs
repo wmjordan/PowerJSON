@@ -61,7 +61,12 @@ namespace fastJSON
 			}
 			var m = cache.SerializeMethod;
 			if (m != null) {
-				m (this, obj);
+				if (cache.CollectionName != null) {
+					WriteObject (obj);
+				}
+				else {
+					m (this, obj);
+				}
 			}
 			else {
 				WriteValue (obj);
@@ -146,7 +151,12 @@ namespace fastJSON
 				var t = obj.GetType ();
 				var c = _manager.GetReflectionCache (t);
 				if (c.SerializeMethod != null) {
-					c.SerializeMethod (this, obj);
+					if (c.CollectionName != null) {
+						WriteObject (obj);
+					}
+					else {
+						c.SerializeMethod (this, obj);
+					}
 				}
 				else if (_manager.IsTypeRegistered (obj.GetType ())) {
 					WriteCustom (obj);
@@ -370,7 +380,8 @@ namespace fastJSON
 				}
 				if (p.Serializable == TriState.Default) {
 					if (m.IsStatic && _params.SerializeStaticMembers == false
-						|| m.IsReadOnly && m.MemberTypeReflection.AppendItem == null && (m.IsProperty && _showReadOnlyProperties == false || m.IsProperty == false && _showReadOnlyFields == false)) {
+						|| m.IsReadOnly && m.MemberTypeReflection.AppendItem == null
+							&& (m.IsProperty && _showReadOnlyProperties == false || m.IsProperty == false && _showReadOnlyFields == false)) {
 						continue;
 					}
 				}
@@ -441,6 +452,9 @@ namespace fastJSON
 					if (v == null || v is DBNull) {
 						_output.Append ("null");
 					}
+					else if (m.MemberTypeReflection.CollectionName != null) {
+						WriteObject (v);
+					}
 					else {
 						m.SerializeMethod (this, v);
 					}
@@ -452,8 +466,18 @@ namespace fastJSON
 
 				append = true;
 			}
+			#region Write Inherited Collection
+			if (def.CollectionName != null && def.SerializeMethod != null) {
+				if (append)
+					_output.Append (',');
+				WriteStringFast (def.CollectionName);
+				_output.Append (':');
+				def.SerializeMethod (this, obj);
+				append = true;
+			}
+			#endregion
+			#region Write Extra Values
 			if (si != null) {
-				#region Write Extra Values
 				var ev = si.SerializeExtraValues (obj);
 				if (ev != null) {
 					foreach (var item in ev) {
@@ -463,9 +487,9 @@ namespace fastJSON
 						append = true;
 					}
 				}
-				#endregion
 				si.OnSerialized (obj);
 			}
+			#endregion
 			_currentDepth--;
 			_output.Append ('}');
 		}

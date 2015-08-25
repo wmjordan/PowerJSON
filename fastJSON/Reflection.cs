@@ -76,7 +76,7 @@ namespace fastJSON
 		//	};
 		//	return new SafeDictionary<Type, byte> (d);
 		//}
-        internal static JsonDataType GetJsonDataType (Type type) {
+		internal static JsonDataType GetJsonDataType (Type type) {
 			JsonDataType t;
 			if (_jsonTypeCache.TryGetValue (type, out t)) {
 				return t;
@@ -145,7 +145,9 @@ namespace fastJSON
 			CreateObject c;
 			var n = objtype.Name + ".ctor";
 			if (objtype.IsClass) {
-				var dynMethod = skipVisibility ? new DynamicMethod (n, objtype, null, objtype, true) : new DynamicMethod (n, objtype, Type.EmptyTypes);
+				var dynMethod = skipVisibility
+					? new DynamicMethod (n, objtype, null, objtype, true)
+					: new DynamicMethod (n, objtype, Type.EmptyTypes);
 				var ilGen = dynMethod.GetILGenerator ();
 				var ct = objtype.GetConstructor (Type.EmptyTypes)
 					?? objtype.GetConstructor (BindingFlags.NonPublic | BindingFlags.Instance, null, Type.EmptyTypes, null);
@@ -157,7 +159,9 @@ namespace fastJSON
 				c = (CreateObject)dynMethod.CreateDelegate (typeof(CreateObject));
 			}
 			else {// structs
-				var dynMethod = skipVisibility ? new DynamicMethod (n, typeof(object), null, objtype, true) : new DynamicMethod (n, typeof(object), null, objtype);
+				var dynMethod = skipVisibility
+					? new DynamicMethod (n, typeof(object), null, objtype, true)
+					: new DynamicMethod (n, typeof(object), null, objtype);
 				var ilGen = dynMethod.GetILGenerator ();
 				var lv = ilGen.DeclareLocal (objtype);
 				ilGen.Emit (OpCodes.Ldloca_S, lv);
@@ -341,7 +345,7 @@ namespace fastJSON
 
 			var type = propertyInfo.DeclaringType;
 			var pt = propertyInfo.PropertyType;
-            var arguments = new Type[2];
+			var arguments = new Type[2];
 			arguments[0] = arguments[1] = typeof(object);
 
 			var setter = new DynamicMethod (setMethod.Name, typeof(object), arguments, true);
@@ -392,12 +396,14 @@ namespace fastJSON
 
 		// TODO: Support method that takes more than 1 arguments
 		/// <summary>
-		/// Creates a wrapper delegate for the given method. The delegate should have a similar signature as the <paramref name="method"/>, except that an argument in inserted before the method arguments.
+		/// Creates a wrapper delegate for the given method.
+		/// The delegate should have a similar signature as the <paramref name="method"/>, except that an argument in inserted before the method arguments.
 		/// </summary>
 		/// <typeparam name="T">A delegate definition. The first argument of the delegate will be used to invoke the method.</typeparam>
 		/// <param name="method">The method to be converted to the delegate.</param>
 		/// <returns>The wrapper delegate to invoke the method.</returns>
-		/// <example><code><![CDATA[delegate void MyAddMethod (IEnumerable target, object value); Reflection.CreateWrapperMethod<MyAddMethod> (typeof(List<string>).GetMethod("Add"));]]></code></example>
+		/// <example><code><![CDATA[delegate void MyAddMethod (IEnumerable target, object value);
+		/// Reflection.CreateWrapperMethod<MyAddMethod> (typeof(List<string>).GetMethod("Add"));]]></code></example>
 		internal static T CreateWrapperMethod<T> (MethodInfo method) where T : class {
 			if (method == null)
 				return null;

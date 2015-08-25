@@ -1,0 +1,117 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<topic id="e778b228-9cf2-4212-b5c9-8bf23da8dc21" revisionNumber="1">
+	<developerHowToDocument
+	  xmlns="http://ddue.schemas.microsoft.com/authoring/2003/5"
+	  xmlns:xlink="http://www.w3.org/1999/xlink">
+
+		<!--
+    <summary>
+      <para>Optional summary abstract</para>
+    </summary>
+    -->
+
+		<introduction>
+			<para>
+				In previous version prior to version 2.5, types implementing <codeEntityReference>T:System.Collections.IEnumerable</codeEntityReference> with extended members could not be fully serialized.
+			</para>
+			<para>The types would be serialized as JSON dictionaries (for those implementing <codeEntityReference>T:System.Collections.IDictionary</codeEntityReference>) or JSON arrays (for those implementing <codeEntityReference>T:System.Collections.ICollection</codeEntityReference>), and their properties and fields will not be serialized.</para>
+			<para>From version 2.5 on, it is possible to fully serialize those types.</para>
+			<para>
+				In the fulll-serializing mode, those types will be serialized as JSON dictionaries, their enumerable items will be placed into container fields named by the programmer, and extended members will be serialized as entries in the dictionaries.
+			</para>
+			<para>
+				In <newTerm>fastJSON</newTerm>, the field which holds the enumerable items is called <newTerm>Container</newTerm> and its name can be set via a <codeEntityReference>T:fastJSON.JsonCollectionAttribute</codeEntityReference> attribute or <codeEntityReference>P:fastJSON.TypeOverride.CollectionContainer</codeEntityReference> from the <codeEntityReference>T:fastJSON.TypeOverride</codeEntityReference> type.
+			</para>
+		</introduction>
+
+		<!-- Optional procedures followed by optional code example but must have
+         at least one procedure or code example -->
+		<procedure>
+			<title>Serializing Types Implementing IEnumerable Interface</title>
+			<steps class="ordered">
+				<step>
+					<content>
+						<para>In this example, we have a class looks like the following:</para>
+						<code language="c#">
+							<![CDATA[public class A : List<int> {
+	public string Name { get; set; }
+}]]>
+						</code>
+						<para>In versions prior to version 2.5, the <codeInline>Name</codeInline> property will not be serialized, and class <codeInline>A</codeInline> will be serialized as a JSON array.
+					</para>
+					</content>
+				</step>
+				<step>
+					<content>
+						<para>To fully serialize class <codeInline>A</codeInline> in this example, we can apply a <codeEntityReference>T:fastJSON.JsonCollectionAttribute</codeEntityReference> onto the class.
+					</para>
+						<code language="c#">
+							<![CDATA[[JsonCollection ("items")
+public class A : List<int> {
+	public string Name { get; set; }
+}]]></code>
+						<para>This will generate serialization results  like the following.</para>
+						<code language="js">{"Name":"my name","items":[1,2,3]}</code>
+					</content>
+				</step>
+				<step>
+					<content>
+						<para>In noninvasive mode, we can assign a value to the <codeEntityReference>P:fastJSON.TypeOverride.CollectionContainer</codeEntityReference> property.
+					</para>
+						<code language="c#">
+							<![CDATA[JSON.Manager.Override<A> (new TypeOverride () {
+	CollectionContainer = "items"
+});]]></code>
+						<para>The serialization effect will be the same as the <codeEntityReference>T:fastJSON.JsonCollectionAttribute</codeEntityReference> shown above.
+					</para>
+					</content>
+				</step>
+			</steps>
+			<!-- <conclusion>Optional conclusion</conclusion> -->
+		</procedure>
+
+		<!-- <codeExample>Optional code example</codeExample> -->
+
+		<!-- <buildInstructions>Optional instructions for building a
+         code example.</buildInstructions> -->
+
+		<!-- <robustProgramming>Optional discussion of error handling and other
+         issues related to writing solid code.</robustProgramming> -->
+
+		<!-- <security>Optional discussion of security issues.</security> -->
+
+		<relatedTopics>
+			<!-- One or more of the following:
+           - A local link
+           - An external link
+           - A code entity reference
+
+      <link xlink:href="Other Topic's ID">Link text</link>
+      <externalLink>
+          <linkText>Link text</linkText>
+          <linkAlternateText>Optional alternate link text</linkAlternateText>
+          <linkUri>URI</linkUri>
+      </externalLink>
+      <codeEntityReference>API member ID</codeEntityReference>
+
+      Examples:
+
+      <link xlink:href="00e97994-e9e6-46e0-b420-5be86b2f8278">Some other topic</link>
+
+      <externalLink>
+          <linkText>SHFB on GitHub</linkText>
+          <linkAlternateText>Go to GitHub</linkAlternateText>
+          <linkUri>https://GitHub.com/EWSoftware/SHFB</linkUri>
+      </externalLink>
+
+      <codeEntityReference>T:TestDoc.TestClass</codeEntityReference>
+      <codeEntityReference>P:TestDoc.TestClass.SomeProperty</codeEntityReference>
+      <codeEntityReference>M:TestDoc.TestClass.#ctor</codeEntityReference>
+      <codeEntityReference>M:TestDoc.TestClass.#ctor(System.String,System.Int32)</codeEntityReference>
+      <codeEntityReference>M:TestDoc.TestClass.ToString</codeEntityReference>
+      <codeEntityReference>M:TestDoc.TestClass.FirstMethod</codeEntityReference>
+      <codeEntityReference>M:TestDoc.TestClass.SecondMethod(System.Int32,System.String)</codeEntityReference>
+      -->
+		</relatedTopics>
+	</developerHowToDocument>
+</topic>

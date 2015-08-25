@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
 
 namespace fastJSON
 {
@@ -40,7 +39,8 @@ namespace fastJSON
 		bool OnSerializing (object data, JsonItem item);
 
 		/// <summary>
-		/// This method is called between the object has been created and the values are filled during deserialization. This method provides an opportunity to initialize an object before deserialization.
+		/// This method is called between the object has been created and the values are filled during deserialization.
+		/// This method provides an opportunity to initialize an object before deserialization.
 		/// </summary>
 		/// <param name="data">The object being deserialized.</param>
 		void OnDeserializing (object data);
@@ -61,7 +61,8 @@ namespace fastJSON
 	}
 
 	/// <summary>
-	/// This is a default implementation of <see cref="IJsonInterceptor"/>, which restricts the type of the object being serialized or deserialized. The default implementation does nothing and returns true for all OnSerializing or OnDeserializing methods.
+	/// This is a default implementation of <see cref="IJsonInterceptor"/>, which restricts the type of the object being serialized or deserialized.
+	/// The default implementation does nothing and returns true for all OnSerializing or OnDeserializing methods.
 	/// </summary>
 	/// <typeparam name="T">The type of the object being serialized or deserialized.</typeparam>
 	/// <preliminary />
@@ -88,7 +89,8 @@ namespace fastJSON
 		public virtual void OnSerialized (T data) { }
 
 		/// <summary>
-		/// This method is called between the object has been created and the values are filled during deserialization. This method provides an opportunity to initialize an object before deserialization.
+		/// This method is called between the object has been created and the values are filled during deserialization.
+		/// This method provides an opportunity to initialize an object before deserialization.
 		/// </summary>
 		/// <param name="data">The object being deserialized.</param>
 		public virtual void OnDeserializing (T data) { }

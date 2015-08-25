@@ -85,7 +85,6 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="Constants.cs" />
-    <Compile Include="dynamic.cs" />
     <Compile Include="Formatter.cs" />
     <Compile Include="JsonConverter.cs" />
     <Compile Include="JsonDeserializer.cs" />

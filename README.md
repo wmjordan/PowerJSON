@@ -43,6 +43,7 @@ The attributes are listed below:
 * **JsonEnumValueAttribute**: controls the serialized literal name of an `Enum` value.
 * **JsonSerializableAttribute**: enables serializing and deserializing non-public types or members.
 * **JsonNonSerializedValueAttribute**: prevents specified member value from serializing.
+* **JsonContainerAttribute**: puts enumerable items into a field named by this attribute to fully serialize types implementing `IEnumerable`.
 
 Some .NET built-in attributes are also supported.
 * **DefaultValueAttribute**: values equal to `DefaultValueAttribute.Value` are not serialized.
@@ -52,7 +53,7 @@ Some .NET built-in attributes are also supported.
 * **EnumMemberAttribute**
 * **IgnoreDataMemberAttribute**
 
-XML serialization attributes are optionally supported. By default, the support is disabled and can be accessed by creating a new `SerializationManager` with a `JsonReflectionController` which has that option turned on.
+XML serialization attributes are optionally supported (listed below). By default, the support is disabled and can be accessed by creating a new `SerializationManager` with a `JsonReflectionController` which has that option turned on.
 * **XmlElementAttribute**
 * **XmlAttributeAttribute**
 * **XmlArrayAttribute**
@@ -82,6 +83,7 @@ This fork also fixed some issues in the original fastJSON project:
 * Multi-demensional arrays could not be deserialized. (2015-4-25)
 * `List<T[]>` list could not be deserialized. (2015-4-27)
 * `HashSet<T>` could not be serialized. (2015-5-13)
+* Types implementing `IEnumerable` could not be fully serialized. (2015-8-25)
 
 ### Other Enhancements
 

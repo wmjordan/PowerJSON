@@ -78,6 +78,17 @@ namespace MsUnitTest
 				Strings = new HashSet<string> ();
 			}
 		}
+		[JsonCollection ("items")]
+		public class ExtensiveList : List<int> {
+			public string Name { get; set; }
+			public ExtensiveList Child { get; set; }
+		}
+		[JsonCollection ("_items")]
+		public class ExtensiveDict : Dictionary<string, int>
+		{
+			public string Name { get; set; }
+			public ExtensiveList Child { get; set; }
+		}
 		#endregion
 
 		#region Array Tests
@@ -612,7 +623,35 @@ namespace MsUnitTest
 			var o = JSON.ToObject<MyCollection> (s);
 			Assert.AreEqual (c.MyField, o.MyField);
 			CollectionAssert.AreEqual (c, o);
+
+			var a = new ExtensiveList () { 1, 2, 3 };
+			a.Name = "test";
+			a.Child = new ExtensiveList () { 4 };
+			a.Child.Name = "child";
+			s = JSON.ToJSON (a);
+			Console.WriteLine (s);
+			var b = JSON.ToObject<ExtensiveList> (s);
+			CollectionAssert.AreEqual (a, b);
+			Assert.AreEqual (a.Name, b.Name);
+			CollectionAssert.AreEqual (a.Child, b.Child);
+			Assert.AreEqual (a.Child.Name, b.Child.Name);
+
+			var d = new ExtensiveDict () {
+				{ "a",1 },
+				{ "b",2 }
+			};
+			d.Name = "d";
+			d.Child = new ExtensiveList () { 5 };
+			d.Child.Name = "list";
+			s = JSON.ToJSON (d);
+			Console.WriteLine (s);
+			var d2 = JSON.ToObject<ExtensiveDict> (s);
+			CollectionAssert.AreEqual (d, d2);
+			Assert.AreEqual (d.Name, d2.Name);
+			CollectionAssert.AreEqual (d.Child, d2.Child);
+			Assert.AreEqual (d.Child.Name, d2.Child.Name);
 		}
+
 		#endregion
 	}
 }

@@ -98,7 +98,14 @@ namespace fastJSON
 				return c;
 			}
 
-			c = _reflections[type] = new ReflectionCache (type, this);
+			c = _reflections[type] = new ReflectionCache (type);
+			if (c.ArgumentReflections != null) {
+				var ar = c.ArgumentReflections;
+				var at = c.ArgumentTypes;
+				for (int i = ar.Length - 1; i >= 0; i--) {
+					ar[i] = GetReflectionCache (at[i]);
+				}
+			}
 			ControlTypeSerializationSettings (type, c);
 			return c;
 		}
@@ -111,13 +118,17 @@ namespace fastJSON
 				c.Converter = _controller.GetConverter (type);
 				c.AlwaysDeserializable = _controller.IsAlwaysDeserializable (type) || type.Namespace == typeof (JSON).Namespace;
 				c.Interceptor = _controller.GetInterceptor (type);
+				c.CollectionName = _controller.GetCollectionContainerName (type);
+				if (c.CollectionName != null) {
+					c.DeserializeMethod = new CompoundDeserializer (c.CollectionName, c.DeserializeMethod).Deserialize;
+				}
 			}
 			if (c.Members != null) {
 				foreach (var item in c.Members) {
 					item.MemberTypeReflection = GetReflectionCache (item.MemberType);
 				}
 				c.Getters = Reflection.GetGetters (type, c.Members, _controller);
-				c.Setters = GetProperties (type, c.Members, _controller);
+				c.Setters = GetSetters (type, c.Members, _controller);
 				foreach (var item in c.Setters) {
 					var m = item.Value.Member;
 					if (m.MemberTypeReflection == null) {
@@ -262,6 +273,12 @@ namespace fastJSON
 			if (overrideInfo.OverrideConverter) {
 				c.Converter = overrideInfo.Converter;
 			}
+			if (overrideInfo.OverrideContainerName) {
+				c.CollectionName = overrideInfo.CollectionContainer;
+				c.DeserializeMethod = overrideInfo.CollectionContainer == null
+					? JsonDeserializer.GetReadJsonMethod (type)
+					: new CompoundDeserializer (c.CollectionName, c.DeserializeMethod).Deserialize;
+			}
 			if (overrideInfo.Deserializable.HasValue) {
 				c.AlwaysDeserializable = overrideInfo.Deserializable == true;
 			}
@@ -301,7 +318,7 @@ namespace fastJSON
 			}
 		}
 
-		static Dictionary<string, JsonMemberSetter> GetProperties (Type type, MemberCache[] members, IReflectionController controller) {
+		static Dictionary<string, JsonMemberSetter> GetSetters (Type type, MemberCache[] members, IReflectionController controller) {
 			var sd = new Dictionary<string, JsonMemberSetter> (StringComparer.OrdinalIgnoreCase);
 			foreach (var p in members) {
 				var d = new JsonMemberSetter (p);
@@ -489,7 +506,8 @@ namespace fastJSON
 		/// </summary>
 		/// <typeparam name="T">The type to be processed by the interceptor.</typeparam>
 		/// <param name="converter">The converter to convert instances of type before the serialization and deserialization.</param>
-		/// <remarks>If the type has already gotten an <see cref="IJsonConverter"/>, the new <paramref name="converter"/> will replace it. If the new converter is null, existing converter will be removed from the type.</remarks>
+		/// <remarks>If the type has already gotten an <see cref="IJsonConverter"/>, the new <paramref name="converter"/> will replace it.
+		/// If the new converter is null, existing converter will be removed from the type.</remarks>
 		public void OverrideConverter<T>(IJsonConverter converter) {
 			Override (typeof(T), new TypeOverride () { Converter = converter }, false);
 		}
@@ -527,7 +545,8 @@ namespace fastJSON
 		/// <param name="type">The type containing the member.</param>
 		/// <param name="memberName">The member to be assigned.</param>
 		/// <param name="converter">The converter to process the member value.</param>
-		/// <remarks>If the member has already gotten an <see cref="IJsonConverter"/>, the new <paramref name="converter"/> will replace it. If the new converter is null, existing converter will be removed from the type.</remarks>
+		/// <remarks>If the member has already gotten an <see cref="IJsonConverter"/>, the new <paramref name="converter"/> will replace it.
+		/// If the new converter is null, existing converter will be removed from the type.</remarks>
 		/// <exception cref="MissingMemberException">No field or property matches <paramref name="memberName"/> in <paramref name="type"/>.</exception>
 		public void OverrideMemberConverter (Type type, string memberName, IJsonConverter converter) {
 			Override (type, new TypeOverride () {
@@ -539,7 +558,8 @@ namespace fastJSON
 		/// Assigns new name mapping for an Enum type <typeparamref name="T"/>.
 		/// </summary>
 		/// <typeparam name="T">The type of the Enum.</typeparam>
-		/// <param name="nameMapper">The value mapper for the enum type <typeparamref name="T"/>. The key of the dictionary is the original name of the enum value to be overridden, the value is the new serialized name to be specified to the value.</param>
+		/// <param name="nameMapper">The value mapper for the enum type <typeparamref name="T"/>.
+		/// The key of the dictionary is the original name of the enum value to be overridden, the value is the new serialized name to be specified to the value.</param>
 		/// <exception cref="InvalidOperationException"><typeparamref name="T"/> is not an Enum type.</exception>
 		public void OverrideEnumValueNames<T> (IDictionary<string, string> nameMapper) {
 			OverrideEnumValueNames (typeof(T), nameMapper);
@@ -548,7 +568,8 @@ namespace fastJSON
 		/// Assigns new name mapping for an Enum type <paramref name="type"/>.
 		/// </summary>
 		/// <param name="type">The type of the Enum.</param>
-		/// <param name="nameMapper">The Enum value mapper. The key of the dictionary is the original name of the enum value to be overridden, the value is the new serialized name to be specified to the value.</param>
+		/// <param name="nameMapper">The Enum value mapper.
+		/// The key of the dictionary is the original name of the enum value to be overridden, the value is the new serialized name to be specified to the value.</param>
 		/// <exception cref="InvalidOperationException"><paramref name="type"/> is not an Enum type.</exception>
 		public void OverrideEnumValueNames (Type type, IDictionary<string, string> nameMapper) {
 			if (type == null) {
@@ -622,6 +643,18 @@ namespace fastJSON
 			}
 		}
 
+		internal bool OverrideContainerName;
+		string _CollectionContainer;
+		/// <summary>
+		/// Gets or sets the name of the container for the overridden type which implements <see cref="System.Collections.IEnumerable"/> or <see cref="System.Collections.IDictionary"/>.
+		/// </summary>
+		public string CollectionContainer {
+			get { return _CollectionContainer; }
+			set {
+				_CollectionContainer = value; OverrideContainerName = true;
+			}
+		}
+
 		internal List<MemberOverride> _MemberOverrides;
 		/// <summary>
 		/// Gets the override information for members.
@@ -665,7 +698,9 @@ namespace fastJSON
 		}
 		Dictionary<Type, string> _TypedNames;
 		/// <summary>
-		/// Gets the polymorphic serialization for the member. The item key is the type and the item value is the serialized name corresponding to the type. The type should derive from the type of the member.
+		/// Gets the polymorphic serialization for the member.
+		/// The item key is the type and the item value is the serialized name corresponding to the type.
+		/// The type should derive from the type of the member.
 		/// </summary>
 		public Dictionary<Type, string> TypedNames {
 			get {

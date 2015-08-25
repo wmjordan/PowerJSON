@@ -139,6 +139,21 @@ namespace fastJSON
 		}
 
 		/// <summary>
+		/// Gets the name of the collection container for customized types which implement <see cref="IEnumerable"/> and have extra members to be serialized.
+		/// </summary>
+		/// <param name="type">The <see cref="Type"/> which implements <see cref="IEnumerable"/> and contains extra members to be serialized.</param>
+		/// <returns>The name of the collection container. If null is returned, no container will be created.</returns>
+		/// <remarks>By default, the serializer serializes types which implement <see cref="IEnumerable"/> interface as JSON arrays.
+		/// Members of the type will be ignored. And so to the types which implements <see cref="IDictionary"/>.
+		/// To serialize those members, return a non-empty name and the members will be serialized into a field named returned by this method.</remarks>
+		public override string GetCollectionContainerName (Type type) {
+			var n = AttributeHelper.GetAttribute<JsonCollectionAttribute> (type, true);
+			if (n != null && String.IsNullOrEmpty (n.Name) == false) {
+				return n.Name;
+			}
+			return null;
+		}
+		/// <summary>
 		/// Returns whether the specific member is serializable. This value can be set via <see cref="JsonIncludeAttribute"/> and <see cref="IgnoreAttributes"/>.
 		/// If true is returned, the member will always get serialized.
 		/// If false is returned, the member will be excluded from serialization.
@@ -359,6 +374,16 @@ namespace fastJSON
 		public virtual IJsonConverter GetConverter (Type type) { return null; }
 
 		/// <summary>
+		/// Gets the name of the collection container for customized types which implement <see cref="IEnumerable"/> and have extra members to be serialized.
+		/// </summary>
+		/// <param name="type">The <see cref="Type"/> which implements <see cref="IEnumerable"/> and contains extra members to be serialized.</param>
+		/// <returns>The name of the collection container. If null is returned, no container will be created.</returns>
+		/// <remarks>By default, the serializer serializes types which implement <see cref="IEnumerable"/> interface as JSON arrays.
+		/// Members of the type will be ignored. And so to the types which implements <see cref="IDictionary"/>.
+		/// To serialize those members, return a non-empty name and the members will be serialized into a field named returned by this method.</remarks>
+		public virtual string GetCollectionContainerName (Type type) { return null; }
+
+		/// <summary>
 		/// This method is called to determine whether a field or a property is serializable.
 		/// If false is returned, the member will be excluded from serialization.
 		/// If true is returned, the member will always get serialized.
@@ -472,6 +497,16 @@ namespace fastJSON
 		IJsonConverter GetConverter (Type type);
 
 		/// <summary>
+		/// Gets the name of the collection container for customized types which implement <see cref="IEnumerable"/> and have extra members to be serialized.
+		/// </summary>
+		/// <param name="type">The <see cref="Type"/> which implements <see cref="IEnumerable"/> and contains extra members to be serialized.</param>
+		/// <returns>The name of the collection container. If null is returned, no container will be created.</returns>
+		/// <remarks>By default, the serializer serializes types which implement <see cref="IEnumerable"/> interface as JSON arrays.
+		/// Members of those types will be ignored. And so to the types which implements <see cref="IDictionary"/>.
+		/// To serialize those members, return a non-empty name for those types and the members will be serialized into a field with the returned name.</remarks>
+		string GetCollectionContainerName (Type type);
+
+		/// <summary>
 		/// This method is called to determine whether a field or a property is serializable.
 		/// If false is returned, the member will be excluded from serialization.
 		/// If true is returned, the member will always get serialized.
@@ -517,6 +552,7 @@ namespace fastJSON
 		/// <param name="member">The <see cref="MemberInfo"/> of the field or property.</param>
 		/// <returns>The converter.</returns>
 		IJsonConverter GetMemberItemConverter (MemberInfo member);
+
 	}
 
     /// <summary>

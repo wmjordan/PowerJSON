@@ -13,6 +13,20 @@ namespace fastJSON
 	delegate void AddCollectionItem (object target, object value);
 	delegate object RevertJsonValue (JsonDeserializer deserializer, object value, ReflectionCache targetType);
 
+	struct CompoundDeserializer
+	{
+		readonly string CollectionName;
+		readonly RevertJsonValue DeserializeMethod;
+		public CompoundDeserializer (string collectionName, RevertJsonValue deserializeMethod) {
+			CollectionName = collectionName;
+			DeserializeMethod = deserializeMethod;
+		}
+		internal object Deserialize (JsonDeserializer deserializer, object value, ReflectionCache targetType) {
+			var d = value as JsonDict;
+			var o = DeserializeMethod (deserializer, d[CollectionName], targetType);
+			return deserializer.CreateObject (d, targetType, o);
+		}
+	}
 	[DebuggerDisplay ("{TypeName} ({JsonDataType})")]
 	class ReflectionCache
 	{
@@ -34,9 +48,11 @@ namespace fastJSON
 		internal readonly ConstructorTypes ConstructorInfo;
 		internal readonly CreateObject Constructor;
 		internal readonly WriteJsonValue SerializeMethod;
-		internal readonly RevertJsonValue DeserializeMethod;
+		internal RevertJsonValue DeserializeMethod;
 		internal readonly MemberCache[] Members;
 		internal JsonMemberGetter[] Getters;
+		// denotes the collection name for extended IEnumerable types
+		internal string CollectionName;
 		// a member could have several setters because of the result of typed serialization
 		internal Dictionary<string, JsonMemberSetter> Setters;
 		internal bool AlwaysDeserializable;
@@ -49,7 +65,7 @@ namespace fastJSON
 		internal Dictionary<string, Enum> EnumNames;
 		#endregion
 
-		internal ReflectionCache (Type type, SerializationManager manager) {
+		internal ReflectionCache (Type type) {
 			Type = type;
 			TypeName = type.FullName;
 			AssemblyName = type.AssemblyQualifiedName;
@@ -63,23 +79,33 @@ namespace fastJSON
 				return;
 			}
 
-			if (type.IsGenericType) {
-				ArgumentTypes = type.GetGenericArguments ();
-				var gt = type.GetGenericTypeDefinition ();
-				if (gt.Equals (typeof (Dictionary<,>))) {
-					CommonType = ComplexType.Dictionary;
-				}
-				else if (gt.Equals (typeof (List<>))) {
-					CommonType = ComplexType.List;
-				}
-				else if (gt.Equals (typeof (Nullable<>))) {
-					CommonType = ComplexType.Nullable;
-					SerializeMethod = JsonSerializer.GetWriteJsonMethod (ArgumentTypes[0]);
-				}
-			}
-			else if (type.IsArray) {
+			if (type.IsArray) {
 				ArgumentTypes = new Type[] { type.GetElementType () };
 				CommonType = type.GetArrayRank () == 1 ? ComplexType.Array : ComplexType.MultiDimensionalArray;
+			}
+			else {
+				var t = type;
+				if (t.IsGenericType == false) {
+					while ((t = t.BaseType) != null) {
+						if (t.IsGenericType) {
+							break;
+						}
+					}
+				}
+				if (t != null) {
+					ArgumentTypes = t.GetGenericArguments ();
+					var gt = t.GetGenericTypeDefinition ();
+					if (gt.Equals (typeof (Dictionary<,>))) {
+						CommonType = ComplexType.Dictionary;
+					}
+					else if (gt.Equals (typeof (List<>))) {
+						CommonType = ComplexType.List;
+					}
+					else if (gt.Equals (typeof (Nullable<>))) {
+						CommonType = ComplexType.Nullable;
+						SerializeMethod = JsonSerializer.GetWriteJsonMethod (ArgumentTypes[0]);
+					}
+				}
 			}
 			if (typeof(IEnumerable).IsAssignableFrom (type)) {
 				if (typeof(Array).IsAssignableFrom (type) == false) {
@@ -91,7 +117,7 @@ namespace fastJSON
 				}
 			}
 			if (ArgumentTypes != null) {
-				ArgumentReflections = Array.ConvertAll (ArgumentTypes, manager.GetReflectionCache);
+				ArgumentReflections = new ReflectionCache[ArgumentTypes.Length];
 			}
 			if (CommonType != ComplexType.Array
 				&& CommonType != ComplexType.MultiDimensionalArray

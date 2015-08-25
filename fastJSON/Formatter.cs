@@ -2,7 +2,7 @@
 
 namespace fastJSON
 {
-	internal static class Formatter
+	static class Formatter
 	{
 		public static string Indent = "   ";
 

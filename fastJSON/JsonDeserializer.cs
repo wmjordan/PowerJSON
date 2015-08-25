@@ -130,13 +130,6 @@ namespace fastJSON
 			return o;
 		}
 
-		static RevertJsonValue GetRevertMethod (ReflectionCache type) {
-			if (type == null) {
-				return RevertUndefined;
-			}
-			return type.DeserializeMethod;
-		}
-
 		internal static RevertJsonValue GetReadJsonMethod (Type type) {
 			if (type == null) {
 				return RevertUndefined;
@@ -167,8 +160,7 @@ namespace fastJSON
 				var c = _manager.GetReflectionCache (rt);
 				var jt = Reflection.GetJsonDataType (rt);
 				if (jt != JsonDataType.Undefined) {
-					var m = GetRevertMethod (c);
-					xv = m (this, xv, c);
+					xv = c.DeserializeMethod (this, xv, c);
 				}
 				else if (xv is JsonDict) {
 					xv = CreateObject ((JsonDict)xv, c, null);
@@ -348,12 +340,15 @@ namespace fastJSON
 					case JsonDataType.Guid: oset = CreateGuid (v); break;
 					case JsonDataType.ByteArray: oset = Convert.FromBase64String ((string)v); break;
 					case JsonDataType.List:
+						if (m.MemberTypeReflection.CollectionName != null) {
+							goto default;
+						}
 						oset = CreateList ((JsonArray)v, m.MemberTypeReflection, pi.CanWrite && (m.IsClass || m.IsStruct) ? null : m.Getter (o));
 						break;
 					case JsonDataType.Object: oset = v; break;
 					default:
 						if (m.DeserializeMethod != null) {
-							oset = m.DeserializeMethod (this, ji._Value, m.MemberTypeReflection);
+							oset = m.MemberTypeReflection.DeserializeMethod (this, ji._Value, m.MemberTypeReflection);
 							goto SET_VALUE;
 						}
 						if ((m.IsClass || m.IsStruct) && v is JsonDict)
@@ -395,8 +390,7 @@ namespace fastJSON
 				var c = _manager.GetReflectionCache (rt);
 				var jt = Reflection.GetJsonDataType (rt);
 				if (jt != JsonDataType.Undefined) {
-					var m = GetRevertMethod (c);
-					xv = m (this, xv, c);
+					xv = c.DeserializeMethod (this, xv, c);
 				}
 				else if (xv is JsonDict) {
 					xv = CreateObject ((JsonDict)xv, c, pi.Member.Getter (o));
@@ -626,18 +620,18 @@ namespace fastJSON
 			// TODO: candidate of code clean-up.
 			Type et = listType.ArgumentTypes != null ? listType.ArgumentTypes[0] : null;
 			// create an array of objects
-			foreach (var ob in data) {
-				if (ob is IDictionary)
-					col.Add (CreateObject ((JsonDict)ob, ec, null));
+			foreach (var o in data) {
+				if (o is IDictionary)
+					col.Add (CreateObject ((JsonDict)o, ec, null));
 
-				else if (ob is JsonArray) {
+				else if (o is JsonArray) {
 					if (et.IsGenericType)
-						col.Add (ob);//).ToArray());
+						col.Add (o);//).ToArray());
 					else
-						col.Add (((JsonArray)ob).ToArray ());
+						col.Add (((JsonArray)o).ToArray ());
 				}
 				else
-					col.Add (ChangeType (ob, et));
+					col.Add (ChangeType (o, et));
 			}
 			return col;
 		}
@@ -646,7 +640,7 @@ namespace fastJSON
 			var col = (IDictionary)pt.Instantiate ();
 			// NOTE: argument 0 is not used
 			ReflectionCache ec = pt.ArgumentReflections != null ? pt.ArgumentReflections[1] : null;
-			var m = GetRevertMethod (ec);
+			var m = ec != null ? ec.DeserializeMethod : RevertUndefined;
 			foreach (KeyValuePair<string, object> values in reader) {
 				col.Add (values.Key, m (this, values.Value, ec));
 			}
@@ -660,9 +654,9 @@ namespace fastJSON
 				c1 = pt.ArgumentReflections[0];
 				c2 = pt.ArgumentReflections[1];
 			}
-			var mk = GetRevertMethod (c1);
-			var mv = GetRevertMethod (c2);
-			
+			var mk = c1.DeserializeMethod;
+			var mv = c2.DeserializeMethod;
+
 			foreach (JsonDict values in reader) {
 				col.Add (mk (this, values["k"], c1), mv (this, values["v"], c2));
 			}

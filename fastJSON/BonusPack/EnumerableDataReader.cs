@@ -89,10 +89,9 @@ namespace fastJSON.BonusPack
 		/// <param name="showReadOnlyValues">if set to <c>true</c>, read-only values will be exported to the <see cref="IDataReader"/>.</param>
 		/// <exception cref="NotSupportedException">This exception will be thrown when <typeparamref name="T"/> is a scalar type.</exception>
 		public EnumerableDataReader (IEnumerable<T> collection, bool showReadOnlyValues) {
-            if (collection == null)
-            {
-                throw new ArgumentNullException ("collection");
-            }
+			if (collection == null) {
+				throw new ArgumentNullException ("collection");
+			}
 			var t = typeof(T);
 			if (_scalarTypes.ContainsKey (t)) {
 				throw new NotSupportedException (t.FullName + " is not supported.");
