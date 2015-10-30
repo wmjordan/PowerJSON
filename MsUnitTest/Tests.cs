@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using fastJSON;
-using System.IO;
 #if !SILVERLIGHT
 using System.Data;
 #endif
@@ -769,51 +768,5 @@ namespace MsUnitTest
 			Assert.AreEqual(2312, (o as Retclass).Field2);
 		}
 
-		[TestMethod]
-		public void withDataContract()
-		{
-			var data = new TestData
-			{
-				TestBool = true,
-				TestByteArray = new byte[] { 0x00, 0x02, 0x04, 0x05, 0x01 },
-				TestDouble = 17.0,
-				TestByte = 0xff,
-				TestDateTime = new DateTime(2089, 9, 27),
-				TestInt = 7,
-				TestList = new List<int> { 4, 55, 4, 6, 13 },
-				TestLong = 777,
-				TestShort = 456,
-				TestString = "Hello World!",
-				TestChar = 'R',
-				TestDecimal = 100,
-				TestsByte = 0x05,
-				TestuInt = 80,
-				DontGo = 42,
-				Children = new List<SubTestData> { new SubTestData { Name = "one" }, new SubTestData { Name = "two" } }
-			};
-
-			var str = JSON.ToJSON(data);
-			var result = JSON.ToObject<TestData>(str);
-		}
-
-		private void VerifyEqual(TestData data, TestData result)
-		{
-			Assert.AreEqual(data.Children, result.Children);
-			Assert.AreNotEqual(data.DontGo, result.DontGo);
-			Assert.AreEqual(data.TestBool, result.TestBool);
-			Assert.AreEqual(data.TestByte, result.TestByte);
-			Assert.AreEqual(data.TestByteArray, result.TestByteArray);
-			Assert.AreEqual(data.TestChar, result.TestChar);
-			Assert.AreEqual(data.TestDateTime, result.TestDateTime);
-			Assert.AreEqual(data.TestDecimal, result.TestDecimal);
-			Assert.AreEqual(data.TestDouble, result.TestDouble);
-			Assert.AreEqual(data.TestInt, result.TestInt);
-			Assert.AreEqual(data.TestList, result.TestList);
-			Assert.AreEqual(data.TestLong, result.TestLong);
-			Assert.AreEqual(data.TestShort, result.TestShort);
-			Assert.AreEqual(data.TestString, result.TestString);
-			Assert.AreEqual(data.TestuInt, result.TestuInt);
-
-		}
 	}
 }

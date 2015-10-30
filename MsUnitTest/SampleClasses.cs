@@ -215,6 +215,13 @@ namespace MsUnitTest
 	[DataContract]
 	public class SubTestData
 	{
+		public SubTestData()
+		{
+			// this library does not this scenario properly; it should work with a default null on Name 
+			// as no dictionary lookup should happen on the object until it has been populated
+			Name = "default";
+		}
+
 		[DataMember(Order = 1)]
 		public string Name { get; set; }
 

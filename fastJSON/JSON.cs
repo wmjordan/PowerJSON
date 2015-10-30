@@ -200,6 +200,32 @@ namespace fastJSON
 		{
 			return new JsonDeserializer(param, manager).ToObject(json, null);
 		}
+
+		/// <summary>
+		/// Creates an object from the JSON with parameter override on this call.
+		/// </summary>
+		/// <param name="json">The JSON string to be deserialized.</param>
+		/// <param name="type">The type of the expected object after deserialization.</param>
+		/// <param name="manager">The <see cref="SerializationManager"/> to control advanced JSON deserialization.</param>
+		/// <returns>The deserialized object.</returns>
+		public static object ToObject(string json, Type type, SerializationManager manager)
+		{
+			return new JsonDeserializer(Parameters, manager).ToObject(json, type);
+		}
+
+		/// <summary>
+		/// Creates an object from the JSON with parameter override on this call.
+		/// </summary>
+		/// <param name="json">The JSON string to be deserialized.</param>
+		/// <param name="type">The type of the expected object after deserialization.</param>
+		/// <param name="param">The <see cref="JSONParameters"/> to control deserialization.</param>
+		/// <param name="manager">The <see cref="SerializationManager"/> to control advanced JSON deserialization.</param>
+		/// <returns>The deserialized object.</returns>
+		public static object ToObject(string json, Type type, JSONParameters param, SerializationManager manager)
+		{
+			return new JsonDeserializer(param, manager).ToObject(json, type);
+		}
+		
 		/// <summary>
 		/// Creates an object of type from the JSON with the default <see cref="Parameters"/>.
 		/// </summary>
@@ -238,6 +264,7 @@ namespace fastJSON
 		{
 			return new JsonDeserializer(Parameters, Manager).ToObject(ToJSON(obj));
 		}
+
 		/// <summary>
 		/// Deep-copies an object i.e. clones to a new object.
 		/// </summary>
@@ -247,6 +274,19 @@ namespace fastJSON
 		public static T DeepCopy<T> (T obj)
 		{
 			return new JsonDeserializer(Parameters, Manager).ToObject<T>(ToJSON(obj));
+		}
+
+		/// <summary>
+		/// Deep-copies an object i.e. clones to a new object.
+		/// </summary>
+		/// <typeparam name="T">The type of the object to be copied.</typeparam>
+		/// <param name="obj">The object to be deep copied.</param>
+		/// <param name="param">The <see cref="JSONParameters"/> to control deserialization.</param>
+		/// <param name="manager">The <see cref="SerializationManager"/> to control advanced JSON deserialization.</param>
+		/// <returns>The copy of <paramref name="obj"/>.</returns>
+		public static T DeepCopy<T>(T obj, JSONParameters param, SerializationManager manager)
+		{
+			return new JsonDeserializer(param, manager).ToObject<T>(ToJSON(obj));
 		}
 
 		/// <summary>
