@@ -271,6 +271,7 @@ namespace fastJSON
 					: type.Instantiate ();
 			}
 			int circount = 0;
+			// dictionary lookup makes it impossible to use objects with a custom GetHashCode based on (unchanging) properties:
 			if (_circobj.TryGetValue (o, out circount) == false) {
 				circount = _circobj.Count + 1;
 				_circobj.Add (o, circount);
@@ -333,9 +334,9 @@ namespace fastJSON
 					case JsonDataType.Int: oset = (int)(long)v; break;
 					case JsonDataType.String:
 					case JsonDataType.Bool:
-					case JsonDataType.Long:
-					case JsonDataType.Double: oset = v; break;
-					case JsonDataType.Single: oset = (float)(double)v; break;
+					case JsonDataType.Long: oset = v; break;
+					case JsonDataType.Double: oset = v is long ? (double)(long)v : (double)v; break;
+					case JsonDataType.Single: oset = v is long ? (float)(long)v : (float)(double)v; break;
 					case JsonDataType.DateTime: oset = CreateDateTime (this, v); break;
 					case JsonDataType.Guid: oset = CreateGuid (v); break;
 					case JsonDataType.ByteArray: oset = Convert.FromBase64String ((string)v); break;
@@ -853,6 +854,7 @@ namespace fastJSON
 				return new DateTime (year, month, day, hour, min, sec, ms);
 			else
 				return new DateTime (year, month, day, hour, min, sec, ms, DateTimeKind.Utc).ToLocalTime ();
+			// these individual numeric parses are really cheaper than one DateTime.ParseExact ?
 		}
 		internal static object RevertUndefined (JsonDeserializer deserializer, object value, ReflectionCache type) {
 			if (value == null) return null;
