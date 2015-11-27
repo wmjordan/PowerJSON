@@ -89,7 +89,7 @@ namespace fastJSON
 			}
 			var chs = new char[d];
 			var i = d;
-			while (--i > 0) {
+			while (--i >= 0) {
 				chs[i] = (char)('0' + (value % 10L));
 				value /= 10L;
 				if (value == 0L) {
@@ -114,7 +114,7 @@ namespace fastJSON
 			}
 			var chs = new char[d];
 			var i = d;
-			while (--i > 0) {
+			while (--i >= 0) {
 				chs[i] = (char)('0' + (value % 10UL));
 				value /= 10UL;
 				if (value == 0UL) {
@@ -141,7 +141,7 @@ namespace fastJSON
 			}
 			var chs = new char[d];
 			var i = d;
-			while (--i > 0) {
+			while (--i >= 0) {
 				chs[i] = (char)('0' + (value % 10));
 				value /= 10;
 				if (value == 0) {
