@@ -26,6 +26,7 @@ namespace fastJSON
 	{
 		static JSONParameters _Parameters = new JSONParameters();
 		static SerializationManager _Manager = SerializationManager.Instance;
+		static SafeDictionary<string, string> _TypeAliases = null, _ReverseTypeAliases = null;
 		/// <summary>
 		/// Gets or sets global parameters for the serializer.
 		/// </summary>
@@ -103,7 +104,44 @@ namespace fastJSON
 			}
 
 			ReflectionCache c = manager.GetReflectionCache (obj.GetType ());
-			return new JsonSerializer(param, manager).ConvertToJSON(obj, c);
+			return new JsonSerializer(param, manager, _TypeAliases).ConvertToJSON(obj, c);
+		}
+
+		public static void SetTypeAlias(Dictionary<Type, string> list)
+		{
+			if (null == list)
+			{
+				_TypeAliases = _ReverseTypeAliases = null;
+				return;
+			}
+			_TypeAliases = new SafeDictionary<string, string>();
+			// Deserializer needs a reverse lookup dictionary
+			_ReverseTypeAliases = new SafeDictionary<string, string>();
+			foreach (KeyValuePair<Type, string> item in list)
+			{
+				_TypeAliases.Add(item.Key.AssemblyQualifiedName, item.Value);
+				_ReverseTypeAliases.Add(item.Value, item.Key.AssemblyQualifiedName);
+			}
+		}
+
+		public static void SetTypeAlias(List<Type> list)
+		{
+			if (null == list)
+			{
+				_TypeAliases = _ReverseTypeAliases = null;
+				return;
+			}
+			_TypeAliases= new SafeDictionary<string, string>();
+			_ReverseTypeAliases = new SafeDictionary<string, string>();
+			foreach (Type item in list)
+			{
+				JsonTypeAttribute att= AttributeHelper.GetAttribute<JsonTypeAttribute>(item, false);
+				if (null == att)
+					continue;
+
+				_TypeAliases.Add(item.AssemblyQualifiedName, att.Name);
+				_ReverseTypeAliases.Add(att.Name, item.AssemblyQualifiedName);
+			}
 		}
 
 		/// <summary>
@@ -134,7 +172,7 @@ namespace fastJSON
 		/// <returns>The deserialized object of type <typeparamref name="T"/>.</returns>
 		public static T ToObject<T>(string json)
 		{
-			return new JsonDeserializer(Parameters, Manager).ToObject<T>(json);
+			return new JsonDeserializer(Parameters, Manager, _ReverseTypeAliases).ToObject<T>(json);
 		}
 		/// <summary>
 		/// Create a typed generic object from the JSON with parameter override on this call.
