@@ -18,7 +18,6 @@ namespace fastJSON
 		readonly Dictionary<int, object> _cirrev = new Dictionary<int, object> ();
 		bool _usingglobals = false;
 		Dictionary<string,object> globaltypes;
-		readonly SafeDictionary<string, string> _typeAliases = null;
 		readonly bool _useTypeAlias;
 
 		static RevertJsonValue[] RegisterMethods () {
@@ -50,11 +49,10 @@ namespace fastJSON
 			return r;
 		}
 
-		public JsonDeserializer (JSONParameters param, SerializationManager manager, SafeDictionary<string, string> typeAliases = null) {
+		public JsonDeserializer (JSONParameters param, SerializationManager manager) {
 			_params = param;
 			_manager = manager;
-			_typeAliases = typeAliases;
-			_useTypeAlias = (null != _typeAliases);
+			_useTypeAlias = (0 < _manager.TypeAliasCount());
 		}
 
 		public T ToObject<T>(string json) {
@@ -249,7 +247,7 @@ namespace fastJSON
 				}
 			}
 
-			var tn = _useTypeAlias? LookupAlias(data.Type) : data.Type;
+			var tn = _useTypeAlias? _manager.ReverseLookupAlias(data.Type) : data.Type;
 			bool found = (tn != null && tn.Length > 0);
 #if !SILVERLIGHT
 			if (found == false && type != null && typeof (object).Equals (type.Type)) {
@@ -385,18 +383,6 @@ namespace fastJSON
 				si.OnDeserialized (o);
 			}
 			return o;
-		}
-
-
-		private string LookupAlias(string assemblyName)
-		{
-			if (null == _typeAliases || null == assemblyName)
-				return assemblyName;
-			string alias = null;
-			_typeAliases.TryGetValue(assemblyName, out alias);
-			if (null == alias)
-				return assemblyName;
-			return alias;
 		}
 
 

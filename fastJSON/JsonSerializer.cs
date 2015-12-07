@@ -26,16 +26,14 @@ namespace fastJSON
 		bool _useGlobalTypes, _useTypeAlias;
 		readonly bool _useEscapedUnicode, _useExtensions, _showReadOnlyProperties, _showReadOnlyFields;
 		readonly NamingStrategy _naming;
-		readonly SafeDictionary<string, string> _typeAliases = null;
 
-		internal JsonSerializer (JSONParameters param, SerializationManager manager, SafeDictionary<string, string> typeAliases = null) {
+		internal JsonSerializer (JSONParameters param, SerializationManager manager) {
 			_manager = manager;
 			_params = param;
 			_useEscapedUnicode = _params.UseEscapedUnicode;
 			_maxDepth = _params.SerializerMaxDepth;
 			_naming = _params.NamingStrategy;
-			_typeAliases = typeAliases;
-			_useTypeAlias = null != _typeAliases;
+			_useTypeAlias = (0 < _manager.TypeAliasCount());
 			if (_params.EnableAnonymousTypes) {
 				_useExtensions = _useGlobalTypes = false;
 				_showReadOnlyFields = _showReadOnlyProperties = true;
@@ -358,10 +356,10 @@ namespace fastJSON
 			#region Write Type Reference
 			if (_useExtensions) {
 				if (_useGlobalTypes == false)
-					WritePairFast (JsonDict.ExtType, _useTypeAlias? LookupAlias(def.AssemblyName) : def.AssemblyName);
+					WritePairFast (JsonDict.ExtType, _useTypeAlias? _manager.ForwardLookupAlias(def.AssemblyName) : def.AssemblyName);
 				else {
 					var dt = 0;
-					var ct = _useTypeAlias ? LookupAlias(def.AssemblyName) : def.AssemblyName;
+					var ct = _useTypeAlias ? _manager.ForwardLookupAlias(def.AssemblyName) : def.AssemblyName;
 					if (_globalTypes.TryGetValue (ct, out dt) == false) {
 						dt = _globalTypes.Count + 1;
 						_globalTypes.Add (ct, dt);
@@ -495,18 +493,6 @@ namespace fastJSON
 			#endregion
 			_currentDepth--;
 			_output.Append ('}');
-		}
-
-
-		private string LookupAlias(string assemblyName)
-		{
-			if (null == _typeAliases || null == assemblyName)
-				return assemblyName;
-			string alias = null;
-			_typeAliases.TryGetValue(assemblyName, out alias);
-			if (null == alias)
-				return assemblyName;
-			return alias;
 		}
 
 		void WritePairFast (string name, string value) {
