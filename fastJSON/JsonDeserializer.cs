@@ -18,6 +18,7 @@ namespace fastJSON
 		readonly Dictionary<int, object> _cirrev = new Dictionary<int, object> ();
 		bool _usingglobals = false;
 		Dictionary<string,object> globaltypes;
+		readonly bool _useTypeAlias;
 
 		static RevertJsonValue[] RegisterMethods () {
 			var r = new RevertJsonValue[Enum.GetNames (typeof (JsonDataType)).Length];
@@ -51,6 +52,7 @@ namespace fastJSON
 		public JsonDeserializer (JSONParameters param, SerializationManager manager) {
 			_params = param;
 			_manager = manager;
+			_useTypeAlias = (0 < _manager.TypeAliasCount());
 		}
 
 		public T ToObject<T>(string json) {
@@ -245,7 +247,7 @@ namespace fastJSON
 				}
 			}
 
-			var tn = data.Type;
+			var tn = _useTypeAlias? _manager.ReverseLookupAlias(data.Type) : data.Type;
 			bool found = (tn != null && tn.Length > 0);
 #if !SILVERLIGHT
 			if (found == false && type != null && typeof (object).Equals (type.Type)) {
@@ -382,6 +384,7 @@ namespace fastJSON
 			}
 			return o;
 		}
+
 
 		void ConvertProperty (object o, JsonMemberSetter pi, JsonItem ji) {
 			var pc = pi.Converter ?? pi.Member.MemberTypeReflection.Converter;

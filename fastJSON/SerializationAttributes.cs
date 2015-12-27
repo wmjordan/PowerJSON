@@ -74,6 +74,32 @@ namespace fastJSON
 	}
 
 	/// <summary>
+	/// Indicates the name of the serialized data type.
+	/// If unset, the assembly qualified name is used.
+	/// </summary>
+	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
+	public sealed class JsonTypeAttribute :Attribute
+	{
+		/// <summary>
+		/// Gets the name of the serialized class.
+		/// The case of the serialized name defined in this attribute will not be changed by <see cref="JSONParameters.NamingConvention"/> setting in <see cref="JSONParameters"/>.
+		/// </summary>
+		public string Name
+		{
+			get; private set;
+		}
+
+		/// <summary>
+		/// Specifies the name of the serialized field or property.
+		/// </summary>
+		/// <param name="name">The name of the serialized field or property.</param>
+		public JsonTypeAttribute(string name)
+		{
+			Name = name;
+		}
+	}
+
+	/// <summary>
 	/// Specifies a value of the annotated member which is hidden from being serialized.
 	/// </summary>
 	[AttributeUsage (AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = true)]

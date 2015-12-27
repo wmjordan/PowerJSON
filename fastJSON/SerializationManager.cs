@@ -23,6 +23,8 @@ namespace fastJSON
 		// JSON custom
 		readonly SafeDictionary<Type, Serialize> _customSerializer = new SafeDictionary<Type, Serialize> ();
 		readonly SafeDictionary<Type, Deserialize> _customDeserializer = new SafeDictionary<Type, Deserialize> ();
+		readonly SafeDictionary<string, string> _typeAliases = new SafeDictionary<string, string>();
+		readonly SafeDictionary<string, string> _reverseTypeAliases = new SafeDictionary<string, string>();
 
 		/// <summary>
 		/// Returns the <see cref="IReflectionController"/> currently used by the <see cref="SerializationManager"/>.
@@ -89,7 +91,78 @@ namespace fastJSON
 				// reset property cache
 				ResetCache ();
 			}
-		} 
+		}
+		#endregion
+
+		#region Type Aliases
+		/// <summary>
+		/// Sets user-defined type aliases for serialized types
+		/// This method is similar to <see cref="RegisterTypeAlias" />, but allows for better flexiblility by relying on strings provided at runtime as part of its argument rather than fixed class attributes.
+		/// </summary>
+		/// <param name="list">List of types to be substituted along with their corresponding type name strings</param>
+		public void SetTypeAlias(Dictionary<Type, string> list)
+		{
+			_typeAliases.Clear();
+			_reverseTypeAliases.Clear();
+			if (null == list)
+				return;
+			// Deserializer needs a reverse lookup dictionary
+			foreach (KeyValuePair<Type, string> item in list)
+			{
+				_typeAliases.Add(item.Key.AssemblyQualifiedName, item.Value);
+				_reverseTypeAliases.Add(item.Value, item.Key.AssemblyQualifiedName);
+			}
+		}
+
+		/// <summary>
+		/// Sets user-defined type aliases for serialized types using the <see cref="JsonTypeAttribute"/>.
+		/// </summary>
+		/// <param name="list">List of types to be aliased</param>
+		public void RegisterTypeAlias(List<Type> list)
+		{
+			_typeAliases.Clear();
+			_reverseTypeAliases.Clear();
+			if (null == list)
+				return;
+			foreach (Type item in list)
+			{
+				JsonTypeAttribute att = AttributeHelper.GetAttribute<JsonTypeAttribute>(item, false);
+				if (null == att)
+					continue;
+
+				_typeAliases.Add(item.AssemblyQualifiedName, att.Name);
+				_reverseTypeAliases.Add(att.Name, item.AssemblyQualifiedName);
+			}
+		}
+
+		internal string ForwardLookupAlias(string assemblyName)
+		{
+			if (null == _typeAliases || null == assemblyName)
+				return assemblyName;
+			string alias = null;
+			_typeAliases.TryGetValue(assemblyName, out alias);
+			if (null == alias)
+				return assemblyName;
+			return alias;
+		}
+
+		internal string ReverseLookupAlias(string aliasedName)
+		{
+			if (null == _typeAliases || null == aliasedName)
+				return aliasedName;
+			string assemblyName = null;
+			_reverseTypeAliases.TryGetValue(aliasedName, out assemblyName);
+			if (null == assemblyName)
+				return aliasedName;
+			return assemblyName;
+		}
+
+		internal int TypeAliasCount()
+		{
+			if (null == _typeAliases || null == _reverseTypeAliases || _typeAliases.Count != _reverseTypeAliases.Count)
+				return 0;
+			return _typeAliases.Count;
+		}
 		#endregion
 
 		internal ReflectionCache GetReflectionCache (Type type) {
