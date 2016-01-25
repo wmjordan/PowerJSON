@@ -396,14 +396,19 @@ namespace fastJSON
 					cv.SerializationConvert (ji);
 				}
 				#region Convert Items
-				if (p.ItemConverter != null) {
+				var ic = p.ItemConverter;
+				if (ic == null && m.MemberTypeReflection.ArgumentReflections != null) {
+					var it = m.MemberTypeReflection.ArgumentReflections[0]; // item type
+					ic = it.Converter;
+				}
+				if (ic != null) {
 					var ev = ji._Value as IEnumerable;
 					if (ev != null) {
 						var ai = new JsonItem (ji.Name, null, false);
 						var ol = new List<object> ();
 						foreach (var item in ev) {
 							ai.Value = item;
-							p.ItemConverter.SerializationConvert (ai);
+							ic.SerializationConvert (ai);
 							ol.Add (ai.Value);
 						}
 						ji._Value = ol;
