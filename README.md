@@ -8,7 +8,27 @@ Please read the article [about fastJSON](http://www.codeproject.com/Articles/159
 Features of PowerJSON
 ---------------
 
-### New Features
+### Version 3 New Features
+
+The following features and changes are added to version 3:
+
+* Streaming serialization API.
+* Type alias system for polymorphic deserialization.
+* Changes of default settings for serialization.
+* Deprecation of obsolete APIs.
+
+## Migration from Previous Versions or fastJSON to Version 3
+
+1. Change the assembly reference from *fastJSON.dll* to **PowerJson.dll**.
+1. Replace all `fastJSON` namespace to `PowerJson`.
+1. Change *JSON* to *Json* in all API types and methods. Typically the `JSON` class and its `ToJSON` method overloads, and the `JSONParameters` class. 
+1. Default values in the `JsonParameters` class has changed. `SerializeStaticMembers`, `UseFastGuid` and `UseEscapedUnicode` will have the default value of false instead of true in previous versions. 
+1. Some settings in `JsonParameters` class has been renamed. `ShowReadOnlyProperties`, `ShowReadOnlyFields` shall be changed to `SerializeReadOnlyProperties` and `SerializeReadOnlyFields` respectively. 
+1. `UsingGlobalTypes` in `JsonParameters` are no longer used. No global types will be written to the serialized JSON string. 
+1. The *$type* extension will show the alias (settable by calling the `OverrideTypeAlias< T> (String)` method, or applying to the type with the `JsonTypeAliasAttribute`) or FullName instead of the `AssemblyQualifiedName` of the type. 
+1. All obsolete features in previous versions shall be removed or changed to corresponding API.
+
+### New Features before Version 3
 
 The following features are added to the original fastJSON.
 
@@ -26,6 +46,7 @@ The following features are added to the original fastJSON.
 ### New Classes and Interfaces
 
 The newly introduced classes and interfaces have brought more control onto each aspect in serialization.
+
 * **SerializationManager**: Caches the reflection result and controls the serialization. Supports non-invasive control over serialization.
 * **IReflectionController**: Controls every possible aspect in reflection for serialization.
 * **IJsonInterceptor**: Intercepts JSON serialization and enables conditional serialization.
@@ -36,6 +57,7 @@ The newly introduced classes and interfaces have brought more control onto each 
 
 This fork has empowered fastJSON to serialize and deserialize objects with additional attribute types.
 The attributes are listed below:
+
 * **JsonInterceptorAttribute**: 1) controls the procedure of serialization. 2) allows conditional serialization. 3) allows writing out extra key-value pairs in the serialized object.
 * **JsonFieldAttribute**: 1) controls the name of the serialized field or property. 2) allows serializing interface or abstract types with the Type and Name conbination in the attribute.
 * **JsonIncludeAttribute**: 1) explicitly controls whether a field or property is serialized or not. 2) allows serializing readonly property even when the `ShowReadOnlyProperties` setting is turned off.
@@ -44,8 +66,12 @@ The attributes are listed below:
 * **JsonSerializableAttribute**: enables serializing and deserializing non-public types or members.
 * **JsonNonSerializedValueAttribute**: prevents specified member value from serializing.
 * **JsonContainerAttribute**: puts enumerable items into a field named by this attribute to fully serialize types implementing `IEnumerable`.
+* **JsonTypeAliasAttribute**: sets the alias of a type for polymorphic deserialization. +
+
+ \+ new in version 3
 
 Some .NET built-in attributes are also supported.
+
 * **DefaultValueAttribute**: values equal to `DefaultValueAttribute.Value` are not serialized.
 * **ReadOnlyAttribute**: values are not deserialized when `ReadOnlyAttribute.IsReadOnly` is set to true.
 * **DataContractAttribute**
@@ -54,15 +80,17 @@ Some .NET built-in attributes are also supported.
 * **IgnoreDataMemberAttribute**
 
 XML serialization attributes are optionally supported (listed below). By default, the support is disabled and can be accessed by creating a new `SerializationManager` with a `JsonReflectionController` which has that option turned on.
+
 * **XmlElementAttribute**
 * **XmlAttributeAttribute**
 * **XmlArrayAttribute**
 * **XmlEnumAttribute**
 * **XmlIgnoreAttribute**
 
-### New Settings in JSONParameters
+### New Settings in JsonParameters
 
-This fork introduced the following settings in `JSONParameters`:
+This fork introduced the following settings in `JsonParameters`:
+
 * **NamingConvention**: control the naming convention of serialized fields and properties. It has added support for camel-case, uppercase names.
 * **SerializeStaticMembers**: control whether static fields or properties should be serialized. (2015-4-2)
 * **ShowReadOnlyFields**: control whether readonly fields should be serialized. (2015-4-7)
