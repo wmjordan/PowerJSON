@@ -1,24 +1,23 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
     <metadata>
-        <id>PowerJSON</id>
-        <version>2.5.0.1</version>
-        <title>PowerJSON</title>
+        <id>PowerJson</id>
+        <version>3.0.0-alpha1</version>
+        <title>PowerJson</title>
         <authors>WMJ</authors>
         <projectUrl>https://github.com/wmjordan/PowerJSON</projectUrl>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
         <description>A fork from the fastJSON serializer with power to control various aspects of JSON serialization and deserialization.</description>
         <summary>PowerJSON is a fork from the fastJSON with many serialization controls and performance enhancements.</summary>
-        <releaseNotes>Fixed an issue which caused JsonConverter not applied to enumerable items.</releaseNotes>
+        <releaseNotes>This is a pre-release version of PowerJson 3.0. Please read the migration guidance in the documentation file.</releaseNotes>
         <copyright>wmjordan</copyright>
+        <tags>JSON</tags>
     </metadata>
     <files>
-        <file src="output\net20\fastJSON.dll" target="lib\net20\fastJSON.dll" />
-        <file src="output\net20\fastJSON.XML" target="lib\net20\fastJSON.XML" />
-        <file src="output\PowerJSON\fastJSON.dll" target="lib\net40\fastJSON.dll" />
-        <file src="output\PowerJSON\fastJSON.XML" target="lib\net40\fastJSON.XML" />
-        <file src="output\net40\fastJSON.dll" target="lib\net40-client\fastJSON.dll" />
-        <file src="output\net40\fastJSON.XML" target="lib\net40-client\fastJSON.XML" />
+        <file src="output\net20\PowerJson.dll" target="lib\net20\PowerJSON.dll" />
+        <file src="output\net20\PowerJSON.XML" target="lib\net20\PowerJSON.XML" />
+        <file src="output\net40\PowerJson.dll" target="lib\net40\PowerJSON.dll" />
+        <file src="output\net40\PowerJson.xml" target="lib\net40\PowerJSON.XML" />
         <file src="output\Help\PowerJSON.chm" target="PowerJSON.chm" />
     </files>
 </package>

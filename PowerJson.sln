@@ -3,13 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.24720.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Benchmarks", "consoletest\Benchmarks.csproj", "{6BADD8B3-618E-412A-BBCA-8420EFD5B62E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Benchmarks", "Benchmarks\Benchmarks.csproj", "{6BADD8B3-618E-412A-BBCA-8420EFD5B62E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowerJson net2", "fastJSON\PowerJson net2.csproj", "{FDAF5695-E651-4D4D-8E15-0BD9FBEF5069}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowerJson net2", "Source\PowerJson net2.csproj", "{FDAF5695-E651-4D4D-8E15-0BD9FBEF5069}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MsUnitTest", "MsUnitTest\MsUnitTest.csproj", "{06986A96-E884-4807-BECD-8BF5153C2984}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowerJson", "fastJSON\PowerJson.csproj", "{508E9933-382C-46E9-950B-0264B21A8A7B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowerJson", "Source\PowerJson.csproj", "{508E9933-382C-46E9-950B-0264B21A8A7B}"
 EndProject
 Project("{7CF6DF6D-3B04-46F8-A40B-537D21BCA0B4}") = "Documentation", "Documentation\Documentation.shfbproj", "{CB7A62EE-16E5-4671-8BCE-13419B0F13F7}"
 EndProject

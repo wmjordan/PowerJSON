@@ -81,7 +81,7 @@
     <Compile Include="Program.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\fastJSON\PowerJson.csproj">
+    <ProjectReference Include="..\Source\PowerJson.csproj">
       <Project>{508e9933-382c-46e9-950b-0264b21a8a7b}</Project>
       <Name>PowerJson</Name>
     </ProjectReference>

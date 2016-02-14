@@ -5,11 +5,11 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>9.0.30729</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{207E91B1-C9F8-4913-88E1-3549EF5F3273}</ProjectGuid>
+    <ProjectGuid>{508E9933-382C-46E9-950B-0264B21A8A7B}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>fastJSON</RootNamespace>
-    <AssemblyName>fastJSON</AssemblyName>
+    <RootNamespace>PowerJson</RootNamespace>
+    <AssemblyName>PowerJson</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
@@ -40,7 +40,7 @@
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
     <NoWin32Manifest>False</NoWin32Manifest>
-    <IntermediateOutputPath>obj\net40\$(Configuration)\</IntermediateOutputPath>
+    <IntermediateOutputPath>obj\PowerJSON\$(Configuration)\</IntermediateOutputPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -49,7 +49,9 @@
     <OutputPath>bin\net40\</OutputPath>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <DefineConstants>DEBUG;</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;BONUSPACK</DefineConstants>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <LangVersion>5</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <Optimize>true</Optimize>
@@ -57,12 +59,18 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <DebugSymbols>true</DebugSymbols>
-    <DocumentationFile>..\output\net40\fastJSON.XML</DocumentationFile>
+    <DefineConstants>BONUSPACK</DefineConstants>
+    <DocumentationFile>..\output\net40\PowerJson.xml</DocumentationFile>
+    <CodeAnalysisRuleSet>ExtendedDesignGuidelineRules.ruleset</CodeAnalysisRuleSet>
+    <LangVersion>5</LangVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(TargetFrameworkVersion.Replace(&quot;v&quot;,&quot;&quot;))' &gt;= '4.0' ">
+    <DefineConstants>$(DefineConstants);NET_40_OR_GREATER</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <CheckForOverflowUnderflow>False</CheckForOverflowUnderflow>
     <StartAction>Project</StartAction>
-    <BaseIntermediateOutputPath>obj\net40\</BaseIntermediateOutputPath>
+    <BaseIntermediateOutputPath>obj\PowerJSON\</BaseIntermediateOutputPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Platform)' == 'AnyCPU' ">
     <RegisterForComInterop>False</RegisterForComInterop>
@@ -70,11 +78,8 @@
     <BaseAddress>4194304</BaseAddress>
     <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(TargetFrameworkVersion.Replace(&quot;v&quot;,&quot;&quot;))' &gt;= '4.0' ">
-    <DefineConstants>$(DefineConstants);NET_40_OR_GREATER</DefineConstants>
-  </PropertyGroup>
   <PropertyGroup>
-    <AssemblyOriginatorKeyFile>fastJSON.snk</AssemblyOriginatorKeyFile>
+    <AssemblyOriginatorKeyFile>PowerJson.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -87,22 +92,33 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="Converters.cs" />
+    <Compile Include="DynamicJson.cs" />
     <Compile Include="Constants.cs" />
-    <Compile Include="dynamic.cs" />
+    <Compile Include="Extensions\EnumerableDataReader.cs" />
+    <Compile Include="ExtraConverters\IPAddressConverter.cs" />
+    <Compile Include="ExtraConverters\ReflectedTypeConverter.cs" />
+    <Compile Include="ExtraConverters\RegexConverter.cs" />
+    <Compile Include="ExtraConverters\UriConverter.cs" />
+    <Compile Include="ExtraConverters\VersionConverter.cs" />
+    <Compile Include="ExtraConverters\XmlNodeConverter.cs" />
+    <Compile Include="ExtraConverters\ZeroOneBooleanConverter.cs" />
     <Compile Include="Formatter.cs" />
+    <Compile Include="JsonInterceptor.cs" />
     <Compile Include="JsonConverter.cs" />
     <Compile Include="JsonDeserializer.cs" />
-    <Compile Include="JsonInterceptor.cs" />
-    <Compile Include="JSONParameters.cs" />
+    <Compile Include="JsonParameters.cs" />
     <Compile Include="JsonSerializationException.cs" />
     <Compile Include="JsonSerializer.cs" />
-    <Compile Include="JSON.cs" />
+    <Compile Include="Json.cs" />
     <Compile Include="JsonParser.cs" />
+    <Compile Include="JsonStringWriter.cs" />
     <Compile Include="Reflection.cs" />
     <Compile Include="ReflectionCache.cs" />
     <Compile Include="ReflectionController.cs" />
     <Compile Include="SafeDictionary.cs" />
     <Compile Include="SerializationAttributes.cs" />
+    <Compile Include="SerializationInfo.cs" />
     <Compile Include="SerializationManager.cs" />
     <Compile Include="ValueConverter.cs" />
   </ItemGroup>
@@ -129,11 +145,11 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\fastJSON.nuspec">
-      <Link>fastJSON.nuspec</Link>
+    <None Include="..\PowerJson.nuspec">
+      <Link>PowerJson.nuspec</Link>
       <SubType>Designer</SubType>
     </None>
-    <None Include="fastJSON.snk" />
+    <None Include="PowerJson.snk" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
