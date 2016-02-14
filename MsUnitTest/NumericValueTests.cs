@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading;
-using fastJSON;
+using PowerJson;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace MsUnitTest
@@ -11,8 +11,8 @@ namespace MsUnitTest
 		[TestMethod]
 		public void BigNumber () {
 			double d = 4.16366160299608e18;
-			var s = JSON.ToJSON (d);
-			var o = JSON.ToObject<double> (s);
+			var s = Json.ToJson (d);
+			var o = Json.ToObject<double> (s);
 			Assert.AreEqual (d, o);
 		}
 
@@ -21,8 +21,8 @@ namespace MsUnitTest
 			var cc = Thread.CurrentThread.CurrentCulture;
             Thread.CurrentThread.CurrentCulture = new System.Globalization.CultureInfo ("de");
 			decimal d = 3.141592654M;
-			var s = JSON.ToJSON (d);
-			var o = JSON.ToObject<decimal> (s);
+			var s = Json.ToJson (d);
+			var o = Json.ToObject<decimal> (s);
 			Assert.AreEqual (d, o);
 
 			Thread.CurrentThread.CurrentCulture = cc;

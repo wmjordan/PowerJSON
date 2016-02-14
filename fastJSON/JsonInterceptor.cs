@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace fastJSON
+namespace PowerJson
 {
 	/// <summary>
 	/// <para>An interface to intercept various aspects in JSON serialization and deserialization.</para>
-	/// <para>It is recommended to inherit from <see cref="JsonInterceptor&lt;T&gt;"/> for easier implementation when possible.</para>
+	/// <para>It is recommended to inherit from <see cref="JsonInterceptor{T}"/> for easier implementation when possible.</para>
 	/// </summary>
 	/// <preliminary />
 	public interface IJsonInterceptor

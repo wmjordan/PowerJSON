@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using fastJSON;
+using PowerJson;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace MsUnitTest
@@ -109,14 +109,14 @@ namespace MsUnitTest
 		[TestInitialize]
 		public void Bootstrap () {
 			#region Bootstrap
-			JSON.Parameters.NamingConvention = NamingConvention.CamelCase;
-			JSON.Parameters.UseExtensions = false;
+			Json.Parameters.NamingConvention = NamingConvention.CamelCase;
+			Json.Parameters.UseExtensions = false;
 			#endregion
 		}
 		[TestCleanup]
 		public void CleanUp () {
-			JSON.Parameters.NamingConvention = NamingConvention.Default;
-			JSON.Parameters.UseExtensions = true;
+			Json.Parameters.NamingConvention = NamingConvention.Default;
+			Json.Parameters.UseExtensions = true;
 		}
 
 		[TestMethod]
@@ -131,7 +131,7 @@ namespace MsUnitTest
 			};
 			#endregion
 			#region Print Result
-			var s = JSON.ToJSON (d);
+			var s = Json.ToJson (d);
 			Console.WriteLine (s);
 			#endregion
 			Assert.IsTrue (s.Contains ("\"prop\":\"p\""));
@@ -141,17 +141,17 @@ namespace MsUnitTest
 			Assert.IsTrue (s.Contains ("\"a\":{\"name\":\"c\"}"));
 			Assert.IsTrue (s.Contains ("\"private\":1"));
 			s = s.Replace ("\"private\":1", "\"private\":2");
-			var o = JSON.ToObject<Demo1.DemoClass> (s);
+			var o = Json.ToObject<Demo1.DemoClass> (s);
 			Assert.AreEqual (d.MyProperty, o.MyProperty);
 			Assert.AreEqual (d.Number, o.Number);
 			Assert.AreEqual ((d.Identifier as ClassA).Name, (o.Identifier as ClassA).Name);
 			Assert.AreEqual (0, o.InternalValue);
 			Assert.AreEqual (d.MyEnumProperty, o.MyEnumProperty);
-			s = JSON.ToJSON (o);
+			s = Json.ToJson (o);
 			Assert.IsTrue (s.Contains ("\"private\":2"));
 
 			d.Number = 0;
-			s = JSON.ToJSON (d);
+			s = Json.ToJson (d);
 			Console.WriteLine (s);
 			Assert.IsFalse (s.Contains ("\"number\":"));
 		}
@@ -161,7 +161,7 @@ namespace MsUnitTest
 
 			#region Noninvasive Control Code
 			// overrides the serialization behavior of DemoClass
-			JSON.Manager.Override<DemoClass> (new TypeOverride () {
+			Json.Manager.Override<DemoClass> (new TypeOverride () {
 				// makes DemoClass always deserializable
 				Deserializable = true,
 				// override members of the class
@@ -187,7 +187,7 @@ namespace MsUnitTest
 				}
 			});
 			// changes the serialized name of the "Vip" field of the MyEnum enum type
-			JSON.Manager.OverrideEnumValueNames<MyEnum> (new Dictionary<string, string> {
+			Json.Manager.OverrideEnumValueNames<MyEnum> (new Dictionary<string, string> {
 				{ "Vip", "VIP" }
 			});
 			#endregion
@@ -199,7 +199,7 @@ namespace MsUnitTest
 				InternalValue = 2,
 				Identifier = new ClassA () { Name = "c" }
 			};
-			var s = JSON.ToJSON (d);
+			var s = Json.ToJson (d);
 			Console.WriteLine (s);
 			Assert.IsTrue (s.Contains ("\"prop\":\"p\""));
 			Assert.IsTrue (s.Contains ("\"number\":1"));
@@ -209,24 +209,24 @@ namespace MsUnitTest
 			Assert.IsTrue (s.Contains ("\"a\":{\"name\":\"c\"}"));
 
 			s = s.Replace ("\"private\":1", "\"private\":2");
-			var o = JSON.ToObject<DemoClass> (s);
+			var o = Json.ToObject<DemoClass> (s);
 			Assert.AreEqual (d.MyProperty, o.MyProperty);
 			Assert.AreEqual (d.Number, o.Number);
 			Assert.AreEqual ((d.Identifier as ClassA).Name, (o.Identifier as ClassA).Name);
 			Assert.AreEqual (0, o.InternalValue);
 			Assert.AreEqual (d.MyEnumProperty, o.MyEnumProperty);
-			s = JSON.ToJSON (o);
+			s = Json.ToJson (o);
 			Assert.IsTrue (s.Contains ("\"private\":2"));
 
 			d.Number = 0;
-			s = JSON.ToJSON (d);
+			s = Json.ToJson (d);
 			Console.WriteLine (s);
 			Assert.IsFalse (s.Contains ("\"number\":"));
 		}
 
 		[TestMethod]
 		public void AlterationTest () {
-			JSON.Parameters.NamingConvention = NamingConvention.Default;
+			Json.Parameters.NamingConvention = NamingConvention.Default;
 			#region Alternated SerializationManager
 			var g = new Group () {
 				ID = 1,
@@ -238,18 +238,18 @@ namespace MsUnitTest
 				}
 			};
 
-			var gsm = new SerializationManager (new DefaultReflectionController ());
-			gsm.Override<Member> (new TypeOverride () {
+			var sm = new SerializationManager (new DefaultReflectionController ());
+			sm.Override<Member> (new TypeOverride () {
 				MemberOverrides = { new MemberOverride ("GroupID", false) }
 			});
 
 			// use the alternated SerializationManager
-			var s1 = JSON.ToJSON (g, JSON.Parameters, gsm);
+			var s1 = Json.ToJson (g, sm);
 			Console.WriteLine ("Group: " + s1);
 			Assert.IsFalse (s1.Contains ("GroupID")); // "GroupID" is invisible
 
 			 // use the default SerializationManager
-			s1 = JSON.ToJSON (g.Members[0]);
+			s1 = Json.ToJson (g.Members[0]);
 			Console.WriteLine ("Member: " + s1);
 			StringAssert.Contains (s1, "GroupID"); // "GroupID" is visible
 			#endregion
@@ -259,35 +259,35 @@ namespace MsUnitTest
 		{
 			static readonly DateTime RefDate = new DateTime (1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 			static readonly long RefTicks = RefDate.Ticks;
-			protected override string Convert (string fieldName, DateTime fieldValue) {
-				return String.Concat ("/Date(", ((long)Math.Round (fieldValue.Subtract (RefDate).TotalMilliseconds)).ToString (System.Globalization.NumberFormatInfo.InvariantInfo), ")/");
+			protected override string Convert (DateTime value) {
+				return String.Concat ("/Date(", ((long)Math.Round (value.Subtract (RefDate).TotalMilliseconds)).ToString (System.Globalization.NumberFormatInfo.InvariantInfo), ")/");
 			}
-			protected override DateTime Revert (string fieldName, string fieldValue) {
-				var s = fieldValue.IndexOf ('(');
-				var e = fieldValue.IndexOf (')');
-				return new DateTime (RefTicks + Int64.Parse (fieldValue.Substring (++s, e - s)) * 10000L, DateTimeKind.Local);
+			protected override DateTime Revert (string value) {
+				var s = value.IndexOf ('(');
+				var e = value.IndexOf (')');
+				return new DateTime (RefTicks + Int64.Parse (value.Substring (++s, e - s)) * 10000L, DateTimeKind.Local);
 			}
 		}
 		class AddHourConverter : JsonConverter<DateTime, DateTime>
 		{
-			protected override DateTime Convert (string fieldName, DateTime fieldValue) {
-				return fieldValue.AddHours (1);
+			protected override DateTime Convert (DateTime value) {
+				return value.AddHours (1);
 			}
 
-			protected override DateTime Revert (string fieldName, DateTime fieldValue) {
-				return fieldValue.AddHours (-1);
+			protected override DateTime Revert (DateTime value) {
+				return value.AddHours (-1);
 			}
 		}
 		class BaseClassConverter : JsonConverter<baseclass, baseclass>
 		{
-			protected override baseclass Convert (string fieldName, baseclass fieldValue) {
-				fieldValue.Code += "...";
-				return fieldValue;
+			protected override baseclass Convert (baseclass value) {
+				value.Code += "...";
+				return value;
 			}
 
-			protected override baseclass Revert (string fieldName, baseclass fieldValue) {
-				fieldValue.Code = fieldValue.Code.Substring (0, fieldValue.Code.Length - 3);
-				return fieldValue;
+			protected override baseclass Revert (baseclass value) {
+				value.Code = value.Code.Substring (0, value.Code.Length - 3);
+				return value;
 			}
 		}
 		public class ConverterSampleClass
@@ -299,44 +299,44 @@ namespace MsUnitTest
 		public void ConverterTest () {
 			var sm = new SerializationManager ();
 			sm.Override<bool> (new TypeOverride () {
-				Converter = fastJSON.BonusPack.Converters.ZeroOneBoolean
+				Converter = PowerJson.Converters.ZeroOneBoolean
             });
 			sm.Override<DateTime> (new TypeOverride () { Converter = new JavaTimestampConverter () });
-			var s = JSON.ToJSON (true, sm);
+			var s = Json.ToJson (true, sm);
 			Console.WriteLine (s);
 			Assert.AreEqual ("1", s);
-			Assert.IsTrue (JSON.ToObject<bool> (s, sm));
-			s = JSON.ToJSON (false, sm);
+			Assert.IsTrue (Json.ToObject<bool> (s, sm));
+			s = Json.ToJson (false, sm);
 			Console.WriteLine (s);
 			Assert.AreEqual ("0", s);
-			Assert.IsFalse (JSON.ToObject<bool> (s, sm));
+			Assert.IsFalse (Json.ToObject<bool> (s, sm));
 
-			s = JSON.ToJSON (new DateTime (1970, 1, 1), sm);
+			s = Json.ToJson (new DateTime (1970, 1, 1), sm);
 			Console.WriteLine (s);
 			Assert.AreEqual ("\"/Date(0)/\"", s);
 			var d = new DateTime (1997, 7, 1, 23, 59, 59);
-			s = JSON.ToJSON (d, sm);
+			s = Json.ToJson (d, sm);
 			Assert.AreEqual ("\"/Date(867801599000)/\"", s);
 			Console.WriteLine (s);
-			Assert.AreEqual (d, JSON.ToObject<DateTime> (s, sm));
+			Assert.AreEqual (d, Json.ToObject<DateTime> (s, sm));
 
 			var c = new ConverterSampleClass () { Boolean = true, DateTime = DateTime.Now };
-			s = JSON.ToJSON (c, sm);
+			s = Json.ToJson (c, sm);
 			Console.WriteLine (s);
-			var o = JSON.ToObject<ConverterSampleClass> (s, sm);
+			var o = Json.ToObject<ConverterSampleClass> (s, sm);
 			Assert.AreEqual (c.Boolean, o.Boolean);
 			Assert.AreEqual (c.DateTime.ToString (), o.DateTime.ToString ());
 
 			sm.Override<DateTime> (new TypeOverride () { Converter = new AddHourConverter () });
-			s = JSON.ToJSON (d, sm);
+			s = Json.ToJson (d, sm);
 			Console.WriteLine (s);
-			Console.WriteLine (JSON.ToJSON (c, sm));
-			Assert.AreEqual (d, JSON.ToObject<DateTime> (s, sm));
+			Console.WriteLine (Json.ToJson (c, sm));
+			Assert.AreEqual (d, Json.ToObject<DateTime> (s, sm));
 
 			sm.Override<baseclass> (new TypeOverride () { Converter = new BaseClassConverter () });
-			s = JSON.ToJSON (new baseclass () { Name = "a", Code = "b" }, sm);
+			s = Json.ToJson (new baseclass () { Name = "a", Code = "b" }, sm);
 			Console.WriteLine (s);
-			var bc = JSON.ToObject<baseclass> (s, sm);
+			var bc = Json.ToObject<baseclass> (s, sm);
 			Assert.AreEqual ("b", bc.Code);
 		}
 	}

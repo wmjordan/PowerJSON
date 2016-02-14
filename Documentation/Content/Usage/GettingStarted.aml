@@ -17,29 +17,8 @@
            zero (0) to limit it to top-level sections only.  -->
 			<autoOutline />
 
-			<para>
-				This article will give you a simple walkthrough for the PowerJSON--a fork from the fastest JSON serialization engine, <externalLink>
-					<linkText>fastJSON</linkText>
-					<linkUri>http://fastjson.codeplex.com</linkUri>
-					<linkTarget>_blank</linkTarget>
-				</externalLink>.
-			</para>
+			<para>This article will give you a simple walk-through for the high performance JSON serializer--PowerJson.</para>
 		</introduction>
-
-		<prerequisites>
-			<content>
-				<para>
-					If <newTerm>fastJSON</newTerm> is new to you, it is recommended that you <externalLink>
-						<linkText>read this article</linkText>
-						<linkUri>http://www.codeproject.com/Articles/159450/fastJSON</linkUri>
-						<linkTarget>_blank</linkTarget>
-					</externalLink> before you begin.
-				</para>
-				<para>
-					<newTerm>PowerJSON</newTerm> is forked from <newTerm>fastJSON</newTerm> and almost fully compatible with it. Therefore, the assembly file name of PowerJSON is fastJSON.dll and the type library uses <literal>fastJSON</literal> as the namespace.
-				</para>
-			</content>
-		</prerequisites>
 
 		<section>
 			<title>Serialization and Deserialization</title>
@@ -49,7 +28,7 @@
 					<steps class="ordered">
 						<step>
 							<content>
-								<para>Reference to the library <literal>fastJSON.dll</literal>, or add the source code into your solution and compile the code.
+								<para>Reference to the library <literal>PowerJson.dll</literal>, or add the source code into your solution and compile the code.
 								</para>
 							</content>
 						</step>
@@ -72,13 +51,13 @@
 						<step>
 							<content>
 								<para>Serialization could be done in one line:</para>
-								<code language="c#">string json = fastJSON.JSON.ToJSON (obj);</code>
+								<code language="c#">string json = PowerJson.Json.ToJson (obj);</code>
 							</content>
 						</step>
 						<step>
 							<content>
 								<para>And deserialization could be done in one line too:</para>
-								<code language="c#"><![CDATA[MyModel result = fastJSON.JSON.ToObject<MyModel> (json);]]></code>
+								<code language="c#"><![CDATA[MyModel result = PowerJson.Json.ToObject<MyModel> (json);]]></code>
 							</content>
 						</step>
 					</steps>
@@ -86,7 +65,7 @@
 						<content>
 							<para>OK, it is done.</para>
 							<para>
-								In this example, we can learn that the central part of the serialization and deserialization is done with the <codeEntityReference>T:fastJSON.JSON</codeEntityReference> class, and it is fairly easy.
+								In this example, we can learn that the central part of the serialization and deserialization is done with the <codeEntityReference>T:PowerJson.Json</codeEntityReference> class, and it is fairly easy.
 							</para>
 						</content>
 					</conclusion>
@@ -101,9 +80,8 @@
 					<steps class="ordered">
 						<step>
 							<content>
-								<para>If you compile the above lines in a test project, and observe the serialization result of the <codeEntityReference>M:fastJSON.JSON.ToJSON(System.Object)</codeEntityReference> method, you might read something like this.</para>
-								<code language="none"><![CDATA[{"$types":{"consoletest.MyModel, consoletest, Version=1.0.5593.40826,
-Culture=neutral, PublicKeyToken=null":"1"},"$type":"1",
+								<para>If you compile the above lines in a test project, and observe the serialization result of the <codeEntityReference>M:PowerJson.Json.ToJson(System.Object)</codeEntityReference> method, you might read something like this.</para>
+								<code language="none"><![CDATA[{"$type":"consoletest.MyModel",
 "MyProperty":"hello world."}]]></code>
 								<para>If you have read about the <externalLink>
 									<linkText>JSON specification</linkText>
@@ -112,7 +90,7 @@ Culture=neutral, PublicKeyToken=null":"1"},"$type":"1",
 								</externalLink>, you might expect to see a neater result, like the following code shows.</para>
 								<code>{"MyProperty":"hello world."}</code>
 								<para>
-									The reason for the extra part like <codeInline>"$types":{"consoletest.MyModel, consoletest, Version=1.0.5593.40826, Culture=neutral, PublicKeyToken=null":"1"},"$type":"1"</codeInline> is to support <newTerm>polymorphic serialization</newTerm> and <newTerm>circular reference detection</newTerm>. Those added <codeInline>$types</codeInline> and <codeInline>$type</codeInline> fields are called <newTerm>JSON Extensions</newTerm>.
+									The reason for the extra part like <codeInline>"$type":"consoletest.MyModel"</codeInline> is to support <newTerm>polymorphic serialization</newTerm>. The added <codeInline>$type</codeInline> field is called <newTerm>JSON Extension</newTerm>.
 								</para>
 							</content>
 						</step>
@@ -123,16 +101,16 @@ Culture=neutral, PublicKeyToken=null":"1"},"$type":"1",
 						</step>
 						<step>
 							<content>
-								<para>To disable the JSON Extensions globally, you can add the following line before calling the <codeInline>JSON.ToJSON</codeInline> method.</para>
-								<code language="c#">fastJSON.JSON.Parameters.UseExtensions = false;</code>
+								<para>To disable the JSON Extensions globally, you can add the following line before calling the <codeInline>Json.ToJson</codeInline> method.</para>
+								<code language="c#">PowerJson.Json.Parameters.UseExtensions = false;</code>
 							</content>
 						</step>
 						<step>
 							<content>
-								<para>To disable the JSON Extensions for particular serialization results, you can initialize a new <codeEntityReference>T:fastJSON.JSONParameters</codeEntityReference> instance and set the <codeEntityReference>F:fastJSON.JSONParameters.UseExtensions</codeEntityReference> field to <codeInline>false</codeInline>. And then pass it to the <codeInline>ToJSON</codeInline> method, like the following code shows.</para>
+								<para>To disable the JSON Extensions for particular serialization results, you can initialize a new <codeEntityReference>T:PowerJson.JsonParameters</codeEntityReference> instance and set the <codeEntityReference>F:PowerJson.JsonParameters.UseExtensions</codeEntityReference> field to <codeInline>false</codeInline>. And then pass it to the <codeInline>ToJson</codeInline> method, like the following code shows.</para>
 								<code language="c#">
-									<![CDATA[var parameters = new fastJSON.JSONParameters () { UseExtensions = false };
-string json = fastJSON.JSON.ToJSON (obj, parameters);]]></code>
+									<![CDATA[var parameters = new PowerJson.JsonParameters () { UseExtensions = false };
+string json = PowerJson.Json.ToJson (obj, parameters);]]></code>
 							</content>
 						</step>
 					</steps>
@@ -149,15 +127,15 @@ string json = fastJSON.JSON.ToJSON (obj, parameters);]]></code>
 						</step>
 						<step>
 							<content>
-								<para>In this walkthrough, we want the <codeInline>MyModel</codeInline> property to be serialized in camel-case, i.e, <codeInline>myModel</codeInline>.
+								<para>In this walk-through, we want the <codeInline>MyModel</codeInline> property to be serialized in camel-case, i.e, <codeInline>myModel</codeInline>.
 							</para>
 							</content>
 						</step>
 						<step>
 							<content>
-								<para>To change the case of serialized names, you can use the <codeEntityReference>P:fastJSON.JSONParameters.NamingConvention</codeEntityReference> setting, like the following code shows.
+								<para>To change the case of serialized names, you can use the <codeEntityReference>P:PowerJson.JsonParameters.NamingConvention</codeEntityReference> setting, like the following code shows.
 							</para>
-								<code language="c#">fastJSON.JSON.Parameters.NamingConvention = fastJSON.NamingConvention.CamelCase;</code>
+								<code language="c#">PowerJson.Json.Parameters.NamingConvention = PowerJson.NamingConvention.CamelCase;</code>
 								<para>The above code will set the serialized member name to camel-case.</para>
 							</content>
 						</step>
@@ -168,7 +146,7 @@ string json = fastJSON.JSON.ToJSON (obj, parameters);]]></code>
 		<section address="conclusion">
 			<title>Conclusion</title>
 			<content>
-				<para>Here's the complete code snippet for this walkthrough.</para>
+				<para>Here's the complete code snippet for this walk-through.</para>
 				<code language="c#">
 					<![CDATA[
 public class MyModel
@@ -179,16 +157,16 @@ public class Program
 {
 	public static void Main (string[] args) {
 		var obj = new MyModel () { MyProperty = "hello world." };
-		fastJSON.JSON.Parameters.UseExtensions = false;
-		fastJSON.JSON.Parameters.NamingConvention = fastJSON.NamingConvention.CamelCase;
-		string json = fastJSON.JSON.ToJSON (obj);
+		PowerJson.Json.Parameters.UseExtensions = false;
+		PowerJson.Json.Parameters.NamingConvention = PowerJson.NamingConvention.CamelCase;
+		string json = PowerJson.Json.ToJson (obj);
 		Console.WriteLine (json);
 	}
 }
 ]]></code>
 				<para>And the output is:</para>
 				<code language="none">{"myProperty":"hello world."}</code>
-				<para>It is very simple, right? As you work on with your projects, you will encounter more complex requirements of JSON serialization and deserialization. We will disguss more in the following chapters.</para>
+				<para>It is very simple, right? As you work on with your projects, you will encounter more complex requirements of JSON serialization and deserialization. We will discuss more in the following chapters.</para>
 			</content>
 		</section>
 		<!-- Optional next steps info

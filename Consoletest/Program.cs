@@ -5,123 +5,112 @@ using System.Collections.Specialized;
 using System.Data;
 using System.Diagnostics;
 using System.IO;
-using System.Reflection;
 using System.Runtime.Serialization.Formatters.Binary;
 
-namespace consoletest
+namespace PowerJson.Benchmarks
 {
-    public class Program
-    {
-        static int count = 1000;
-        static int tcount = 5;
-        static DataSet ds = new DataSet();
-        static bool exotic = false;
-        static bool dsser = false;
+	public class Program
+	{
+		static int count = 1000;
+		static int tcount = 5;
+		static DataSet ds = CreateDataset();
+		static colclass sampleData;
+		static bool includeOthers;
+		static bool includeDataset;
 
 		public static void Main (string[] args)
-        {
+		{
 			Console.WriteLine (".net version = " + Environment.Version);
 			START:
-			Console.WriteLine ("==== fastJSON console test program ====");
-			Console.WriteLine ("\t1, Serialization Benchmark");
-			Console.WriteLine ("\t2, Deserialization Benchmark");
+			Console.WriteLine ("==== PowerJson Performance Benchmark Program ====");
+			Console.WriteLine ("\t1, Serialization Benchmarks");
+			Console.WriteLine ("\t2, Deserialization Benchmarks");
 			Console.WriteLine ("\t3, Misc. Tests");
-			Console.WriteLine ("\t4, Exotic Serialization Benchmark");
-			Console.WriteLine ("\t5, Exotic Deserialization Benchmark");
+			Console.WriteLine ("\t4, Exotic Serialization Benchmarks");
+			Console.WriteLine ("\t5, Exotic Deserialization Benchmarks");
 			Console.WriteLine ("\t6, Exotic Misc. Tests");
 			Console.WriteLine ("\t7, Serialization Tests");
 			Console.WriteLine ("\t8, Deserialization Tests");
-			Console.WriteLine ("\tOther key: Exit");
+			Console.WriteLine ("[options]");
+			Console.WriteLine ("\tS, Toggle other serializers in benchmarks: " + includeOthers);
+			Console.WriteLine ("\tD, Toggle dataset in benchmarks: " + includeDataset);
+			Console.WriteLine ("\nOther key: Exit");
 			Console.WriteLine ("Please select an option: ");
 			var k = Console.ReadKey ().KeyChar;
 			Console.WriteLine();
 			switch (k) {
 				case '4':
-					exotic = true;
-					SerializationTest ();
+					SerializationTest (true);
 					break;
 				case '1':
-					exotic = false;
-					SerializationTest ();
+					SerializationTest (false);
 					break;
 				case '7':
-					exotic = false;
-					SerializationTest ();
-					exotic = true;
-					SerializationTest ();
+					SerializationTest (false);
+					SerializationTest (true);
 					break;
 				case '5':
-					exotic = true;
-					DeserializationTest ();
+					DeserializationTest (true);
 					break;
 				case '2':
-					exotic = false;
-					DeserializationTest ();
+					DeserializationTest (false);
 					break;
 				case '8':
-					exotic = false;
-					DeserializationTest ();
-					exotic = true;
-					DeserializationTest ();
+					DeserializationTest (false);
+					DeserializationTest (true);
 					break;
 				case '6':
-					exotic = true;
-					WriteTestObject (CreateObject ());
+					WriteTestObject (CreateObject (true, false));
 					WriteTestObject (CreateNVCollection ());
 					NullValueTest ();
 					TestCustomConverterType ();
 					break;
 				case '3':
-					exotic = false;
-					WriteTestObject (CreateObject ());
+					WriteTestObject (CreateObject (false, false));
 					WriteTestObject (CreateNVCollection ());
 					NullValueTest ();
 					TestCustomConverterType ();
+					break;
+				case 'S':
+				case 's':
+					includeOthers = !includeOthers;
+					Console.Clear ();
+					break;
+				case 'D':
+				case 'd':
+					includeDataset = !includeDataset;
+					Console.Clear ();
 					break;
 				default: return;
 			}
 
 			goto START;
-			#region [ other tests]
-
-            //			litjson_serialize();
-            //			jsonnet_serialize();
-            //			jsonnet4_serialize();
-            //stack_serialize();
-
-            //systemweb_deserialize();
-            //bin_deserialize();
-            //fastjson_deserialize();
-
-            //			litjson_deserialize();
-            //			jsonnet_deserialize();
-            //			jsonnet4_deserialize();
-            //			stack_deserialize();
-            #endregion
-        }
-
-		private static void DeserializationTest () {
-			ds = CreateDataset ();
-			Console.WriteLine ("-dataset");
-			dsser = false;
-			//bin_deserialize();
-			fastjson_deserialize ();
-			dsser = true;
-			Console.WriteLine ("+dataset");
-			//bin_deserialize();
-			fastjson_deserialize ();
 		}
 
-		private static void SerializationTest () {
-			ds = CreateDataset ();
-			Console.WriteLine ("-dataset");
-			dsser = false;
-			//bin_serialize();
-			fastjson_serialize ();
-			dsser = true;
-			Console.WriteLine ("+dataset");
-			//bin_serialize();
-			fastjson_serialize ();
+		private static void DeserializationTest (bool exotic) {
+			sampleData = CreateObject (exotic, includeDataset);
+			if (includeOthers) {
+				bin_deserialize();
+			}
+			PowerJson_deserialize ();
+			if (includeOthers) {
+				JsonNet_deserialize ();
+				ServiceStack_deserialize ();
+			}
+			Console.WriteLine ();
+		}
+
+		private static void SerializationTest (bool exotic) {
+			sampleData = CreateObject (exotic, includeDataset);
+			if (includeOthers) {
+				bin_serialize ();
+			}
+			PowerJson_serialize ();
+			if (includeOthers) {
+				JsonNet_serialize ();
+				ServiceStack_serialize ();
+			}
+			Console.WriteLine ();
 		}
 
 		private static System.Collections.Specialized.NameValueCollection CreateNVCollection () {
@@ -134,21 +123,21 @@ namespace consoletest
 		}
 
 		private static void WriteTestObject<T> (T obj) {
-			var t = fastJSON.JSON.ToJSON (obj);
+			var t = Json.ToJson (obj);
 			Console.WriteLine ("serialized " + typeof (T).FullName + ": ");
 			Console.WriteLine (t);
 			Console.WriteLine ("deserialized object: ");
-			var o = fastJSON.JSON.ToObject<T> (t);
-			Console.WriteLine (fastJSON.JSON.ToJSON (o));
+			var o = Json.ToObject<T> (t);
+			Console.WriteLine (Json.ToJson (o));
 			Console.ReadKey ();
 		}
 
 		private static void NullValueTest () {
 			Console.WriteLine ("Null value test");
 			var dv = new NullValueTest ();
-			Console.WriteLine (fastJSON.JSON.ToJSON (dv));
-			Console.WriteLine ((dv = fastJSON.JSON.ToObject<NullValueTest> (@"{ ""Text"": null, ""Number"": null, ""Array"": null, ""Guid"": null, ""NullableNumber"": null }")));
-			Console.WriteLine ((dv = fastJSON.JSON.ToObject<NullValueTest> (@"{}")));
+			Console.WriteLine (Json.ToJson (dv));
+			Console.WriteLine ((dv = Json.ToObject<NullValueTest> (@"{ ""Text"": null, ""Number"": null, ""Array"": null, ""Guid"": null, ""NullableNumber"": null }")));
+			Console.WriteLine ((dv = Json.ToObject<NullValueTest> (@"{}")));
 			Console.WriteLine ();
 		}
 
@@ -165,217 +154,283 @@ namespace consoletest
 				Multiple2 = new FreeTypeTest () { FreeType = new class2 ("a", "b", "c") },
 				Multiple3 = new FreeTypeTest () { FreeType = DateTime.Now }
 			};
-			var t = fastJSON.JSON.ToJSON (c, new fastJSON.JSONParameters () { UseExtensions = false });
+			var t = Json.ToJson (c, new JsonParameters () { UseExtensions = false });
 			Console.WriteLine ("serialized Test instance: ");
 			Console.WriteLine (t);
 			Console.WriteLine ("deserialized Test instance: ");
-			var o = fastJSON.JSON.ToObject<Test> (t);
-			Console.WriteLine (fastJSON.JSON.ToJSON (o, new fastJSON.JSONParameters () { UseExtensions = false }));
+			var o = Json.ToObject<Test> (t);
+			Console.WriteLine (Json.ToJson (o, new JsonParameters () { UseExtensions = false }));
 			Console.WriteLine ();
 			Console.ReadKey (true);
 		}
 
-        //private static string pser(object data)
-        //{
-        //    System.Drawing.Point p = (System.Drawing.Point)data;
-        //    return p.X.ToString() + "," + p.Y.ToString();
-        //}
+		public static colclass CreateObject(bool exotic, bool dataSet)
+		{
+			Console.Write ("Sample data");
+			Console.Write ("\tExtensive: " + exotic);
+			Console.WriteLine ("\tDataset: " + dataSet);
+			var c = new colclass();
 
-        //private static object pdes(string data)
-        //{
-        //    string[] ss = data.Split(',');
+			c.booleanValue = true;
+			c.ordinaryDecimal = 3;
 
-        //    return new System.Drawing.Point(
-        //        int.Parse(ss[0]),
-        //        int.Parse(ss[1])
-        //        );
-        //}
+			if (exotic)
+			{
+				c.nullableGuid = Guid.NewGuid();
+				c.hash = new Hashtable();
+				c.bytes = new byte[1024];
+				c.stringDictionary = new Dictionary<string, baseclass>();
+				c.objectDictionary = new Dictionary<baseclass, baseclass>();
+				c.intDictionary = new Dictionary<int, baseclass>();
+				c.nullableDouble = 100.003;
 
-        //private static string tsser(object data)
-        //{
-        //    return ((TimeSpan)data).Ticks.ToString();
-        //}
+				c.nullableDecimal = 3.14M;
 
-        //private static object tsdes(string data)
-        //{
-        //    return new TimeSpan(long.Parse(data));
-        //}
+				c.hash.Add(new class1("0", "hello", Guid.NewGuid()), new class2("1", "code", "desc"));
+				c.hash.Add(new class2("0", "hello", "pppp"), new class1("1", "code", Guid.NewGuid()));
 
-        public static colclass CreateObject()
-        {
-            var c = new colclass();
+				c.stringDictionary.Add("name1", new class2("1", "code", "desc"));
+				c.stringDictionary.Add("name2", new class1("1", "code", Guid.NewGuid()));
 
-            c.booleanValue = true;
-            c.ordinaryDecimal = 3;
+				c.intDictionary.Add(1, new class2("1", "code", "desc"));
+				c.intDictionary.Add(2, new class1("1", "code", Guid.NewGuid()));
 
-            if (exotic)
-            {
-                c.nullableGuid = Guid.NewGuid();
-                c.hash = new Hashtable();
-                c.bytes = new byte[1024];
-                c.stringDictionary = new Dictionary<string, baseclass>();
-                c.objectDictionary = new Dictionary<baseclass, baseclass>();
-                c.intDictionary = new Dictionary<int, baseclass>();
-                c.nullableDouble = 100.003;
+				c.objectDictionary.Add(new class1("0", "hello", Guid.NewGuid()), new class2("1", "code", "desc"));
+				c.objectDictionary.Add(new class2("0", "hello", "pppp"), new class1("1", "code", Guid.NewGuid()));
 
-                if (dsser)
-                    c.dataset = ds;
-                c.nullableDecimal = 3.14M;
+				c.arrayType = new baseclass[2];
+				c.arrayType[0] = new class1();
+				c.arrayType[1] = new class2();
+			}
+			c.dataset = dataSet ? ds : null;
 
-                c.hash.Add(new class1("0", "hello", Guid.NewGuid()), new class2("1", "code", "desc"));
-                c.hash.Add(new class2("0", "hello", "pppp"), new class1("1", "code", Guid.NewGuid()));
+			c.items.Add(new class1("1", "1", Guid.NewGuid()));
+			c.items.Add(new class2("2", "2", "desc1"));
+			c.items.Add(new class1("3", "3", Guid.NewGuid()));
+			c.items.Add(new class2("4", "4", "desc2"));
 
-                c.stringDictionary.Add("name1", new class2("1", "code", "desc"));
-                c.stringDictionary.Add("name2", new class1("1", "code", Guid.NewGuid()));
+			c.laststring = "" + DateTime.Now;
 
-                c.intDictionary.Add(1, new class2("1", "code", "desc"));
-                c.intDictionary.Add(2, new class1("1", "code", Guid.NewGuid()));
+			return c;
+		}
 
-                c.objectDictionary.Add(new class1("0", "hello", Guid.NewGuid()), new class2("1", "code", "desc"));
-                c.objectDictionary.Add(new class2("0", "hello", "pppp"), new class1("1", "code", Guid.NewGuid()));
+		public static DataSet CreateDataset()
+		{
+			DataSet ds = new DataSet();
+			for (int j = 1; j < 3; j++)
+			{
+				DataTable dt = new DataTable();
+				dt.TableName = "Table" + j;
+				dt.Columns.Add("col1", typeof(int));
+				dt.Columns.Add("col2", typeof(string));
+				dt.Columns.Add("col3", typeof(Guid));
+				dt.Columns.Add("col4", typeof(string));
+				dt.Columns.Add("col5", typeof(bool));
+				dt.Columns.Add("col6", typeof(string));
+				dt.Columns.Add("col7", typeof(string));
+				ds.Tables.Add(dt);
+				Random rrr = new Random();
+				for (int i = 0; i < 100; i++)
+				{
+					DataRow dr = dt.NewRow();
+					dr[0] = rrr.Next(int.MaxValue);
+					dr[1] = "" + rrr.Next(int.MaxValue);
+					dr[2] = Guid.NewGuid();
+					dr[3] = "" + rrr.Next(int.MaxValue);
+					dr[4] = true;
+					dr[5] = "" + rrr.Next(int.MaxValue);
+					dr[6] = "" + rrr.Next(int.MaxValue);
 
-                c.arrayType = new baseclass[2];
-                c.arrayType[0] = new class1();
-                c.arrayType[1] = new class2();
-            }
+					dt.Rows.Add(dr);
+				}
+			}
+			return ds;
+		}
 
-
-            c.items.Add(new class1("1", "1", Guid.NewGuid()));
-            c.items.Add(new class2("2", "2", "desc1"));
-            c.items.Add(new class1("3", "3", Guid.NewGuid()));
-            c.items.Add(new class2("4", "4", "desc2"));
-
-            c.laststring = "" + DateTime.Now;
-
-            return c;
-        }
-
-        public static DataSet CreateDataset()
-        {
-            DataSet ds = new DataSet();
-            for (int j = 1; j < 3; j++)
-            {
-                DataTable dt = new DataTable();
-                dt.TableName = "Table" + j;
-                dt.Columns.Add("col1", typeof(int));
-                dt.Columns.Add("col2", typeof(string));
-                dt.Columns.Add("col3", typeof(Guid));
-                dt.Columns.Add("col4", typeof(string));
-                dt.Columns.Add("col5", typeof(bool));
-                dt.Columns.Add("col6", typeof(string));
-                dt.Columns.Add("col7", typeof(string));
-                ds.Tables.Add(dt);
-                Random rrr = new Random();
-                for (int i = 0; i < 100; i++)
-                {
-                    DataRow dr = dt.NewRow();
-                    dr[0] = rrr.Next(int.MaxValue);
-                    dr[1] = "" + rrr.Next(int.MaxValue);
-                    dr[2] = Guid.NewGuid();
-                    dr[3] = "" + rrr.Next(int.MaxValue);
-                    dr[4] = true;
-                    dr[5] = "" + rrr.Next(int.MaxValue);
-                    dr[6] = "" + rrr.Next(int.MaxValue);
-
-                    dt.Rows.Add(dr);
-                }
-            }
-            return ds;
-        }
-
-        private static void fastjson_deserialize()
-        {
-            Console.Write("fastjson deserialize");
-            colclass c = CreateObject();
+		private static void PowerJson_deserialize()
+		{
+			Console.Write("PowerJson deserialize");
 
 			var stopwatch = new Stopwatch();
-            for (int pp = 0; pp < tcount; pp++)
-            {
-                colclass deserializedStore;
-                string jsonText = null;
+			for (int pp = 0; pp < tcount; pp++)
+			{
+				colclass deserializedStore;
+				string jsonText = null;
 
+				jsonText = Json.ToJson(sampleData, new JsonParameters () { SerializeNullValues = false });
+				deserializedStore = Json.ToObject<colclass>(jsonText);
 				stopwatch.Restart();
-                jsonText = fastJSON.JSON.ToJSON(c, new fastJSON.JSONParameters () { SerializeNullValues = false });
-                //Console.WriteLine(" size = " + jsonText.Length);
-                for (int i = 0; i < count; i++)
-                {
-                    deserializedStore = fastJSON.JSON.ToObject<colclass>(jsonText);
-                }
+				//Console.WriteLine(" size = " + jsonText.Length);
+				for (int i = 0; i < count; i++)
+				{
+					deserializedStore = Json.ToObject<colclass>(jsonText);
+				}
 				stopwatch.Stop();
 				Console.Write("\t" + stopwatch.ElapsedMilliseconds);
-            }
+			}
 			Console.WriteLine ();
 		}
 
-		private static void fastjson_serialize () {
-			Console.Write ("fastjson serialize");
-			colclass c = CreateObject ();
-			fastJSON.JSON.ToJSON (c);
+		private static void PowerJson_serialize () {
+			Console.Write ("PowerJson serialize");
+			Json.ToJson (sampleData);
 			var stopwatch = new Stopwatch();
-            for (int pp = 0; pp < tcount; pp++)
-            {
-                string jsonText = null;
+			for (int pp = 0; pp < tcount; pp++)
+			{
+				string jsonText = null;
 				stopwatch.Restart();
-                for (int i = 0; i < count; i++)
-                {
-                    jsonText = fastJSON.JSON.ToJSON(c);
-                }
+				for (int i = 0; i < count; i++)
+				{
+					jsonText = Json.ToJson(sampleData);
+				}
 				stopwatch.Stop();
 				Console.Write("\t" + stopwatch.ElapsedMilliseconds);
-            }
+			}
 			Console.WriteLine ();
-        }
-
-
-		private static void bin_deserialize()
-        {
-            Console.Write("bin deserialize");
-            colclass c = CreateObject();
-			var stopwatch = new Stopwatch();
-            for (int pp = 0; pp < tcount; pp++)
-            {
-                BinaryFormatter bf = new BinaryFormatter();
-                MemoryStream ms = new MemoryStream();
-				colclass deserializedStore = null;
-				stopwatch.Restart();
-                bf.Serialize(ms, c);
-                //Console.WriteLine(" size = " +ms.Length);
-                for (int i = 0; i < count; i++)
-                {
-					stopwatch.Stop(); // we stop then resume the stopwatch here so we don't factor in Seek()'s execution
-                    ms.Seek(0L, SeekOrigin.Begin);
-					stopwatch.Start();
-                    deserializedStore = (colclass)bf.Deserialize(ms);
-                }
-				stopwatch.Stop();
-				Console.Write("\t" + stopwatch.ElapsedMilliseconds);
-            }
-			Console.WriteLine ();
-        }
-
-        private static void bin_serialize()
-        {
-            Console.Write("bin serialize");
-            colclass c = CreateObject();
-			var stopwatch = new Stopwatch();
-            for (int pp = 0; pp < tcount; pp++)
-            {
-                BinaryFormatter bf = new BinaryFormatter();
-                MemoryStream ms = new MemoryStream();
-				stopwatch.Restart();
-                for (int i = 0; i < count; i++)
-                {
-					stopwatch.Stop(); // we stop then resume the stop watch here so we don't factor in the MemoryStream()'s execution
-                    ms = new MemoryStream();
-					stopwatch.Start();
-                    bf.Serialize(ms, c);
-                }
-				stopwatch.Stop();
-				Console.Write("\t" + stopwatch.ElapsedMilliseconds);
-            }
-        }
+		}
 
 		#region [   other tests  ]
+		private static void JsonNet_deserialize () {
+			Console.Write ("Json.Net deserialize");
+
+			var s = new Newtonsoft.Json.JsonSerializerSettings {
+				TypeNameHandling = Newtonsoft.Json.TypeNameHandling.Auto
+			};
+			var stopwatch = new Stopwatch ();
+			for (int pp = 0; pp < tcount; pp++) {
+				colclass deserializedStore;
+				string jsonText = null;
+
+				jsonText = Newtonsoft.Json.JsonConvert.SerializeObject (sampleData, Newtonsoft.Json.Formatting.None, s);
+				deserializedStore = (colclass)Newtonsoft.Json.JsonConvert.DeserializeObject (jsonText, typeof (colclass), s);
+				stopwatch.Restart ();
+				for (int i = 0; i < count; i++) {
+					deserializedStore = (colclass)Newtonsoft.Json.JsonConvert.DeserializeObject (jsonText, typeof (colclass), s);
+				}
+				stopwatch.Stop ();
+				Console.Write ("\t" + stopwatch.ElapsedMilliseconds);
+			}
+			Console.WriteLine ();
+		}
+
+		private static void JsonNet_serialize () {
+			Console.Write ("Json.Net serialize");
+			var s = new Newtonsoft.Json.JsonSerializerSettings {
+				TypeNameHandling = Newtonsoft.Json.TypeNameHandling.Auto
+			};
+			Newtonsoft.Json.JsonConvert.SerializeObject (sampleData, Newtonsoft.Json.Formatting.None, s);
+			var stopwatch = new Stopwatch ();
+			for (int pp = 0; pp < tcount; pp++) {
+				string jsonText = null;
+				stopwatch.Restart ();
+				for (int i = 0; i < count; i++) {
+					jsonText = Newtonsoft.Json.JsonConvert.SerializeObject (sampleData, Newtonsoft.Json.Formatting.None, s);
+				}
+				stopwatch.Stop ();
+				Console.Write ("\t" + stopwatch.ElapsedMilliseconds);
+			}
+			Console.WriteLine ();
+		}
+
+		private static void ServiceStack_deserialize () {
+			Console.Write ("ServiceStack deserialize");
+			if (sampleData.dataset != null) {
+				Console.WriteLine ("\tSkipped to prevent StackOverflowException when serializing dataset.");
+				return;
+			}
+			ServiceStack.Text.JsConfig.Reset ();
+			ServiceStack.Text.JsConfig.IncludeTypeInfo = true;
+			ServiceStack.Text.JsConfig.IncludeNullValues = false;
+			var stopwatch = new Stopwatch ();
+			for (int pp = 0; pp < tcount; pp++) {
+				colclass deserializedStore;
+				string jsonText = null;
+
+				jsonText = ServiceStack.Text.JsonSerializer.SerializeToString (sampleData);
+				deserializedStore = ServiceStack.Text.JsonSerializer.DeserializeFromString<colclass> (jsonText);
+				stopwatch.Restart ();
+				for (int i = 0; i < count; i++) {
+					deserializedStore = ServiceStack.Text.JsonSerializer.DeserializeFromString<colclass> (jsonText);
+				}
+				stopwatch.Stop ();
+				Console.Write ("\t" + stopwatch.ElapsedMilliseconds);
+			}
+			Console.WriteLine ();
+		}
+
+		private static void ServiceStack_serialize () {
+			Console.Write ("ServiceStack serialize");
+			if (sampleData.dataset != null) {
+				Console.WriteLine ("\tSkipped to prevent StackOverflowException when serializing dataset.");
+				return;
+			}
+			ServiceStack.Text.JsConfig.Reset ();
+			ServiceStack.Text.JsConfig.IncludeTypeInfo = true;
+			ServiceStack.Text.JsConfig.IncludeNullValues = false;
+			ServiceStack.Text.JsConfig.MaxDepth = 20;
+			ServiceStack.Text.JsonSerializer.SerializeToString (sampleData);
+			var stopwatch = new Stopwatch ();
+			for (int pp = 0; pp < tcount; pp++) {
+				string jsonText = null;
+				stopwatch.Restart ();
+				for (int i = 0; i < count; i++) {
+					jsonText = ServiceStack.Text.JsonSerializer.SerializeToString (sampleData);
+				}
+				stopwatch.Stop ();
+				Console.Write ("\t" + stopwatch.ElapsedMilliseconds);
+			}
+			Console.WriteLine ();
+		}
+
+		private static void bin_deserialize()
+		{
+			Console.Write("binary deserialize");
+			var stopwatch = new Stopwatch();
+			for (int pp = 0; pp < tcount; pp++)
+			{
+				BinaryFormatter bf = new BinaryFormatter();
+				MemoryStream ms = new MemoryStream();
+				colclass deserializedStore = null;
+				bf.Serialize(ms, sampleData);
+				ms.Seek(0L, SeekOrigin.Begin);
+				deserializedStore = (colclass)bf.Deserialize (ms);
+				stopwatch.Restart();
+				//Console.WriteLine(" size = " +ms.Length);
+				for (int i = 0; i < count; i++)
+				{
+					stopwatch.Stop(); // we stop then resume the stopwatch here so we don't factor in Seek()'s execution
+					ms.Seek(0L, SeekOrigin.Begin);
+					stopwatch.Start();
+					deserializedStore = (colclass)bf.Deserialize(ms);
+				}
+				stopwatch.Stop();
+				Console.Write("\t" + stopwatch.ElapsedMilliseconds);
+			}
+			Console.WriteLine ();
+		}
+
+		private static void bin_serialize()
+		{
+			Console.Write("binary serialize");
+			var stopwatch = new Stopwatch();
+			for (int pp = 0; pp < tcount; pp++)
+			{
+				BinaryFormatter bf = new BinaryFormatter();
+				MemoryStream ms = new MemoryStream();
+				stopwatch.Restart();
+				for (int i = 0; i < count; i++)
+				{
+					stopwatch.Stop(); // we stop then resume the stop watch here so we don't factor in the MemoryStream()'s execution
+					ms = new MemoryStream();
+					stopwatch.Start();
+					bf.Serialize(ms, sampleData);
+				}
+				stopwatch.Stop();
+				Console.Write("\t" + stopwatch.ElapsedMilliseconds);
+			}
+			Console.WriteLine ();
+		}
+
 		/*
 		private static void systemweb_serialize()
 		{
@@ -420,89 +475,25 @@ namespace consoletest
 		}
 
 		private static void systemweb_deserialize()
-//		{
-//			Console.WriteLine();
-//			Console.Write("fastjson deserialize");
-//			colclass c = CreateObject();
-//			var sws = new System.Web.Script.Serialization.JavaScriptSerializer();
-//			for (int pp = 0; pp < tcount; pp++)
-//			{
-//				DateTime st = DateTime.Now;
-//				colclass deserializedStore = null;
-//				string jsonText = null;
-//
-//				jsonText =sws.Serialize(c);
-//				//Console.WriteLine(" size = " + jsonText.Length);
-//				for (int i = 0; i < count; i++)
-//				{
-//					deserializedStore = (colclass)sws.DeserializeObject(jsonText);
-//				}
-//				Console.Write("\t" + DateTime.Now.Subtract(st).TotalMilliseconds );
-//			}
-//		}
-
-		private static void jsonnet4_deserialize()
 		{
 			Console.WriteLine();
-			Console.Write("json.net4 deserialize");
-			for (int pp = 0; pp < 5; pp++)
+			Console.Write("PowerJson deserialize");
+			colclass c = CreateObject();
+			var sws = new System.Web.Script.Serialization.JavaScriptSerializer();
+			for (int pp = 0; pp < tcount; pp++)
 			{
 				DateTime st = DateTime.Now;
-				colclass c;
 				colclass deserializedStore = null;
 				string jsonText = null;
-				c = Tests.mytests.CreateObject();
-				var s = new Newtonsoft.Json.JsonSerializerSettings();
-				s.TypeNameHandling = Newtonsoft.Json.TypeNameHandling.All;
-				jsonText = Newtonsoft.Json.JsonConvert.SerializeObject(c, Newtonsoft.Json.Formatting.Indented, s);
-				for (int i = 0; i < count; i++)
-				{
-					deserializedStore = (colclass)Newtonsoft.Json.JsonConvert.DeserializeObject(jsonText, typeof(colclass), s);
-				}
-				Console.Write("\t" + DateTime.Now.Subtract(st).TotalMilliseconds );
-			}
-		}
 
-		private static void jsonnet4_serialize()
-		{
-			Console.WriteLine();
-			Console.Write("json.net4 serialize");
-			for (int pp = 0; pp < 5; pp++)
-			{
-				DateTime st = DateTime.Now;
-				colclass c = Tests.mytests.CreateObject();
-				Newtonsoft.Json.JsonSerializerSettings s = null;
-				string jsonText = null;
-				s = new Newtonsoft.Json.JsonSerializerSettings();
-				s.TypeNameHandling = Newtonsoft.Json.TypeNameHandling.All;
-
-				for (int i = 0; i < count; i++)
-				{
-					jsonText = Newtonsoft.Json.JsonConvert.SerializeObject(c, Newtonsoft.Json.Formatting.Indented, s);
-				}
-				Console.Write("\t" + DateTime.Now.Subtract(st).TotalMilliseconds );
-			}
-		}
-
-		private static void stack_deserialize () {
-			Console.Write ("servicestack deserialize");
-			colclass c = CreateObject ();
-
-			var stopwatch = new Stopwatch ();
-			for (int pp = 0; pp < tcount; pp++) {
-				colclass deserializedStore;
-				string jsonText = null;
-
-				stopwatch.Restart ();
-				jsonText = ServiceStack.Text.JsonSerializer.SerializeToString (c);
+				jsonText =sws.Serialize(c);
 				//Console.WriteLine(" size = " + jsonText.Length);
-				for (int i = 0; i < count; i++) {
-					deserializedStore = ServiceStack.Text.JsonSerializer.DeserializeFromString<colclass> (jsonText);
+				for (int i = 0; i < count; i++)
+				{
+					deserializedStore = (colclass)sws.DeserializeObject(jsonText);
 				}
-				stopwatch.Stop ();
-				Console.Write ("\t" + stopwatch.ElapsedMilliseconds);
+				Console.Write("\t" + DateTime.Now.Subtract(st).TotalMilliseconds );
 			}
-			Console.WriteLine ();
 		}
 
 		private static void jsonnet_deserialize()

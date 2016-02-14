@@ -2,7 +2,7 @@
 using System.Runtime.Serialization;
 using System.Security.Permissions;
 
-namespace fastJSON
+namespace PowerJson
 {
 	/// <summary>
 	/// An exception thrown during serialization or deserialization.
@@ -50,20 +50,32 @@ namespace fastJSON
 		/// Gets the context text around the error position.
 		/// </summary>
 		public string ContextText { get; private set; }
+		/// <summary>
+		/// Gets the reason which raises the exception.
+		/// </summary>
+		public string Reason { get; private set; }
 
 		internal JsonParserException (string reason, int index, string context) : base (
 			String.Concat (reason, index, ": ", context)
 			) {
+			Reason = reason;
 			Position = index;
 			ContextText = context;
 		}
 
+		private JsonParserException(System.Runtime.Serialization.SerializationInfo info, StreamingContext context) {
+			Position = info.GetInt32 ("$Position");
+			ContextText = info.GetString ("$ContextText");
+			Reason = info.GetString ("$Reason");
+		}
+
 		[SecurityPermission (SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.SerializationFormatter)]
-		void ISerializable.GetObjectData (SerializationInfo info, StreamingContext context) {
+		void ISerializable.GetObjectData (System.Runtime.Serialization.SerializationInfo info, StreamingContext context) {
 			if (info == null)
 				throw new ArgumentNullException ("info");
-			info.AddValue ("Position", Position);
-			info.AddValue ("ContextText", ContextText);
+			info.AddValue ("$Position", Position);
+			info.AddValue ("$ContextText", ContextText);
+			info.AddValue ("$Reason", Reason);
 			GetObjectData (info, context);
 		}
 	}

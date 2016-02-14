@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 
-namespace fastJSON
+namespace PowerJson
 {
 	/// <summary>
 	/// This class encodes and decodes JSON strings.
@@ -91,7 +91,6 @@ namespace fastJSON
 							}
 							if (name[0] == '$') {
 								switch (name) {
-									case JsonDict.ExtTypes: table.Types = (JsonDict)value; continue;
 									case JsonDict.ExtType: table.Type = (string)value; continue;
 									case JsonDict.ExtRefIndex: table.RefIndex = (int)(long)value; continue;
 									case JsonDict.ExtSchema: table.Schema = value; continue;
@@ -363,7 +362,6 @@ namespace fastJSON
 		internal const string ExtSchema = "$schema";
 
 		internal int RefIndex;
-		internal JsonDict Types;
 		internal string Type;
 		internal object Schema;
 

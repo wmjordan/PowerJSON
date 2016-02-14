@@ -6,26 +6,22 @@ using System.Globalization;
 using System.IO;
 using System.Collections.Specialized;
 
-namespace fastJSON
+namespace PowerJson
 {
 	sealed class JsonDeserializer
 	{
 		static readonly RevertJsonValue[] _revertMethods = RegisterMethods ();
 
-		readonly JSONParameters _params;
+		readonly JsonParameters _params;
 		readonly SerializationManager _manager;
 		readonly Dictionary<object, int> _circobj = new Dictionary<object, int> ();
 		readonly Dictionary<int, object> _cirrev = new Dictionary<int, object> ();
-		bool _usingglobals = false;
-		Dictionary<string,object> globaltypes;
-		readonly bool _useTypeAlias;
 
 		static RevertJsonValue[] RegisterMethods () {
 			var r = new RevertJsonValue[Enum.GetNames (typeof (JsonDataType)).Length];
 			r[(int)JsonDataType.Array] = RevertArray;
 			r[(int)JsonDataType.Bool] = RevertPrimitive;
 			r[(int)JsonDataType.ByteArray] = RevertByteArray;
-			r[(int)JsonDataType.Custom] = RevertCustom;
 			r[(int)JsonDataType.DataSet] = RevertDataSet;
 			r[(int)JsonDataType.DataTable] = RevertDataTable;
 			r[(int)JsonDataType.DateTime] = RevertDateTime;
@@ -49,10 +45,9 @@ namespace fastJSON
 			return r;
 		}
 
-		public JsonDeserializer (JSONParameters param, SerializationManager manager) {
+		public JsonDeserializer (JsonParameters param, SerializationManager manager) {
 			_params = param;
 			_manager = manager;
-			_useTypeAlias = (0 < _manager.TypeAliasCount());
 		}
 
 		public T ToObject<T>(string json) {
@@ -69,27 +64,19 @@ namespace fastJSON
 			if (o == null)
 				return null;
 
-			ReflectionCache c = null;
+			SerializationInfo c = null;
 			if (type != null) {
-				c = _manager.GetReflectionCache (type);
+				c = _manager.GetSerializationInfo (type);
 				var cv = c.Converter;
 				if (cv != null) {
-					var ji = new JsonItem (String.Empty, o, false);
-					ConvertObject (cv, ji, type);
-					if (ReferenceEquals (ji._Value, o) == false) {
-						return ji._Value;
-					}
-					if (c.CommonType == ComplexType.Dictionary
-						|| c.CommonType == ComplexType.List) {
-						_usingglobals = false;
+					var v = ConvertObject (cv, o, type);
+					if (ReferenceEquals (v, o) == false) {
+						return v;
 					}
 				}
 				else if (c.DeserializeMethod != null) {
 					return c.DeserializeMethod (this, o, c);
 				}
-			}
-			else {
-				_usingglobals = _params.UsingGlobalTypes;
 			}
 
 			var d = o as JsonDict;
@@ -155,26 +142,24 @@ namespace fastJSON
 		}
 
 		#region [   p r i v a t e   m e t h o d s   ]
-		void ConvertObject (IJsonConverter converter, JsonItem ji, Type sourceType) {
-			var rt = converter.GetReversiveType (ji);
-			var xv = ji._Value;
-			if (xv != null && rt != null && sourceType.Equals (xv.GetType ()) == false) {
-				var c = _manager.GetReflectionCache (rt);
+		object ConvertObject (IJsonConverter converter, object value, Type sourceType) {
+			var rt = converter.GetReversiveType (new JsonItem (String.Empty, value, false));
+			if (value != null && rt != null && sourceType.Equals (value.GetType ()) == false) {
+				var c = _manager.GetSerializationInfo (rt);
 				var jt = Reflection.GetJsonDataType (rt);
 				if (jt != JsonDataType.Undefined) {
-					xv = c.DeserializeMethod (this, xv, c);
+					value = c.DeserializeMethod (this, value, c);
 				}
-				else if (xv is JsonDict) {
-					xv = CreateObject ((JsonDict)xv, c, null);
+				else if (value is JsonDict) {
+					value = CreateObject ((JsonDict)value, c, null);
 				}
 			}
-			ji._Value = xv;
-			converter.DeserializationConvert (ji);
+			return converter.DeserializationConvert (value);
 		}
 
 		object RootHashTable (JsonArray o) {
 			Hashtable h = new Hashtable ();
-			var c = _manager.GetReflectionCache (typeof (object));
+			var c = _manager.GetSerializationInfo (typeof (object));
 			foreach (JsonDict values in o) {
 				object key = values["k"];
 				object val = values["v"];
@@ -190,21 +175,20 @@ namespace fastJSON
 			return h;
 		}
 
-		object RootList (object parse, ReflectionCache type) {
-			var ec = type.ArgumentReflections[0];
+		object RootList (object parse, SerializationInfo type) {
+			var ec = type.TypeParameters[0];
 			var m = ec.DeserializeMethod;
 			IList o = (IList)type.Instantiate ();
 			foreach (var k in (IList)parse) {
-				_usingglobals = false;
 				object v = m (this, k, ec);
 				o.Add (v);
 			}
 			return o;
 		}
 
-		object RootDictionary (object parse, ReflectionCache type) {
-			var g = type.ArgumentReflections;
-			ReflectionCache c1 = g[0], c2 = g[1];
+		object RootDictionary (object parse, SerializationInfo type) {
+			var g = type.TypeParameters;
+			SerializationInfo c1 = g[0], c2 = g[1];
 			var mk = c1.DeserializeMethod;
 			var m = c2.DeserializeMethod;
 			var d = parse as JsonDict;
@@ -232,35 +216,21 @@ namespace fastJSON
 		/// <param name="input">The data container. If this value is not null, deserialized members will be written to it. If null, new object will be created.</param>
 		/// <returns>The deserialized object.</returns>
 		/// <exception cref="JsonSerializationException">Cannot determine type from <paramref name="data"/>.</exception>
-		internal object CreateObject (JsonDict data, ReflectionCache type, object input) {
+		internal object CreateObject (JsonDict data, SerializationInfo type, object input) {
 			if (data.RefIndex > 0) {
 				object v = null;
 				_cirrev.TryGetValue (data.RefIndex, out v);
 				return v;
 			}
 
-			if (data.Types != null && data.Types.Count > 0) {
-				_usingglobals = true;
-				globaltypes = new Dictionary<string,object> ();
-				foreach (var kv in data.Types) {
-					globaltypes.Add ((string)kv.Value, kv.Key);
+			if (String.IsNullOrEmpty (data.Type) == false) {
+				type = _manager.GetSerializationInfo (data.Type);
+				if (type == null) {
+					type = _manager.GetSerializationInfo (Reflection.Instance.GetTypeFromCache (data.Type));
 				}
 			}
-
-			var tn = _useTypeAlias? _manager.ReverseLookupAlias(data.Type) : data.Type;
-			bool found = (tn != null && tn.Length > 0);
-#if !SILVERLIGHT
-			if (found == false && type != null && typeof (object).Equals (type.Type)) {
+			if (type != null && typeof (object).Equals (type.Reflection.Type)) {
 				return data;
-			}
-#endif
-			if (found) {
-				if (_usingglobals) {
-					object tname = "";
-					if (globaltypes != null && globaltypes.TryGetValue (data.Type, out tname))
-						tn = (string)tname;
-				}
-				type = _manager.GetReflectionCache (Reflection.Instance.GetTypeFromCache (tn));
 			}
 
 			if (type == null)
@@ -269,7 +239,7 @@ namespace fastJSON
 			object o = input;
 			if (o == null) {
 				o = _params.ParametricConstructorOverride
-					? System.Runtime.Serialization.FormatterServices.GetUninitializedObject (type.Type)
+					? System.Runtime.Serialization.FormatterServices.GetUninitializedObject (type.Reflection.Type)
 					: type.Instantiate ();
 			}
 			int circount = 0;
@@ -284,25 +254,25 @@ namespace fastJSON
 			if (si != null) {
 				si.OnDeserializing (o);
 			}
-			Dictionary<string, JsonMemberSetter> props = type.Setters;
-			//TODO: Candidate to removal of unknown use of map
-			//if (data.Map != null) {
-			//	ProcessMap (o, props, data.Map);
-			//}
+			var props = type.Setters;
 			foreach (var kv in data) {
 				var n = kv.Key;
 				var v = kv.Value;
 				JsonMemberSetter pi;
-				if (props.TryGetValue (n, out pi) == false || pi.CanWrite == false && pi.Member.JsonDataType != JsonDataType.List)
+				// field name is not defined
+				if (props.TryGetValue (n, out pi) == false) {
 					continue;
-				MemberCache m = pi.Member;
+				}
+				if (pi.CanWrite == false && pi.Member.JsonDataType != JsonDataType.List)
+					continue;
+				var m = pi.Member;
 				var ji = new JsonItem (n, v, false);
 				bool converted = false;
 				// TODO: Convert items for types implements IEnumerable and Add(?) method
 				if (v is IList && pi.ItemConverter != null) {
-					converted = ConvertItems (pi, ji);
+					ji._Value = ConvertItems (pi, v as IList);
 				}
-				if (pi.Converter != null || m.MemberTypeReflection.Converter != null) {
+				if (pi.Converter != null || pi.TypeInfo.Converter != null) {
 					ConvertProperty (o, pi, ji);
 				}
 
@@ -310,7 +280,7 @@ namespace fastJSON
 				// use the converted value
 				if (converted || ReferenceEquals (ji._Value, v) == false) {
 					if (pi.CanWrite == false && m.JsonDataType == JsonDataType.List) {
-						ji._Value = CreateList ((JsonArray)ji._Value, m.MemberTypeReflection, m.Getter (o));
+						ji._Value = CreateList ((JsonArray)ji._Value, pi.TypeInfo, m.Getter (o));
 					}
 					if (ji._Value != null || m.IsClass || m.IsNullable) {
 						oset = ji._Value;
@@ -343,22 +313,22 @@ namespace fastJSON
 					case JsonDataType.Guid: oset = CreateGuid (v); break;
 					case JsonDataType.ByteArray: oset = Convert.FromBase64String ((string)v); break;
 					case JsonDataType.List:
-						if (m.MemberTypeReflection.CollectionName != null) {
+						if (pi.TypeInfo.CollectionName != null) {
 							goto default;
 						}
-						oset = CreateList ((JsonArray)v, m.MemberTypeReflection, pi.CanWrite && (m.IsClass || m.IsStruct) ? null : m.Getter (o));
+						oset = CreateList ((JsonArray)v, pi.TypeInfo, pi.CanWrite && (m.IsClass || m.IsStruct) ? null : m.Getter (o));
 						break;
 					case JsonDataType.Object: oset = v; break;
 					default:
-						if (m.DeserializeMethod != null) {
-							oset = m.MemberTypeReflection.DeserializeMethod (this, ji._Value, m.MemberTypeReflection);
+						if (pi.TypeInfo.DeserializeMethod != null) {
+							oset = pi.TypeInfo.DeserializeMethod (this, ji._Value, pi.TypeInfo);
 							goto SET_VALUE;
 						}
 						if ((m.IsClass || m.IsStruct) && v is JsonDict)
-							oset = CreateObject ((JsonDict)v, m.MemberTypeReflection, m.Getter (o));
+							oset = CreateObject ((JsonDict)v, pi.TypeInfo, m.Getter (o));
 
 						else if (v is JsonArray)
-							oset = CreateArray ((JsonArray)v, _manager.GetReflectionCache (typeof (object[])));
+							oset = CreateArray ((JsonArray)v, _manager.GetSerializationInfo (typeof (object[])));
 
 						else if (m.IsValueType)
 							oset = ChangeType (v, m.ChangeType);
@@ -387,11 +357,11 @@ namespace fastJSON
 
 
 		void ConvertProperty (object o, JsonMemberSetter pi, JsonItem ji) {
-			var pc = pi.Converter ?? pi.Member.MemberTypeReflection.Converter;
+			var pc = pi.Converter ?? pi.TypeInfo.Converter;
 			var rt = pc.GetReversiveType (ji);
 			var xv = ji._Value;
 			if (xv != null && rt != null && pi.Member.MemberType.Equals (xv.GetType ()) == false) {
-				var c = _manager.GetReflectionCache (rt);
+				var c = _manager.GetSerializationInfo (rt);
 				var jt = Reflection.GetJsonDataType (rt);
 				if (jt != JsonDataType.Undefined) {
 					xv = c.DeserializeMethod (this, xv, c);
@@ -400,43 +370,41 @@ namespace fastJSON
 					xv = CreateObject ((JsonDict)xv, c, pi.Member.Getter (o));
 				}
 			}
-			ji._Value = xv;
-			pc.DeserializationConvert (ji);
+			ji._Value = pc.DeserializationConvert (xv);
 		}
 
-		static bool ConvertItems (JsonMemberSetter pi, JsonItem ji) {
-			var vl = ji._Value as IList;
+		static object ConvertItems (JsonMemberSetter pi, IList vl) {
 			var l = vl.Count;
 			var converted = false;
-			var ai = new JsonItem (ji._Name, null, false);
+			object xv;
 			for (int i = 0; i < l; i++) {
 				var vi = vl[i];
-				ai._Value = vi;
-				pi.ItemConverter.DeserializationConvert (ai);
-				if (ReferenceEquals (vi, ai._Value) == false) {
-					vl[i] = ai._Value;
+				xv = pi.ItemConverter.DeserializationConvert (vi);
+				if (ReferenceEquals (vi, xv) == false) {
+					vl[i] = xv;
 					converted = true;
 				}
 			}
 			if (converted) {
 				if (pi.Member.JsonDataType == JsonDataType.Array) {
-					ji._Value = Array.CreateInstance (pi.Member.ElementType, l);
-					vl.CopyTo ((Array)ji._Value, 0);
+					var a = Array.CreateInstance (pi.Member.ElementType, l);
+					vl.CopyTo ((Array)a, 0);
+					return a;
 				}
 				else if (pi.Member.JsonDataType == JsonDataType.List) {
-					ji._Value = pi.Member.MemberTypeReflection.Instantiate ();
-					var gl = ji._Value as IList;
+					var a = pi.TypeInfo.Instantiate () as IList;
 					for (int i = 0; i < l; i++) {
-						gl.Add (vl[i]);
+						a.Add (vl[i]);
 					}
+					return a;
 				}
 			}
 
-			return converted;
+			return vl;
 		}
 
 		static StringDictionary CreateStringDictionary (JsonDict d) {
-			StringDictionary nv = new StringDictionary ();
+			var nv = new StringDictionary ();
 
 			foreach (var o in d)
 				nv.Add (o.Key, (string)o.Value);
@@ -445,7 +413,7 @@ namespace fastJSON
 		}
 
 		static NameValueCollection CreateNameValueCollection (JsonDict d) {
-			NameValueCollection nv = new NameValueCollection ();
+			var nv = new NameValueCollection ();
 
 			foreach (var o in d) {
 				var k = o.Key;
@@ -473,7 +441,7 @@ namespace fastJSON
 		}
 
 		object ChangeType (object value, Type conversionType) {
-			var c = _manager.GetReflectionCache (conversionType);
+			var c = _manager.GetSerializationInfo (conversionType);
 			if (c.DeserializeMethod != null) {
 				return c.DeserializeMethod (this, value, c);
 			}
@@ -483,7 +451,7 @@ namespace fastJSON
 					if (value == null) {
 						return value;
 					}
-					conversionType = c.ArgumentTypes[0];
+					conversionType = c.Reflection.ArgumentTypes[0];
 				}
 			}
 
@@ -504,11 +472,11 @@ namespace fastJSON
 			}
 		}
 
-		object CreateArray (JsonArray data, ReflectionCache arrayType) {
+		object CreateArray (JsonArray data, SerializationInfo arrayType) {
 			var l = data.Count;
-			var ec = arrayType.ArgumentReflections[0];
-			Array col = Array.CreateInstance (ec.Type, l);
-			var r = arrayType.ItemDeserializer;
+			var ec = arrayType.TypeParameters[0];
+			Array col = Array.CreateInstance (ec.Reflection.Type, l);
+			var r = arrayType.ItemDeserializeMethod;
 			if (r != null) {
 				for (int i = 0; i < l; i++) {
 					var ob = data[i];
@@ -534,16 +502,15 @@ namespace fastJSON
 					col.SetValue (CreateArray ((JsonArray)ob, ec), i);
 				}
 				else
-					col.SetValue (ChangeType (ob, ec.Type), i);
+					col.SetValue (ChangeType (ob, ec.Reflection.Type), i);
 			}
 
 			return col;
 		}
 
-		object CreateMultiDimensionalArray (JsonArray data, ReflectionCache arrayType) {
-			ReflectionCache ec = arrayType.ArgumentReflections[0];
-			Type et = ec.Type;
-			var ar = arrayType.Type.GetArrayRank ();
+		object CreateMultiDimensionalArray (JsonArray data, SerializationInfo arrayType) {
+			var ec = arrayType.TypeParameters[0];
+			var ar = arrayType.Reflection.Type.GetArrayRank ();
 			var ub = new int[ar];
 			var d = data;
 			// get upper bounds
@@ -566,14 +533,14 @@ namespace fastJSON
 				}
 			}
 			var mdi = new int[ar];
-			Array col = Array.CreateInstance (ec.Type, ub);
-			var m = arrayType.ItemDeserializer;
+			Array col = Array.CreateInstance (ec.Reflection.Type, ub);
+			var m = arrayType.ItemDeserializeMethod;
 			var ri = 0;
 			SetMultiDimensionalArrayValue (data, ec, ub, mdi, col, m, ri);
 			return col;
 		}
 
-		void SetMultiDimensionalArrayValue (JsonArray data, ReflectionCache et, int[] upperBounds, int[] indexes, Array array, RevertJsonValue m, int rankIndex) {
+		void SetMultiDimensionalArrayValue (JsonArray data, SerializationInfo et, int[] upperBounds, int[] indexes, Array array, RevertJsonValue m, int rankIndex) {
 			if (rankIndex + 1 == upperBounds.Length) {
 				foreach (var item in data) {
 					array.SetValue (m (this, item, et), indexes);
@@ -597,10 +564,11 @@ namespace fastJSON
 			}
 		}
 
-		object CreateList (JsonArray data, ReflectionCache listType, object input) {
-			var ec = listType.ArgumentReflections != null ? listType.ArgumentReflections[0] : null;
-			var r = listType.ItemDeserializer;
-			object l = input ?? listType.Instantiate ();
+		object CreateList (JsonArray data, SerializationInfo info, object input) {
+			var listType = info;
+			var ec = listType.TypeParameters != null ? listType.TypeParameters[0] : null;
+			var r = listType.ItemDeserializeMethod;
+			object l = input ?? info.Instantiate ();
 			IList col = l as IList;
 			if (col != null) {
 				if (r != null) {
@@ -611,10 +579,10 @@ namespace fastJSON
 					return col;
 				}
 			}
-			var a = listType.AppendItem;
+			var a = listType.Reflection.AppendItem;
 			if (a != null) {
 				if (l == null) {
-					throw new JsonSerializationException ("The collection member typed \"" + listType.AssemblyName + "\" was null and could not be instantiated");
+					throw new JsonSerializationException ("The collection member typed \"" + listType.Reflection.AssemblyName + "\" was null and could not be instantiated");
 				}
 				foreach (var item in data) {
 					a (l, r (this, item, ec));
@@ -622,28 +590,28 @@ namespace fastJSON
 				return l;
 			}
 			// TODO: candidate of code clean-up.
-			Type et = listType.ArgumentTypes != null ? listType.ArgumentTypes[0] : null;
-			// create an array of objects
-			foreach (var o in data) {
-				if (o is IDictionary)
-					col.Add (CreateObject ((JsonDict)o, ec, null));
+			//var et = listType.TypeParameters != null ? listType.TypeParameters[0] : null;
+			//// create an array of objects
+			//foreach (var o in data) {
+			//	if (o is IDictionary)
+			//		col.Add (CreateObject ((JsonDict)o, ec, null));
 
-				else if (o is JsonArray) {
-					if (et.IsGenericType)
-						col.Add (o);//).ToArray());
-					else
-						col.Add (((JsonArray)o).ToArray ());
-				}
-				else
-					col.Add (ChangeType (o, et));
-			}
+			//	else if (o is JsonArray) {
+			//		if (et.IsGenericType)
+			//			col.Add (o);//).ToArray());
+			//		else
+			//			col.Add (((JsonArray)o).ToArray ());
+			//	}
+			//	else
+			//		col.Add (ChangeType (o, et));
+			//}
 			return col;
 		}
 
-		object CreateStringKeyDictionary (JsonDict reader, ReflectionCache pt) {
+		object CreateStringKeyDictionary (JsonDict reader, SerializationInfo pt) {
 			var col = (IDictionary)pt.Instantiate ();
 			// NOTE: argument 0 is not used
-			ReflectionCache ec = pt.ArgumentReflections != null ? pt.ArgumentReflections[1] : null;
+			var ec = pt.TypeParameters != null ? pt.TypeParameters[1] : null;
 			var m = ec != null ? ec.DeserializeMethod : RevertUndefined;
 			foreach (KeyValuePair<string, object> values in reader) {
 				col.Add (values.Key, m (this, values.Value, ec));
@@ -651,12 +619,12 @@ namespace fastJSON
 			return col;
 		}
 
-		object CreateDictionary (JsonArray reader, ReflectionCache pt) {
+		object CreateDictionary (JsonArray reader, SerializationInfo pt) {
 			IDictionary col = (IDictionary)pt.Instantiate ();
-			ReflectionCache c1 = null, c2 = null;
-			if (pt.ArgumentReflections != null) {
-				c1 = pt.ArgumentReflections[0];
-				c2 = pt.ArgumentReflections[1];
+			SerializationInfo c1 = null, c2 = null;
+			if (pt.TypeParameters != null) {
+				c1 = pt.TypeParameters[0];
+				c2 = pt.TypeParameters[1];
 			}
 			var mk = c1.DeserializeMethod;
 			var mv = c2.DeserializeMethod;
@@ -670,7 +638,7 @@ namespace fastJSON
 
 #if !SILVERLIGHT
 		DataSet CreateDataSet (JsonDict reader) {
-			DataSet ds = new DataSet ();
+			var ds = new DataSet ();
 			ds.EnforceConstraints = false;
 			ds.BeginInit ();
 
@@ -682,7 +650,7 @@ namespace fastJSON
 				ds.ReadXmlSchema (tr);
 			}
 			else {
-				DatasetSchema ms = (DatasetSchema)CreateObject ((JsonDict)schema, _manager.GetReflectionCache (typeof (DatasetSchema)), null);
+				var ms = (DatasetSchema)CreateObject ((JsonDict)schema, _manager.GetSerializationInfo (typeof (DatasetSchema)), null);
 				ds.DataSetName = ms.Name;
 				for (int i = 0; i < ms.Info.Count; i += 3) {
 					if (ds.Tables.Contains (ms.Info[i]) == false)
@@ -694,11 +662,10 @@ namespace fastJSON
 			foreach (KeyValuePair<string, object> pair in reader) {
 				//if (pair.Key == "$type" || pair.Key == "$schema") continue;
 
-				JsonArray rows = (JsonArray)pair.Value;
+				var rows = (JsonArray)pair.Value;
 				if (rows == null) continue;
 
-				DataTable dt = ds.Tables[pair.Key];
-				ReadDataTable (rows, dt);
+				ReadDataTable (rows, ds.Tables[pair.Key]);
 			}
 
 			ds.EndInit ();
@@ -709,8 +676,8 @@ namespace fastJSON
 		void ReadDataTable (JsonArray rows, DataTable dataTable) {
 			dataTable.BeginInit ();
 			dataTable.BeginLoadData ();
-			List<int> guidcols = new List<int> ();
-			List<int> datecol = new List<int> ();
+			var guidcols = new List<int> ();
+			var datecol = new List<int> ();
 
 			foreach (DataColumn c in dataTable.Columns) {
 				if (typeof (Guid).Equals (c.DataType) || typeof (Guid?).Equals (c.DataType))
@@ -722,11 +689,11 @@ namespace fastJSON
 			var dc = datecol.Count > 0;
 
 			foreach (JsonArray row in rows) {
-				object[] v = new object[row.Count];
+				var v = new object[row.Count];
 				row.CopyTo (v, 0);
 				if (gc) {
 					foreach (int i in guidcols) {
-						string s = (string)v[i];
+						var s = (string)v[i];
 						if (s != null && s.Length < 36)
 							v[i] = new Guid (Convert.FromBase64String (s));
 					}
@@ -752,11 +719,12 @@ namespace fastJSON
 			var schema = reader.Schema;
 
 			if (schema is string) {
-				TextReader tr = new StringReader ((string)schema);
-				dt.ReadXmlSchema (tr);
+				using (var tr = new StringReader ((string)schema)) {
+					dt.ReadXmlSchema (tr);
+				}
 			}
 			else {
-				var ms = (DatasetSchema)CreateObject ((JsonDict)schema, _manager.GetReflectionCache (typeof (DatasetSchema)), null);
+				var ms = (DatasetSchema)CreateObject ((JsonDict)schema, _manager.GetSerializationInfo (typeof (DatasetSchema)), null);
 				dt.TableName = ms.Info[0];
 				for (int i = 0; i < ms.Info.Count; i += 3) {
 					dt.Columns.Add (ms.Info[i + 1], Reflection.Instance.GetTypeFromCache (ms.Info[i + 2]));
@@ -786,58 +754,58 @@ namespace fastJSON
 			return _revertMethods[(int)type];
 		}
 		#region RevertJsonValue delegate methods
-		internal static object RevertPrimitive (JsonDeserializer deserializer, object value, ReflectionCache type) {
+		internal static object RevertPrimitive (JsonDeserializer deserializer, object value, SerializationInfo type) {
 			return value;
 		}
-		internal static object RevertInt32 (JsonDeserializer deserializer, object value, ReflectionCache type) {
+		internal static object RevertInt32 (JsonDeserializer deserializer, object value, SerializationInfo type) {
 			return value is double ? (int)(double)value : (int)(long)value;
 		}
-		internal static object RevertByte (JsonDeserializer deserializer, object value, ReflectionCache type) {
+		internal static object RevertByte (JsonDeserializer deserializer, object value, SerializationInfo type) {
 			return value is double ? (byte)(double)value : (byte)(long)value;
 		}
-		internal static object RevertSByte (JsonDeserializer deserializer, object value, ReflectionCache type) {
+		internal static object RevertSByte (JsonDeserializer deserializer, object value, SerializationInfo type) {
 			return value is double ? (sbyte)(double)value : (sbyte)(long)value;
 		}
-		internal static object RevertShort (JsonDeserializer deserializer, object value, ReflectionCache type) {
+		internal static object RevertShort (JsonDeserializer deserializer, object value, SerializationInfo type) {
 			return value is double ? (short)(double)value : (short)(long)value;
 		}
-		internal static object RevertUShort (JsonDeserializer deserializer, object value, ReflectionCache type) {
+		internal static object RevertUShort (JsonDeserializer deserializer, object value, SerializationInfo type) {
 			return value is double ? (ushort)(double)value : (ushort)(long)value;
 		}
-		internal static object RevertUInt32 (JsonDeserializer deserializer, object value, ReflectionCache type) {
+		internal static object RevertUInt32 (JsonDeserializer deserializer, object value, SerializationInfo type) {
 			return value is double ? (uint)(double)value : (uint)(long)value;
 		}
-		internal static object RevertUInt64 (JsonDeserializer deserializer, object value, ReflectionCache type) {
+		internal static object RevertUInt64 (JsonDeserializer deserializer, object value, SerializationInfo type) {
 			return value is double ? (ulong)(double)value : (ulong)(long)value;
 		}
-		internal static object RevertSingle (JsonDeserializer deserializer, object value, ReflectionCache type) {
+		internal static object RevertSingle (JsonDeserializer deserializer, object value, SerializationInfo type) {
 			return value is double ? (float)(double)value : (float)(long)value;
 		}
-		internal static object RevertDecimal (JsonDeserializer deserializer, object value, ReflectionCache type) {
+		internal static object RevertDecimal (JsonDeserializer deserializer, object value, SerializationInfo type) {
 			return value is double ? (decimal)(double)value : (decimal)(long)value;
 		}
-		internal static object RevertChar (JsonDeserializer deserializer, object value, ReflectionCache type) {
+		internal static object RevertChar (JsonDeserializer deserializer, object value, SerializationInfo type) {
 			var s = value as string;
 			return s.Length > 0 ? s[0] : '\0';
 		}
-		internal static object RevertGuid (JsonDeserializer deserializer, object value, ReflectionCache type) {
+		internal static object RevertGuid (JsonDeserializer deserializer, object value, SerializationInfo type) {
 			return CreateGuid (value);
 		}
 		static object CreateGuid (object value) {
 			var s = (string)value;
 			return s.Length > 30 ? new Guid (s) : new Guid (Convert.FromBase64String (s));
 		}
-		internal static object RevertTimeSpan (JsonDeserializer deserializer, object value, ReflectionCache type) {
+		internal static object RevertTimeSpan (JsonDeserializer deserializer, object value, SerializationInfo type) {
 			return CreateTimeSpan (value);
 		}
 		static object CreateTimeSpan (object value) {
 			// TODO: Optimize TimeSpan
 			return TimeSpan.Parse ((string)value);
 		}
-		internal static object RevertByteArray (JsonDeserializer deserializer, object value, ReflectionCache type) {
+		internal static object RevertByteArray (JsonDeserializer deserializer, object value, SerializationInfo type) {
 			return Convert.FromBase64String ((string)value);
 		}
-		internal static object RevertDateTime (JsonDeserializer deserializer, object value, ReflectionCache type) {
+		internal static object RevertDateTime (JsonDeserializer deserializer, object value, SerializationInfo type) {
 			return CreateDateTime (deserializer, value);
 		}
 		internal static object CreateDateTime (JsonDeserializer deserializer, object value) {
@@ -859,7 +827,7 @@ namespace fastJSON
 				return new DateTime (year, month, day, hour, min, sec, ms, DateTimeKind.Utc).ToLocalTime ();
 			// these individual numeric parses are really cheaper than one DateTime.ParseExact ?
 		}
-		internal static object RevertUndefined (JsonDeserializer deserializer, object value, ReflectionCache type) {
+		internal static object RevertUndefined (JsonDeserializer deserializer, object value, SerializationInfo type) {
 			if (value == null) return null;
 			var d = value as JsonDict;
 			if (d != null) {
@@ -871,43 +839,40 @@ namespace fastJSON
 			}
 			return value;
 		}
-		internal static object RevertArray (JsonDeserializer deserializer, object value, ReflectionCache type) {
+		internal static object RevertArray (JsonDeserializer deserializer, object value, SerializationInfo type) {
 			return deserializer.CreateArray ((JsonArray)value, type);
 		}
-		internal static object RevertMultiDimensionalArray (JsonDeserializer deserializer, object value, ReflectionCache type) {
+		internal static object RevertMultiDimensionalArray (JsonDeserializer deserializer, object value, SerializationInfo type) {
 			return deserializer.CreateMultiDimensionalArray ((JsonArray)value, type);
 		}
-		internal static object RevertList (JsonDeserializer deserializer, object value, ReflectionCache type) {
+		internal static object RevertList (JsonDeserializer deserializer, object value, SerializationInfo type) {
 			return deserializer.CreateList ((JsonArray)value, type, null);
 		}
-		internal static object RevertDataSet (JsonDeserializer deserializer, object value, ReflectionCache type) {
+		internal static object RevertDataSet (JsonDeserializer deserializer, object value, SerializationInfo type) {
 			return deserializer.CreateDataSet ((JsonDict)value);
 		}
-		internal static object RevertDataTable (JsonDeserializer deserializer, object value, ReflectionCache type) {
+		internal static object RevertDataTable (JsonDeserializer deserializer, object value, SerializationInfo type) {
 			return deserializer.CreateDataTable ((JsonDict)value);
 		}
-		internal static object RevertHashTable (JsonDeserializer deserializer, object value, ReflectionCache type) {
+		internal static object RevertHashTable (JsonDeserializer deserializer, object value, SerializationInfo type) {
 			return deserializer.RootHashTable ((JsonArray)value);
 		}
-		internal static object RevertDictionary (JsonDeserializer deserializer, object value, ReflectionCache type) {
+		internal static object RevertDictionary (JsonDeserializer deserializer, object value, SerializationInfo type) {
 			return deserializer.RootDictionary (value, type);
 		}
-		internal static object RevertNameValueCollection (JsonDeserializer deserializer, object value, ReflectionCache type) {
+		internal static object RevertNameValueCollection (JsonDeserializer deserializer, object value, SerializationInfo type) {
 			return CreateNameValueCollection ((JsonDict)value);
 		}
-		internal static object RevertStringDictionary (JsonDeserializer deserializer, object value, ReflectionCache type) {
+		internal static object RevertStringDictionary (JsonDeserializer deserializer, object value, SerializationInfo type) {
 			return CreateStringDictionary ((JsonDict)value);
 		}
-		internal static object RevertStringKeyDictionary (JsonDeserializer deserializer, object value, ReflectionCache type) {
+		internal static object RevertStringKeyDictionary (JsonDeserializer deserializer, object value, SerializationInfo type) {
 			return deserializer.CreateStringKeyDictionary ((JsonDict)value, type);
 		}
-		internal static object RevertEnum (JsonDeserializer deserializer, object value, ReflectionCache type) {
-			return deserializer.CreateEnum (value, type.Type);
+		internal static object RevertEnum (JsonDeserializer deserializer, object value, SerializationInfo type) {
+			return deserializer.CreateEnum (value, type.Reflection.Type);
 		}
-		internal static object RevertCustom (JsonDeserializer deserializer, object value, ReflectionCache type) {
-			return deserializer._manager.CreateCustom ((string)value, type.Type);
-		}
-		//internal static object ChangeType (JsonDeserializer deserializer, object value, ReflectionCache type) {
+		//internal static object ChangeType (JsonDeserializer deserializer, object value, SerializationOverride type) {
 		//	return deserializer.ChangeType (value, type);
 		//}
 		#endregion

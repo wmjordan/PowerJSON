@@ -22,7 +22,7 @@
 		<section>
 			<content>
 				<para>
-					This article will give a short description about what <newTerm>PowerJSON</newTerm> offers, along with the features in the original <newTerm>fastJSON</newTerm>.
+					This article will give a short description about what <newTerm>PowerJson</newTerm> offers, along with the features in the original <newTerm>fastJSON</newTerm>.
 				</para>
 			</content>
 			<sections address="S1">
@@ -30,26 +30,26 @@
 					<title>Getting Started from fastJSON</title>
 					<content>
 						<para>
-							Since <newTerm>PowerJSON</newTerm> is a fork from <newTerm>fastJSON</newTerm>, for backward compatibility, the assembly name and namespace of the library is the same as fastJSON.
+							Since <newTerm>PowerJson</newTerm> is a fork from <newTerm>fastJSON</newTerm>, for backward compatibility, the assembly name and namespace of the library is the same as PowerJson.
 						</para>
 						<para>
-							Object serialization and deserialization is offered by the central static class <codeEntityReference>T:fastJSON.JSON</codeEntityReference>. To serialize an object, simply call its <codeEntityReference>M:fastJSON.JSON.ToJSON(System.Object)</codeEntityReference> static method. To deserialize an object, calling <codeEntityReference>M:fastJSON.JSON.ToObject``1(System.String)</codeEntityReference> will do the job.
+							Object serialization and deserialization is offered by the central static class <codeEntityReference>T:PowerJson.Json</codeEntityReference>. To serialize an object, simply call its <codeEntityReference>M:PowerJson.Json.ToJson(System.Object)</codeEntityReference> static method. To deserialize an object, calling <codeEntityReference>M:PowerJson.Json.ToObject``1(System.String)</codeEntityReference> will do the job.
 						</para>
 						<para>
-							When you get on with the serialization in your practical project, you will probably need to control the result of JSON serialization or consume external JSON strings. More control on serialization can be set via the <codeEntityReference>T:fastJSON.JSONParameters</codeEntityReference> class, and using the following method overload <codeEntityReference>M:fastJSON.JSON.ToJSON(System.Object,fastJSON.JSONParameters)</codeEntityReference> and <codeEntityReference>M:fastJSON.JSON.ToObject``1(System.String,fastJSON.JSONParameters)</codeEntityReference> in <codeEntityReference>T:fastJSON.JSON</codeEntityReference>.
+							When you get on with the serialization in your practical project, you will probably need to control the result of JSON serialization or consume external JSON strings. More control on serialization can be set via the <codeEntityReference>T:PowerJson.JsonParameters</codeEntityReference> class, and using the following method overload <codeEntityReference>M:PowerJson.Json.ToJson(System.Object,PowerJson.JsonParameters)</codeEntityReference> and <codeEntityReference>M:PowerJson.Json.ToObject``1(System.String,PowerJson.JsonParameters)</codeEntityReference> in <codeEntityReference>T:PowerJson.Json</codeEntityReference>.
 						</para>
 						<para>
-							If the settings offered by <codeEntityReference>T:fastJSON.JSONParameters</codeEntityReference> can not fulfill your needs, you still need further control with your project. Classes and extensive <codeEntityReference qualifyHint="true">T:System.Attribute</codeEntityReference>s offered by this fork will help you out.
+							If the settings offered by <codeEntityReference>T:PowerJson.JsonParameters</codeEntityReference> can not fulfill your needs, you still need further control with your project. Classes and extensive <codeEntityReference qualifyHint="true">T:System.Attribute</codeEntityReference>s offered by this fork will help you out.
 						</para>
 						<para>The extensive serialization support provided by this fork has three levels. The easiest level is marking the code with custom attributes. The middle level is custom attributes with interceptor or convertor types. The ultimate level is reflection and serialization management.</para>
 
 					</content>
 				</section>
 				<section address="S10">
-					<title>Working with PowerJSON</title>
+					<title>Working with PowerJson</title>
 					<content>
 						<para>
-							While you work along in more project, you might soon find that you need more features. It is time to utilize the power offered by <newTerm>PowerJSON</newTerm>. The following is a incomplete list of features provided by PowerJSON.
+							While you work along in more project, you might soon find that you need more features. It is time to utilize the power offered by <newTerm>PowerJson</newTerm>. The following is a incomplete list of features provided by PowerJson.
 						</para>
 						<list class="bullet">
 							<listItem>
@@ -92,25 +92,25 @@
 						<list class="bullet">
 							<listItem>
 								<para>
-									<codeEntityReference>T:fastJSON.JsonSerializableAttribute</codeEntityReference> - Marks a non-public <codeInline>class</codeInline> or <codeInline>struct</codeInline> is deserializable.
+									<codeEntityReference>T:PowerJson.JsonSerializableAttribute</codeEntityReference> - Marks a non-public <codeInline>class</codeInline> or <codeInline>struct</codeInline> is deserializable.
 								</para>
 							</listItem>
 
 							<listItem>
 								<para>
-									<codeEntityReference>T:fastJSON.JsonIncludeAttribute</codeEntityReference> - Specifically denotes whether a <codeInline>field</codeInline> or a <codeInline>property</codeInline> is serializable.
+									<codeEntityReference>T:PowerJson.JsonIncludeAttribute</codeEntityReference> - Specifically denotes whether a <codeInline>field</codeInline> or a <codeInline>property</codeInline> is serializable.
 								</para>
 							</listItem>
 
 							<listItem>
 								<para>
-									<codeEntityReference>T:fastJSON.JsonFieldAttribute</codeEntityReference> - Controls how a <codeInline>field</codeInline> or a <codeInline>property</codeInline> is serialized or deserialized. Serialized name (AKA, JSON alias, or renaming) and polymorphic types can be assigned by this attribute.
+									<codeEntityReference>T:PowerJson.JsonFieldAttribute</codeEntityReference> - Controls how a <codeInline>field</codeInline> or a <codeInline>property</codeInline> is serialized or deserialized. Serialized name (AKA, JSON alias, or renaming) and polymorphic types can be assigned by this attribute.
 								</para>
 							</listItem>
 
 							<listItem>
 								<para>
-									<codeEntityReference>T:fastJSON.JsonEnumValueAttribute</codeEntityReference> - Renames serialized <codeInline>enum</codeInline> values (also decodes them in deserialization).
+									<codeEntityReference>T:PowerJson.JsonEnumValueAttribute</codeEntityReference> - Renames serialized <codeInline>enum</codeInline> values (also decodes them in deserialization).
 								</para>
 							</listItem>
 						</list>
@@ -149,9 +149,9 @@
 						<para>
 							To surmount the above issues, PowerJSON has introduced a <newTerm>noninvasive mode</newTerm> of serialization control. The noninvasive mode make no modification on the data models, yet provides no less power than using Custom Attributes.
 						</para>
-						<para>The noninvasive mode is majorly implemented with the following classes: <codeEntityReference>T:fastJSON.SerializationManager</codeEntityReference>, <codeEntityReference>T:fastJSON.TypeOverride</codeEntityReference> and <codeEntityReference>T:fastJSON.MemberOverride</codeEntityReference>.
+						<para>The noninvasive mode is majorly implemented with the following classes: <codeEntityReference>T:PowerJson.SerializationManager</codeEntityReference>, <codeEntityReference>T:PowerJson.TypeOverride</codeEntityReference> and <codeEntityReference>T:PowerJson.MemberOverride</codeEntityReference>.
 						</para>
-						<para>The <codeInline>SerializationManager</codeInline> has a replacable instance in the <codeEntityReference>T:fastJSON.JSON</codeEntityReference> class. Calling its <codeEntityReference>M:fastJSON.SerializationManager.Override``1(fastJSON.TypeOverride)</codeEntityReference> method will inject information on how to alter the result of serialization or deserialization.</para>
+						<para>The <codeInline>SerializationManager</codeInline> has a replacable instance in the <codeEntityReference>T:PowerJson.JSON</codeEntityReference> class. Calling its <codeEntityReference>M:PowerJson.SerializationManager.Override``1(PowerJson.TypeOverride)</codeEntityReference> method will inject information on how to alter the result of serialization or deserialization.</para>
 						<para>The following example has the same effect as the one of the Custom Attributes above. The data model has no attributes.</para>
 						<code language="c#" source="..\MsUnitTest\SerializationControlTests.cs" region="Noninvasive Control" />
 						<para>The serialization is controlled from external code.</para>
@@ -162,18 +162,18 @@
 					<title>Advanced Control with Converters and Interceptors</title>
 					<content>
 						<para>
-							To further control the aspect of serialization and deserialization, we can use data converters and interceptors. They can be applied to <codeInline>class</codeInline>es or <codeInline>struct</codeInline>s via the <codeEntityReference>T:fastJSON.JsonInterceptorAttribute</codeEntityReference> and <codeEntityReference>T:fastJSON.JsonConverterAttribute</codeEntityReference>.
+							To further control the aspect of serialization and deserialization, we can use data converters and interceptors. They can be applied to <codeInline>class</codeInline>es or <codeInline>struct</codeInline>s via the <codeEntityReference>T:PowerJson.JsonInterceptorAttribute</codeEntityReference> and <codeEntityReference>T:PowerJson.JsonConverterAttribute</codeEntityReference>.
 						</para>
 						<list class="bullet">
 							<listItem>
 								<para>
-									<codeEntityReference>T:fastJSON.JsonInterceptorAttribute</codeEntityReference> - Controls how a <codeInline>class</codeInline> or a <codeInline>struct</codeInline> is serialized or deserialized. Various methods are provided to control each phase in serialization and deserialization, such as object data conversion, field exclusion, appendices of extra key-value pairs in the serialized JSON, etc. The attribute takes a type implements <codeEntityReference>T:fastJSON.IJsonInterceptor</codeEntityReference> interface, and a template implementation of the interface is offered by <codeEntityReference>T:fastJSON.JsonInterceptor`1</codeEntityReference>.
+									<codeEntityReference>T:PowerJson.JsonInterceptorAttribute</codeEntityReference> - Controls how a <codeInline>class</codeInline> or a <codeInline>struct</codeInline> is serialized or deserialized. Various methods are provided to control each phase in serialization and deserialization, such as object data conversion, field exclusion, appendices of extra key-value pairs in the serialized JSON, etc. The attribute takes a type implements <codeEntityReference>T:PowerJson.IJsonInterceptor</codeEntityReference> interface, and a template implementation of the interface is offered by <codeEntityReference>T:PowerJson.JsonInterceptor`1</codeEntityReference>.
 								</para>
 							</listItem>
 
 							<listItem>
 								<para>
-									<codeEntityReference>T:fastJSON.JsonConverterAttribute</codeEntityReference> - Converts and reverts data and type of the <codeInline>field</codeInline> or a <codeInline>property</codeInline>. The attribute takes a type implements <codeEntityReference>T:fastJSON.IJsonConverter</codeEntityReference> interface, and a template implementation of the interface is offered by <codeEntityReference>T:fastJSON.JsonConverter`2</codeEntityReference>.
+									<codeEntityReference>T:PowerJson.JsonConverterAttribute</codeEntityReference> - Converts and reverts data and type of the <codeInline>field</codeInline> or a <codeInline>property</codeInline>. The attribute takes a type implements <codeEntityReference>T:PowerJson.IJsonConverter</codeEntityReference> interface, and a template implementation of the interface is offered by <codeEntityReference>T:PowerJson.JsonConverter`2</codeEntityReference>.
 								</para>
 							</listItem>
 						</list>
@@ -186,11 +186,11 @@
 		<relatedTopics>
 			<link xlink:href="07899cb8-f4d9-4e46-bbb6-6ba8518de804" />
 			<externalLink>
-				<linkText>Read more about PowerJSON on CodeProject</linkText>
+				<linkText>Read more about PowerJson on CodeProject</linkText>
 				<linkUri>http://www.codeproject.com/Articles/888604/A-More-Powerful-fastJSON</linkUri>
 			</externalLink>
 			<externalLink>
-				<linkText>PowerJSON on GitHub</linkText>
+				<linkText>PowerJson on GitHub</linkText>
 				<linkUri>https://github.com/wmjordan/PowerJSON</linkUri>
 			</externalLink>
 		</relatedTopics>

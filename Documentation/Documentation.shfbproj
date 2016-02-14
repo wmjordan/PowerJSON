@@ -92,6 +92,7 @@ To gain full control over the serialization, please read the documentation on th
   <ItemGroup>
     <None Include="Content\Usage\ControllingSerialization.aml" />
     <None Include="Content\Usage\GettingStarted.aml" />
+    <None Include="Content\Usage\MigratingFromFastJSON.aml" />
     <None Include="Content\Usage\SerializeIEnumerable.aml" />
     <None Include="Content\VersionHistory\v2.1.11.aml" />
     <None Include="Content\VersionHistory\VersionHistory.aml" />
@@ -105,7 +106,7 @@ To gain full control over the serialization, please read the documentation on th
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\fastJSON\PowerJSON.csproj">
-      <Name>PowerJSON</Name>
+      <Name>PowerJson</Name>
       <Project>{508e9933-382c-46e9-950b-0264b21a8a7b}</Project>
       <Private>True</Private>
     </ProjectReference>

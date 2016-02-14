@@ -4,14 +4,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 
-namespace fastJSON
+namespace PowerJson
 {
 	delegate object CreateObject ();
 	delegate object GenericGetter (object obj);
 	delegate void WriteJsonValue (JsonSerializer serializer, object value);
 	delegate object GenericSetter (object target, object value);
 	delegate void AddCollectionItem (object target, object value);
-	delegate object RevertJsonValue (JsonDeserializer deserializer, object value, ReflectionCache targetType);
+	delegate object RevertJsonValue (JsonDeserializer deserializer, object value, SerializationInfo targetType);
 
 	struct CompoundDeserializer
 	{
@@ -21,7 +21,7 @@ namespace fastJSON
 			CollectionName = collectionName;
 			DeserializeMethod = deserializeMethod;
 		}
-		internal object Deserialize (JsonDeserializer deserializer, object value, ReflectionCache targetType) {
+		internal object Deserialize (JsonDeserializer deserializer, object value, SerializationInfo targetType) {
 			var d = value as JsonDict;
 			var o = DeserializeMethod (deserializer, d[CollectionName], targetType);
 			return deserializer.CreateObject (d, targetType, o);
@@ -34,6 +34,11 @@ namespace fastJSON
 		internal readonly string AssemblyName;
 		internal readonly Type Type;
 		internal readonly JsonDataType JsonDataType;
+		/// <summary>
+		/// Whether the type is an abstract type, an interface, or object type.
+		/// </summary>
+		internal readonly bool IsAbstract;
+		internal readonly bool IsAnonymous;
 
 		#region Definition for Generic or Array Types
 		internal readonly Type[] ArgumentTypes;
@@ -48,27 +53,24 @@ namespace fastJSON
 		internal readonly ConstructorTypes ConstructorInfo;
 		internal readonly CreateObject Constructor;
 		internal readonly WriteJsonValue SerializeMethod;
-		internal RevertJsonValue DeserializeMethod;
+		internal readonly RevertJsonValue DeserializeMethod;
 		internal readonly MemberCache[] Members;
-		internal JsonMemberGetter[] Getters;
-		// denotes the collection name for extended IEnumerable types
-		internal string CollectionName;
-		// a member could have several setters because of the result of typed serialization
-		internal Dictionary<string, JsonMemberSetter> Setters;
-		internal bool AlwaysDeserializable;
-		internal IJsonConverter Converter;
-		internal IJsonInterceptor Interceptor;
 		#endregion
 
 		#region Enum Info
 		internal readonly bool IsFlaggedEnum;
-		internal Dictionary<string, Enum> EnumNames;
 		#endregion
 
 		internal ReflectionCache (Type type) {
 			Type = type;
 			TypeName = type.FullName;
 			AssemblyName = type.AssemblyQualifiedName;
+			IsAbstract = type.IsAbstract || type.IsInterface || type.Equals(typeof(object));
+			IsAnonymous = type.IsGenericType
+				&& (type.Name.StartsWith ("<>", StringComparison.Ordinal) || type.Name.StartsWith ("VB$", StringComparison.Ordinal))
+				&& AttributeHelper.HasAttribute<System.Runtime.CompilerServices.CompilerGeneratedAttribute> (type, false)
+				&& type.Name.Contains ("AnonymousType")
+				&& (type.Attributes & TypeAttributes.NotPublic) == TypeAttributes.NotPublic;
 
 			JsonDataType = Reflection.GetJsonDataType (type);
 			SerializeMethod = JsonSerializer.GetWriteJsonMethod (type);
@@ -109,7 +111,7 @@ namespace fastJSON
 			}
 			if (typeof(IEnumerable).IsAssignableFrom (type)) {
 				if (typeof(Array).IsAssignableFrom (type) == false) {
-					AppendItem = Reflection.CreateWrapperMethod<AddCollectionItem> (Reflection.FindMethod (type, "Add", new Type[1] { null }));
+					AppendItem = Reflection.CreateWrapperMethod<AddCollectionItem> (Reflection.FindMethod (type, "Add", new Type[] { null }));
 				}
 				if (ArgumentTypes != null && ArgumentTypes.Length == 1) {
 					ItemSerializer = JsonSerializer.GetWriteJsonMethod (ArgumentTypes[0]);
@@ -157,42 +159,11 @@ namespace fastJSON
 			//}
 		}
 
-		/// <summary>
-		/// Creates an instance of the type by calling its parameterless constructor.
-		/// </summary>
-		/// <returns>The created instance.</returns>
-		public object Instantiate () {
-			if (Constructor == null) {
-				return null;
-			}
-			if (ConstructorInfo != ConstructorTypes.Default && AlwaysDeserializable == false) {
-				throw new JsonSerializationException ("The constructor of type \"" + TypeName + "\" from assembly \"" + AssemblyName + "\" is not publicly visible.");
-			}
-			try {
-				return Constructor ();
-			}
-			catch (Exception ex) {
-				throw new JsonSerializationException (string.Format (@"Failed to fast create instance for type ""{0}"" from assembly ""{1}""", TypeName, AssemblyName), ex);
-			}
-		}
-
-		internal JsonMemberGetter FindGetters (string memberName) {
-			return Array.Find (Getters, (i) => { return i.MemberName == memberName; });
-		}
 
 		internal MemberCache FindMemberCache (string memberName) {
 			return Array.Find (Members, (i) => { return i.MemberName == memberName; });
 		}
 
-		internal List<JsonMemberSetter> FindProperties (string memberName) {
-			var r = new List<JsonMemberSetter> ();
-			foreach (var item in Setters) {
-				if (item.Value.Member.MemberName == memberName) {
-					r.Add (item.Value);
-				}
-			}
-			return r;
-		}
 	}
 
 	/// <summary>
@@ -236,7 +207,6 @@ namespace fastJSON
 		internal readonly string MemberName;
 		internal readonly Type MemberType;
 		internal readonly MemberInfo MemberInfo; // PropertyInfo or FieldInfo
-		internal ReflectionCache MemberTypeReflection;
 
 		internal readonly bool HasPublicGetter;
 		internal readonly bool HasPublicSetter;
@@ -252,8 +222,6 @@ namespace fastJSON
 		internal readonly JsonDataType JsonDataType;
 		internal readonly Type ElementType; // bt
 		internal readonly Type ChangeType; // nullable ? elementtype : membertype
-		internal readonly WriteJsonValue SerializeMethod;
-		internal readonly RevertJsonValue DeserializeMethod;
 		internal readonly GenericGetter Getter;
 		internal readonly GenericSetter Setter;
 
@@ -298,8 +266,6 @@ namespace fastJSON
 			MemberType = memberType;
 			MemberInfo = memberInfo;
 			JsonDataType dt = Reflection.GetJsonDataType (memberType);
-			DeserializeMethod = JsonDeserializer.GetReadJsonMethod (memberType);
-			SerializeMethod = JsonSerializer.GetWriteJsonMethod (memberType);
 
 			if (dt == JsonDataType.Array || dt == JsonDataType.MultiDimensionalArray) {
 				ElementType = memberType.GetElementType ();
@@ -317,48 +283,6 @@ namespace fastJSON
 				ChangeType = IsNullable ? ElementType : memberType;
 			}
 			JsonDataType = dt;
-		}
-	}
-
-	[DebuggerDisplay ("{MemberName} ({SerializedName})")]
-	sealed class JsonMemberGetter
-	{
-		internal readonly MemberCache Member;
-		internal readonly string MemberName;
-
-		internal TriState Serializable;
-
-		internal bool SpecificName;
-		internal string SerializedName;
-		internal IDictionary<Type, string> TypedNames;
-
-		internal bool HasNonSerializedValue;
-		internal object[] NonSerializedValues;
-
-		internal IJsonConverter Converter;
-		internal IJsonConverter ItemConverter;
-
-		public JsonMemberGetter (MemberCache cache) {
-			Member = cache;
-			MemberName = cache.MemberName;
-			SerializedName = cache.MemberName;
-		}
-	}
-
-	[DebuggerDisplay ("{MemberName} ({JsonDataType})")]
-	sealed class JsonMemberSetter // myPropInfo
-	{
-		internal readonly string MemberName;
-		internal readonly MemberCache Member;
-
-		internal bool CanWrite;
-		internal IJsonConverter Converter;
-		internal IJsonConverter ItemConverter;
-
-		public JsonMemberSetter (MemberCache member) {
-			MemberName = member.MemberName;
-			Member = member;
-			CanWrite = member.IsReadOnly == false;
 		}
 	}
 

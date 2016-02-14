@@ -20,7 +20,7 @@
 				In the fulll-serializing mode, those types will be serialized as JSON dictionaries, their enumerable items will be placed into container fields named by the programmer, and extended members will be serialized as entries in the dictionaries.
 			</para>
 			<para>
-				In <newTerm>fastJSON</newTerm>, the field which holds the enumerable items is called <newTerm>Container</newTerm> and its name can be set via a <codeEntityReference>T:fastJSON.JsonCollectionAttribute</codeEntityReference> attribute or <codeEntityReference>P:fastJSON.TypeOverride.CollectionContainer</codeEntityReference> from the <codeEntityReference>T:fastJSON.TypeOverride</codeEntityReference> type.
+				In <newTerm>fastJSON</newTerm>, the field which holds the enumerable items is called <newTerm>Container</newTerm> and its name can be set via a <codeEntityReference>T:PowerJson.JsonCollectionAttribute</codeEntityReference> attribute or <codeEntityReference>P:PowerJson.TypeOverride.CollectionContainer</codeEntityReference> from the <codeEntityReference>T:PowerJson.TypeOverride</codeEntityReference> type.
 			</para>
 		</introduction>
 
@@ -43,7 +43,7 @@
 				</step>
 				<step>
 					<content>
-						<para>To fully serialize class <codeInline>A</codeInline> in this example, we can apply a <codeEntityReference>T:fastJSON.JsonCollectionAttribute</codeEntityReference> onto the class.
+						<para>To fully serialize class <codeInline>A</codeInline> in this example, we can apply a <codeEntityReference>T:PowerJson.JsonCollectionAttribute</codeEntityReference> onto the class.
 					</para>
 						<code language="c#">
 							<![CDATA[[JsonCollection ("items")
@@ -56,13 +56,13 @@ public class A : List<int> {
 				</step>
 				<step>
 					<content>
-						<para>In noninvasive mode, we can assign a value to the <codeEntityReference>P:fastJSON.TypeOverride.CollectionContainer</codeEntityReference> property.
+						<para>In noninvasive mode, we can assign a value to the <codeEntityReference>P:PowerJson.TypeOverride.CollectionContainer</codeEntityReference> property.
 					</para>
 						<code language="c#">
-							<![CDATA[JSON.Manager.Override<A> (new TypeOverride () {
+							<![CDATA[Json.Manager.Override<A> (new TypeOverride () {
 	CollectionContainer = "items"
 });]]></code>
-						<para>The serialization effect will be the same as the <codeEntityReference>T:fastJSON.JsonCollectionAttribute</codeEntityReference> shown above.
+						<para>The serialization effect will be the same as the <codeEntityReference>T:PowerJson.JsonCollectionAttribute</codeEntityReference> shown above.
 					</para>
 					</content>
 				</step>

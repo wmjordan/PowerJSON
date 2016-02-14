@@ -6,7 +6,7 @@ using System.Runtime.Serialization;
 using System.Security.Permissions;
 using System.Xml.Serialization;
 
-namespace fastJSON
+namespace PowerJson
 {
 	/// <summary>
 	/// The general implementation of <see cref="IReflectionController"/>, which takes custom attributes such as <see cref="JsonFieldAttribute"/>, <see cref="JsonConverterAttribute"/>, etc. into consideration.
@@ -99,6 +99,21 @@ namespace fastJSON
 		}
 
 		/// <summary>
+		/// Gets the type alias which can be used to determine derived types for abstract types, interface types or the <see cref="object" /> type during deserialization.
+		/// </summary>
+		/// <param name="type">The type to be serialized.</param>
+		/// <returns>
+		/// The alias denotes the type.
+		/// </returns>
+		public override string GetTypeAlias (Type type) {
+			var a = AttributeHelper.GetAttribute<JsonTypeAliasAttribute> (type, false);
+			if (a != null) {
+				return a.Name;
+			}
+			return null;
+		}
+
+		/// <summary>
 		/// Gets whether the type is always deserializable. The value can be set via <see cref="JsonSerializableAttribute"/>.
 		/// </summary>
 		/// <param name="type">The type to be deserialized.</param>
@@ -153,15 +168,17 @@ namespace fastJSON
 			}
 			return null;
 		}
+
 		/// <summary>
 		/// Returns whether the specific member is serializable. This value can be set via <see cref="JsonIncludeAttribute"/> and <see cref="IgnoreAttributes"/>.
 		/// If true is returned, the member will always get serialized.
 		/// If false is returned, the member will be excluded from serialization.
-		/// If null is returned, the serialization of the member will be determined by the settings in <see cref="JSONParameters"/>.
+		/// If null is returned, the serialization of the member will be determined by the settings in <see cref="JsonParameters"/>.
 		/// </summary>
 		/// <param name="member">The member to be serialized.</param>
 		/// <param name="info">Reflection information for the member.</param>
 		/// <returns>True is returned if the member is serializable, otherwise, false.</returns>
+		[System.Diagnostics.CodeAnalysis.SuppressMessage ("Microsoft.Design", "CA1062", MessageId = "0")]
 		public override bool? IsMemberSerializable (MemberInfo member, IMemberInfo info) {
 			var ic = AttributeHelper.GetAttribute<JsonIncludeAttribute> (member, true);
 			if (ic != null) {
@@ -197,6 +214,7 @@ namespace fastJSON
 		/// <param name="member">The member to be serialized.</param>
 		/// <param name="info">Reflection information for the member.</param>
 		/// <returns>True is returned if the member is serializable, otherwise, false.</returns>
+		[System.Diagnostics.CodeAnalysis.SuppressMessage ("Microsoft.Design", "CA1062", MessageId = "0")]
 		public override bool IsMemberDeserializable (MemberInfo member, IMemberInfo info) {
 			var ro = AttributeHelper.GetAttribute<System.ComponentModel.ReadOnlyAttribute> (member, true);
 			if (ro != null) {
@@ -350,6 +368,15 @@ namespace fastJSON
 		public virtual string GetEnumValueName (MemberInfo member) { return null; }
 
 		/// <summary>
+		/// Gets the type alias which can be used to determine derived types for abstract types, interface types or the <see cref="object" /> type during deserialization.
+		/// </summary>
+		/// <param name="type">The type to be serialized.</param>
+		/// <returns>
+		/// The alias denotes the type.
+		/// </returns>
+		public virtual string GetTypeAlias (Type type) { return null; }
+
+		/// <summary>
 		/// This method is called before the constructor of a type is built for deserialization to detect whether the type is deserializable.
 		/// When this method returns true, the type can be deserialized regardless it is a non-public type.
 		/// Public types are always deserializable and not affected by the value returned from this method.
@@ -387,11 +414,12 @@ namespace fastJSON
 		/// This method is called to determine whether a field or a property is serializable.
 		/// If false is returned, the member will be excluded from serialization.
 		/// If true is returned, the member will always get serialized.
-		/// If null is returned, the serialization of the member will be determined by the settings in <see cref="JSONParameters"/>.
+		/// If null is returned, the serialization of the member will be determined by the settings in <see cref="JsonParameters"/>.
 		/// </summary>
 		/// <param name="member">The member to be serialized.</param>
 		/// <param name="info">Reflection information for the member.</param>
 		/// <returns>False is returned if the member is private, otherwise, null is returned.</returns>
+		[System.Diagnostics.CodeAnalysis.SuppressMessage ("Microsoft.Design", "CA1062", MessageId = "0")]
 		public virtual bool? IsMemberSerializable (MemberInfo member, IMemberInfo info) {
 			var p = member as PropertyInfo;
 			if (p != null) {
@@ -415,6 +443,7 @@ namespace fastJSON
 		/// <param name="member">The member to be serialized.</param>
 		/// <param name="info">Reflection information for the member.</param>
 		/// <returns>True is returned if the member is public, otherwise, false.</returns>
+		[System.Diagnostics.CodeAnalysis.SuppressMessage ("Microsoft.Design", "CA1062", MessageId = "1")]
 		public virtual bool IsMemberDeserializable (MemberInfo member, IMemberInfo info) {
 			return info.IsReadOnly == false && info.IsPublic;
 		}
@@ -473,10 +502,17 @@ namespace fastJSON
 		string GetEnumValueName (MemberInfo member);
 
 		/// <summary>
+		/// Gets the type alias which can be used to determine derived types for abstract types, interface types or the <see cref="object"/> type during deserialization.
+		/// </summary>
+		/// <param name="type">The type to be serialized.</param>
+		/// <returns>The alias denotes the type.</returns>
+		string GetTypeAlias (Type type);
+
+		/// <summary>
 		/// This method is called before the constructor of a type is built for deserialization to detect whether the type is deserializable.
 		/// When this method returns true, the type can be deserialized regardless it is a non-public type.
 		/// Public types are always deserializable and not affected by the value returned from this method.
-		/// If the type contains generic parameters (for generic types) or an element type (for array types), the parameters and element types will be checked first.
+		/// If the type contains type parameters (for generic types) or an element type (for array types), the parameters and element types will be checked first.
 		/// </summary>
 		/// <param name="type">The type to be deserialized.</param>
 		/// <returns>Whether the type can be deserialized even if it is a non-public type.</returns>
@@ -510,7 +546,7 @@ namespace fastJSON
 		/// This method is called to determine whether a field or a property is serializable.
 		/// If false is returned, the member will be excluded from serialization.
 		/// If true is returned, the member will always get serialized.
-		/// If null is returned, the serialization of the member will be determined by the settings in <see cref="JSONParameters"/>.
+		/// If null is returned, the serialization of the member will be determined by the settings in <see cref="JsonParameters"/>.
 		/// </summary>
 		/// <param name="member">The member to be serialized.</param>
 		/// <param name="info">Reflection information for the member.</param>
@@ -526,7 +562,8 @@ namespace fastJSON
 		bool IsMemberDeserializable (MemberInfo member, IMemberInfo info);
 
 		/// <summary>
-		/// This method returns possible names for corresponding types of a field or a property. This enables polymorphic serialization and deserialization for abstract, interface, or object types, with predetermined concrete types. If polymorphic serialization is not used, null or an empty dictionary could be returned.
+		/// <para>Returns possible names for corresponding types of a field or a property.</para>
+		/// <para>This enables polymorphic serialization and deserialization for abstract, interface, or object types, with predetermined concrete types. If polymorphic serialization is not used, null or an empty dictionary could be returned.</para>
 		/// </summary>
 		/// <param name="member">The <see cref="MemberInfo"/> of the field or property.</param>
 		/// <returns>The dictionary contains types and their corresponding names.</returns>
@@ -555,23 +592,32 @@ namespace fastJSON
 
 	}
 
-    /// <summary>
-    /// Contains the names for a serialized member.
-    /// </summary>
-    /// <preliminary />
-    [Serializable]
-    public sealed class SerializedNames : Dictionary<Type, string>, ISerializable
+	/// <summary>
+	/// Contains the names for a serialized member.
+	/// </summary>
+	/// <preliminary />
+	[Serializable]
+	public sealed class SerializedNames : Dictionary<Type, string>, ISerializable
 	{
 		/// <summary>
 		/// Gets the default name for the serialized member.
 		/// </summary>
 		public string DefaultName { get; set; }
 
-		[SecurityPermission (SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.SerializationFormatter)]
-		void ISerializable.GetObjectData (SerializationInfo info, StreamingContext context) {
-			if (info == null)
-				throw new ArgumentNullException ("info");
+		/// <summary>
+		/// Initializes a new instance of the <see cref="SerializedNames"/> class.
+		/// </summary>
+		public SerializedNames () {}
 
+		private SerializedNames (System.Runtime.Serialization.SerializationInfo info, StreamingContext context) : base (info, context) {
+			DefaultName = (string)info.GetValue ("$DefaultName", typeof(string));
+		}
+
+		[SecurityPermission (SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.SerializationFormatter)]
+		void ISerializable.GetObjectData (System.Runtime.Serialization.SerializationInfo info, StreamingContext context) {
+			if (info == null) {
+				return;
+			}
 			info.AddValue ("$DefaultName", DefaultName);
 			GetObjectData (info, context);
 		}

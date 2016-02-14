@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace fastJSON.BonusPack
+namespace PowerJson.ExtraConverters
 {
 	/// <summary>
 	/// A <see cref="IJsonConverter"/> converts boolean values to 1/0 or "1"/"0", rather than the default "true" and "false" values.
@@ -25,31 +25,33 @@ namespace fastJSON.BonusPack
 		/// </summary>
 		public bool UseTextualForm { get; private set; }
 
-		void IJsonConverter.DeserializationConvert (JsonItem item) {
-			var v = item._Value;
+		object IJsonConverter.DeserializationConvert (object value) {
+			var v = value;
 			if (v == null) {
-				item._Value = false;
+				return false;
 			}
 			var s = v as string;
 			if (s != null) {
-				item._Value = s.Trim () != "0";
+				return s.Trim () != "0";
 			}
 			if (v is long) {
-				item._Value = (long)v != 0L;
+				return (long)v != 0L;
 			}
+			if (v is double) {
+				return (double)v != 0.0;
+			}
+			return value;
 		}
 
 		Type IJsonConverter.GetReversiveType (JsonItem item) {
 			return null;
 		}
 
-		void IJsonConverter.SerializationConvert (JsonItem item) {
+		object IJsonConverter.SerializationConvert (object value) {
 			if (UseTextualForm) {
-				item._Value = (bool)item._Value ? "1" : "0";
+				return (bool)value ? "1" : "0";
 			}
-			else {
-				item._Value = (bool)item._Value ? 1 : 0;
-			}
+			return (bool)value ? 1 : 0;
 		}
 	}
 }

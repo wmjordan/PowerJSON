@@ -2,14 +2,14 @@
 using System.Collections.Generic;
 using System.Xml;
 
-namespace fastJSON.BonusPack
+namespace PowerJson.ExtraConverters
 {
 	/// <summary>
 	/// A <see cref="IJsonConverter"/> to convert <see cref="XmlElement"/> to JSON strings. Currently deserialization has not yet been implemented.
 	/// </summary>
 	class XmlNodeConverter : IJsonConverter
 	{
-		void IJsonConverter.DeserializationConvert (JsonItem item) {
+		object IJsonConverter.DeserializationConvert (object value) {
 			throw new NotImplementedException ();
 			//var d = new XmlDocument ();
 			//var nl = item.Value as IList<object>;
@@ -24,21 +24,22 @@ namespace fastJSON.BonusPack
 			return null;
 		}
 
-		void IJsonConverter.SerializationConvert (JsonItem item) {
-			var v = item.Value as XmlNode;
+		object IJsonConverter.SerializationConvert (object value) {
+			var v = value as XmlNode;
 			if (v == null)
-				return;
+				return null;
 			var nt = v.NodeType;
 			if (nt == XmlNodeType.Element) {
-				item.Value = ConvertElement ((XmlElement)v);
+				value = ConvertElement ((XmlElement)v);
 			}
 			else if (nt == XmlNodeType.Document || nt == XmlNodeType.DocumentFragment) {
-				item.Value = ConvertNode (v);
+				value = ConvertNode (v);
 			}
+			return value;
 		}
 
 		Dictionary<string, object> ConvertElement (XmlElement element) {
-			Dictionary<string, object> d = new Dictionary<string, object> ();
+			var d = new Dictionary<string, object> ();
 			d.Add (String.Concat ("<", element.Name, ">"), element.NamespaceURI);
 			foreach (XmlAttribute attr in element.Attributes) {
 				d.Add ("@" + attr.Name, attr.Value);
@@ -79,7 +80,7 @@ namespace fastJSON.BonusPack
 						break;
 					case XmlNodeType.Comment:
 						n.Add (new KeyValuePair<string, string> ("!", node.Value));
-                        break;
+						break;
 				}
 			}
 			return n;

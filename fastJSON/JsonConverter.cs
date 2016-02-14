@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace fastJSON
+namespace PowerJson
 {
 	/// <summary>
 	/// Converts the member value being serialized or deserialized.
@@ -26,21 +26,21 @@ namespace fastJSON
 		Type GetReversiveType (JsonItem item);
 
 		/// <summary>
-		/// Converts the <paramref name="item" /> to a new value during serialization.
-		/// Either <see cref="JsonItem.Name"/> or <see cref="JsonItem.Value"/> of the <paramref name="item" /> can be changed.
-		/// However, if the name is changed, the data might not be properly deserialized.
+		/// Converts the <paramref name="value" /> to a new value during serialization.
 		/// </summary>
-		/// <param name="item">The item to be deserialized.</param>
-		void SerializationConvert (JsonItem item);
+		/// <param name="value">The value to be serialized.</param>
+		/// <returns>The new value.</returns>
+		object SerializationConvert (object value);
 
 		/// <summary>
-		/// <para>Converts the <see cref="JsonItem.Value"/> of <paramref name="item" /> to a new value during deserialization. The <see cref="JsonItem.Value"/> of <paramref name="item" /> can be changed to a different type.
+		/// <para>Converts the <paramref name="value" /> to a new value during deserialization. The new value can be changed to a different type than the original value.
 		/// This enables adapting various data types from deserialization.</para>
-		/// <para>The <see cref="JsonItem.Value"/> of <paramref name="item" /> could be one of six primitive value types.
+		/// <para>The <paramref name="value" /> could be one of six primitive value types.
 		/// For further information, refer to <see cref="IJsonConverter"/>.</para>
 		/// </summary>
-		/// <param name="item">The item to be deserialized.</param>
-		void DeserializationConvert (JsonItem item);
+		/// <param name="value">The item to be deserialized.</param>
+		/// <returns>The new deserialized value.</returns>
+		object DeserializationConvert (object value);
 	}
 
 	/// <summary>
@@ -79,40 +79,42 @@ namespace fastJSON
 		}
 
 		/// <summary>
-		/// Converts the original value before serialization. If the serialized value is not the type of <typeparamref name="TOriginal"/>, the <paramref name="item"/> will be returned.
+		/// Converts the original value before serialization. If the serialized value is not the type of <typeparamref name="TOriginal" />, the original <paramref name="value" /> will be returned.
 		/// </summary>
-		/// <param name="item">The item to be deserialized.</param>
-		public void SerializationConvert (JsonItem item) {
-			if (item.Value is TOriginal) {
-				item.Value = Convert (item.Name, (TOriginal)item.Value);
+		/// <param name="value">The item to be serialized.</param>
+		/// <returns>The new value.</returns>
+		public object SerializationConvert (object value) {
+			if (value is TOriginal) {
+				return Convert ((TOriginal)value);
 			}
+			return value;
 		}
 
 		/// <summary>
-		/// Reverts the serialized value to <typeparamref name="TOriginal"/>. If the serialized value is not the type of <typeparamref name="TSerialized"/>, nothing will be changed.
+		/// Reverts the serialized value to <typeparamref name="TOriginal" />. If the serialized value is not the type of <typeparamref name="TSerialized" />, nothing will be changed.
 		/// </summary>
-		/// <param name="item">The item to be deserialized.</param>
-		public void DeserializationConvert (JsonItem item) {
-			if (item.Value is TSerialized) {
-				item.Value = Revert (item.Name, (TSerialized)item.Value);
+		/// <param name="value">The item to be deserialized.</param>
+		/// <returns>The new deserialized value.</returns>
+		public object DeserializationConvert (object value) {
+			if (value is TSerialized) {
+				return Revert ((TSerialized)value);
 			}
+			return value;
 		}
 
 		/// <summary>
-		/// Converts the original value to <typeparamref name="TSerialized"/> type before serialization.
+		/// Converts <paramref name="value"/> to <typeparamref name="TSerialized"/> type before serialization.
 		/// </summary>
-		/// <param name="fieldName">The name of the annotated member.</param>
-		/// <param name="fieldValue">The value being serialized.</param>
+		/// <param name="value">The value being serialized.</param>
 		/// <returns>The converted value.</returns>
-		protected abstract TSerialized Convert (string fieldName, TOriginal fieldValue);
+		protected abstract TSerialized Convert (TOriginal value);
 
 		/// <summary>
-		/// Reverts the serialized value to the <typeparamref name="TOriginal"/> type.
+		/// Reverts the serialized <paramref name="value"/> to the <typeparamref name="TOriginal"/> type.
 		/// </summary>
-		/// <param name="fieldName">The name of the annotated member.</param>
-		/// <param name="fieldValue">The serialized value.</param>
-		/// <returns>The reverted value which has the same type as the annotated member.</returns>
-		protected abstract TOriginal Revert (string fieldName, TSerialized fieldValue);
+		/// <param name="value">The serialized value.</param>
+		/// <returns>The reverted value which has the <typeparamref name="TOriginal"/> type.</returns>
+		protected abstract TOriginal Revert (TSerialized value);
 
 	}
 
@@ -130,7 +132,7 @@ namespace fastJSON
 
 		internal string _Name;
 		/// <summary>
-		/// The name of the item. During serialization, this property can be changed to serialize the member to another name. If the item is the object initially passed to the <see cref="JSON.ToJSON(object)"/> method (or its overloads), this value will be an empty string.
+		/// The name of the item. During serialization, this property can be changed to serialize the member to another name. If the item is the object initially passed to the <see cref="Json.ToJson(object)"/> method (or its overloads), this value will be an empty string.
 		/// </summary>
 		/// <exception cref="InvalidOperationException">This value is changed during deserialization or serializing an item of an <see cref="IEnumerable{T}"/> instance.</exception>
 		public string Name {

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
 using System.Reflection.Emit;
-using fastJSON;
+using PowerJson;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace MsUnitTest
@@ -109,10 +109,10 @@ namespace MsUnitTest
 			for (int pp = 0; pp < tcount; pp++) {
 				DateTime st = DateTime.Now;
 				colclass deserializedStore;
-				string jsonText = JSON.ToJSON (c);
+				string jsonText = Json.ToJson (c);
 				//Console.WriteLine(" size = " + jsonText.Length);
 				for (int i = 0; i < count; i++) {
-					deserializedStore = (colclass)JSON.ToObject (jsonText);
+					deserializedStore = (colclass)Json.ToObject (jsonText);
 				}
 				t += DateTime.Now.Subtract (st).TotalMilliseconds;
 				Console.Write ("\t" + DateTime.Now.Subtract (st).TotalMilliseconds);
@@ -130,7 +130,7 @@ namespace MsUnitTest
 				DateTime st = DateTime.Now;
 				string jsonText = null;
 				for (int i = 0; i < count; i++) {
-					jsonText = JSON.ToJSON (c);
+					jsonText = Json.ToJson (c);
 				}
 				t += DateTime.Now.Subtract (st).TotalMilliseconds;
 				Console.Write ("\t" + DateTime.Now.Subtract (st).TotalMilliseconds);

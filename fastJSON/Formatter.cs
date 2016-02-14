@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace fastJSON
+namespace PowerJson
 {
 	static class Formatter
 	{

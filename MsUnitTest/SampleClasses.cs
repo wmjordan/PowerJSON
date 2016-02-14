@@ -60,6 +60,7 @@ namespace MsUnitTest
 
 	}
 
+	[PowerJson.JsonTypeAlias("base")]
 	public class baseclass
 	{
 		public string Name { get; set; }

@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 
-namespace fastJSON
+namespace PowerJson
 {
 	/// <summary>
 	/// Gives the basic control over JSON serialization and deserialization.
 	/// </summary>
-	public sealed class JSONParameters
+	public sealed class JsonParameters
 	{
 		/// <summary>
 		/// Uses the optimized fast Dataset Schema format (default = True)
@@ -16,15 +17,15 @@ namespace fastJSON
 		/// <summary>
 		/// Uses the fast GUID format (default = True)
 		/// </summary>
-		public bool UseFastGuid = true;
+		public bool UseFastGuid;
 		/// <summary>
 		/// Serializes null values to the output (default = True)
 		/// </summary>
 		public bool SerializeNullValues = true;
 		/// <summary>
-		/// Serializes static fields or properties into the output (default = true).
+		/// Serializes static fields or properties into the output (default = false).
 		/// </summary>
-		public bool SerializeStaticMembers = true;
+		public bool SerializeStaticMembers;
 		/// <summary>
 		/// Serializes arrays, collections, lists or dictionaries with no element (default = true).
 		/// </summary>
@@ -37,24 +38,15 @@ namespace fastJSON
 		/// <summary>
 		/// Shows the read-only properties of types in the output (default = False). <see cref="JsonIncludeAttribute"/> has higher precedence than this setting.
 		/// </summary>
-		public bool ShowReadOnlyProperties = false;
+		public bool SerializeReadOnlyProperties;
 		/// <summary>
 		/// Shows the read-only fields of types in the output (default = False). <see cref="JsonIncludeAttribute"/> has higher precedence than this setting.
 		/// </summary>
-		public bool ShowReadOnlyFields = false;
-		/// <summary>
-		/// Uses the $types extension to optimize the output JSON (default = True)
-		/// </summary>
-		public bool UsingGlobalTypes = true;
-		/// <summary>
-		/// Ignores case when processing JSON and deserializing 
-		/// </summary>
-		[Obsolete ("Not needed anymore and will always match")]
-		public bool IgnoreCaseOnDeserialize = false;
+		public bool SerializeReadOnlyFields;
 		/// <summary>
 		/// Anonymous types have read only properties 
 		/// </summary>
-		public bool EnableAnonymousTypes = false;
+		public bool EnableAnonymousTypes;
 		/// <summary>
 		/// Enables fastJSON extensions $types, $type, $map (default = True).
 		/// This setting must be set to true if circular reference detection is required.
@@ -63,30 +55,15 @@ namespace fastJSON
 		/// <summary>
 		/// Use escaped Unicode i.e. \uXXXX format for non ASCII characters (default = True)
 		/// </summary>
-		public bool UseEscapedUnicode = true;
+		public bool UseEscapedUnicode;
 		/// <summary>
 		/// Outputs string key dictionaries as "k"/"v" format (default = False) 
 		/// </summary>
-		public bool KVStyleStringDictionary = false;
+		public bool KVStyleStringDictionary;
 		/// <summary>
 		/// Outputs Enum values instead of names (default = False).
 		/// </summary>
-		public bool UseValuesOfEnums = false;
-
-		/// <summary>
-		/// Ignores attributes to check for (default : XmlIgnoreAttribute)
-		/// </summary>
-		[System.Diagnostics.CodeAnalysis.SuppressMessage ("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
-		[Obsolete ("This property is provided for backward compatibility. It returns the JsonReflectionController.IgnoreAttributes from the controller instance in SerializationManager.Instance, which is used by JSON.ToJSON and JSON.ToObject methods without SerializationManager parameters. For other method overloads in JSON class with the SerializationManager parameter, this setting will not work.")]
-		public IList<Type> IgnoreAttributes {
-			get {
-				var c = SerializationManager.Instance.ReflectionController as JsonReflectionController;
-				if (c == null) {
-					throw new InvalidOperationException ("The SerializationManager.Instance.ReflectionController is not JsonReflectionController");
-				}
-				return c.IgnoreAttributes;
-			}
-		}
+		public bool UseValuesOfEnums;
 
 		/// <summary>
 		/// If you have parametric and no default constructor for you classes (default = False)
@@ -94,11 +71,11 @@ namespace fastJSON
 		/// IMPORTANT NOTE : If True then all initial values within the class will be ignored and will be not set.
 		/// In this case, you can use <see cref="JsonInterceptorAttribute"/> to assign an <see cref="IJsonInterceptor"/> to initialize the object.
 		/// </summary>
-		public bool ParametricConstructorOverride = false;
+		public bool ParametricConstructorOverride;
 		/// <summary>
 		/// Serializes DateTime milliseconds i.e. yyyy-MM-dd HH:mm:ss.nnn (default = false)
 		/// </summary>
-		public bool DateTimeMilliseconds = false;
+		public bool DateTimeMilliseconds;
 		/// <summary>
 		/// Maximum depth for circular references in inline mode (default = 20)
 		/// </summary>
@@ -106,15 +83,7 @@ namespace fastJSON
 		/// <summary>
 		/// Inlines circular or already seen objects instead of replacement with $i (default = False) 
 		/// </summary>
-		public bool InlineCircularReferences = false;
-		/// <summary>
-		/// Saves property/field names as lowercase (default = false)
-		/// </summary>
-		[Obsolete ("Please use NamingConvention instead")]
-		public bool SerializeToLowerCaseNames {
-			get { return _strategy.Convention == NamingConvention.LowerCase; }
-			set { _strategy = value ? NamingStrategy.LowerCase : NamingStrategy.Default; }
-		}
+		public bool InlineCircularReferences;
 
 		/// <summary>
 		/// Controls the case of serialized field names.
@@ -127,28 +96,11 @@ namespace fastJSON
 		NamingStrategy _strategy = NamingStrategy.Default;
 		internal NamingStrategy NamingStrategy { get { return _strategy; } }
 
-		/// <summary>
-		/// Fixes conflicting parameters.
-		/// </summary>
-		[System.Diagnostics.CodeAnalysis.SuppressMessage ("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
-		[Obsolete ("This method is deprecated and parameter conflicts will be automatically handled.")]
-		public void FixValues () {
-			//if (UseExtensions == false)
-			//{
-			//	UsingGlobalTypes = false;
-			//	InlineCircularReferences = true;
-			//}
-			//if (EnableAnonymousTypes) {
-			//	ShowReadOnlyProperties = true;
-			//	ShowReadOnlyFields = true;
-			//}
-		}
 	}
 
 	abstract class NamingStrategy
 	{
 		internal abstract NamingConvention Convention { get; }
-		internal abstract void WriteName (StringBuilder output, string name);
 		internal abstract string Rename (string name);
 
 		internal static readonly NamingStrategy Default = new DefaultNaming ();
@@ -171,11 +123,6 @@ namespace fastJSON
 			internal override NamingConvention Convention {
 				get { return NamingConvention.Default; }
 			}
-			internal override void WriteName (StringBuilder output, string name) {
-				output.Append ('\"');
-				output.Append (name);
-				output.Append ("\":");
-			}
 			internal override string Rename (string name) {
 				return name;
 			}
@@ -184,11 +131,6 @@ namespace fastJSON
 		{
 			internal override NamingConvention Convention {
 				get { return NamingConvention.LowerCase; }
-			}
-			internal override void WriteName (StringBuilder output, string name) {
-				output.Append ('\"');
-				output.Append (name.ToLowerInvariant ());
-				output.Append ("\":");
 			}
 			internal override string Rename (string name) {
 				return name.ToLowerInvariant ();
@@ -199,11 +141,6 @@ namespace fastJSON
 			internal override NamingConvention Convention {
 				get { return NamingConvention.UpperCase; }
 			}
-			internal override void WriteName (StringBuilder output, string name) {
-				output.Append ('\"');
-				output.Append (name.ToUpperInvariant ());
-				output.Append ("\":");
-			}
 			internal override string Rename (string name) {
 				return name.ToUpperInvariant ();
 			}
@@ -213,25 +150,7 @@ namespace fastJSON
 			internal override NamingConvention Convention {
 				get { return NamingConvention.CamelCase; }
 			}
-			internal override void WriteName (StringBuilder output, string name) {
-				output.Append ('\"');
-				var l = name.Length;
-				if (l > 0) {
-					var c = name[0];
-					if (c > 'A' - 1 && c < 'Z' + 1) {
-						output.Append ((char)(c - ('A' - 'a')));
-						if (l > 1) {
-							output.Append (name, 1, l - 1);
-						}
-					}
-					else {
-						output.Append (name);
-					}
-				}
-				output.Append ("\":");
-			}
 			internal override string Rename (string name) {
-				var l = name.Length;
 				var c = name[0];
 				if (c > 'A' - 1 && c < 'Z' + 1) {
 					var cs = name.ToCharArray ();

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Dynamic;
 
-namespace fastJSON
+namespace PowerJson
 {
 	internal class DynamicJson : DynamicObject
 	{
@@ -12,17 +12,25 @@ namespace fastJSON
 		private List<object> _list { get; set; }
 
 		public DynamicJson (string json) {
-			var parse = fastJSON.JSON.Parse (json);
+			var parse = PowerJson.Json.Parse (json);
 
-			if (parse is IDictionary<string, object>)
-				_dictionary = (IDictionary<string, object>)parse;
-			else
-				_list = (List<object>)parse;
+			var dd = parse as JsonDict;
+			if (dd != null) {
+				_dictionary = dd;
+			}
+			else {
+				var l = parse as JsonArray;
+				if (l != null) {
+					_list = l;
+				}
+			}
 		}
 
 		private DynamicJson (object dictionary) {
-			if (dictionary is IDictionary<string, object>)
-				_dictionary = (IDictionary<string, object>)dictionary;
+			var dd = dictionary as IDictionary<string, object>;
+			if (dd != null) {
+				_dictionary = dd;
+			}
 		}
 
 		public override IEnumerable<string> GetDynamicMemberNames () {
@@ -30,6 +38,10 @@ namespace fastJSON
 		}
 
 		public override bool TryGetIndex (GetIndexBinder binder, object[] indexes, out object result) {
+			if (indexes == null || indexes.Length == 0) {
+				result = null;
+				return false;
+			}
 			var index = indexes[0];
 			if (index is int) {
 				result = _list[(int)index];
@@ -37,8 +49,9 @@ namespace fastJSON
 			else {
 				result = _dictionary[(string)index];
 			}
-			if (result is IDictionary<string, object>)
+			if (result is IDictionary<string, object>) {
 				result = new DynamicJson (result as IDictionary<string, object>);
+			}
 			return true;
 		}
 

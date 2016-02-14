@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using fastJSON;
+using PowerJson;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace MsUnitTest
@@ -97,8 +97,8 @@ namespace MsUnitTest
 			arrayclass a = new arrayclass ();
 			a.ints = new int[] { 3, 1, 4 };
 			a.strs = new string[] { "a", "b", "c" };
-			var s = JSON.ToJSON (a);
-			var o = JSON.ToObject<arrayclass> (s);
+			var s = Json.ToJson (a);
+			var o = Json.ToObject<arrayclass> (s);
 			CollectionAssert.AreEqual (a.ints, o.ints);
 			CollectionAssert.AreEqual (a.strs, o.strs);
 		}
@@ -129,8 +129,8 @@ namespace MsUnitTest
 				},
 				null
 			};
-			var s = JSON.ToJSON (a);
-			var o = JSON.ToObject<JaggedArrays> (s);
+			var s = Json.ToJson (a);
+			var o = Json.ToObject<JaggedArrays> (s);
 			CollectionAssert.AreEqual (a.int2d[0], o.int2d[0]);
 			CollectionAssert.AreEqual (a.int2d[1], o.int2d[1]);
 			CollectionAssert.AreEqual (a.int3d[0][0], o.int3d[0][0]);
@@ -159,20 +159,20 @@ namespace MsUnitTest
 
 		[TestMethod]
 		public void ZeroArray () {
-			var s = JSON.ToJSON (new object[] { });
-			var o = JSON.ToObject (s);
+			var s = Json.ToJson (new object[] { });
+			var o = Json.ToObject (s);
 			var a = o as object[];
 			Assert.AreEqual (0, a.Length);
 
-			var p = new JSONParameters () {
+			var p = new JsonParameters () {
 				SerializeEmptyCollections = false
 			};
-			s = JSON.ToJSON (new object[] { }, p);
+			s = Json.ToJson (new object[] { }, p);
 			Assert.AreEqual ("[]", s);
-			Assert.AreEqual (0, JSON.ToObject<object[]> (s).Length);
-			s = JSON.ToJSON (new List<int> (), p);
+			Assert.AreEqual (0, Json.ToObject<object[]> (s).Length);
+			s = Json.ToJson (new List<int> (), p);
 			Assert.AreEqual ("[]", s);
-			CollectionAssert.AreEqual (new List<int> (), JSON.ToObject<List<int>> (s));
+			CollectionAssert.AreEqual (new List<int> (), Json.ToObject<List<int>> (s));
 			var arr = new ZeroCollectionClass () {
 				Array = new int[0],
 				List = new List<int> (),
@@ -181,14 +181,14 @@ namespace MsUnitTest
 				Dict = new Dictionary<int, int> (),
 				Bytes = new byte[0]
 			};
-			s = JSON.ToJSON (arr, p);
+			s = Json.ToJson (arr, p);
 			Console.WriteLine (s);
 			Assert.IsFalse (s.Contains ("\"Array\":"));
 			Assert.IsFalse (s.Contains ("\"List\":"));
 			Assert.IsFalse (s.Contains ("\"Array2\":"));
 			Assert.IsTrue (s.Contains ("\"Array3\":"));
 			Assert.IsFalse (s.Contains ("\"Dict\":"));
-			s = JSON.ToJSON (arr);
+			s = Json.ToJson (arr);
 			Console.WriteLine (s);
 			Assert.IsTrue (s.Contains ("\"Array\":"));
 			Assert.IsTrue (s.Contains ("\"List\":"));
@@ -200,9 +200,9 @@ namespace MsUnitTest
 		[TestMethod]
 		public void EmptyArray () {
 			string str = "[]";
-			var o = JSON.ToObject<List<class1>> (str);
+			var o = Json.ToObject<List<class1>> (str);
 			Assert.AreEqual (typeof (List<class1>), o.GetType ());
-			var d = JSON.ToObject<class1[]> (str);
+			var d = Json.ToObject<class1[]> (str);
 			Assert.AreEqual (typeof (class1[]), d.GetType ());
 		}
 
@@ -217,9 +217,9 @@ namespace MsUnitTest
 			TestObject t = new TestObject () { Name = "MyName", Number = 77 };
 			var n = DateTime.Now;
 			var o = new object[] { 1, "test", n, t };
-			var s = JSON.ToJSON (o);
+			var s = Json.ToJson (o);
 			Console.WriteLine (s);
-			object[] result = JSON.ToObject<object[]> (s);
+			object[] result = Json.ToObject<object[]> (s);
 			// TODO: polymorphic support for primitive types when serializing object[]
 			Assert.AreEqual (1, (int)(long)result[0]);
 			Assert.AreEqual ("test", result[1]);
@@ -235,9 +235,9 @@ namespace MsUnitTest
 			List<string> ls = new List<string> ();
 			ls.AddRange (new string[] { "a", "b", "c", "d" });
 
-			var s = JSON.ToJSON (ls);
+			var s = Json.ToJson (ls);
 			Console.WriteLine (s);
-			var o = JSON.ToObject<List<string>> (s);
+			var o = Json.ToObject<List<string>> (s);
 			CollectionAssert.AreEqual (ls, o);
 			Assert.IsNotNull (o);
 		}
@@ -247,10 +247,10 @@ namespace MsUnitTest
 			List<int> ls = new List<int> ();
 			ls.AddRange (new int[] { 1, 2, 3, 4, 5, 10 });
 
-			var s = JSON.ToJSON (ls);
+			var s = Json.ToJson (ls);
 			Console.WriteLine (s);
-			var p = JSON.Parse (s);
-			var o = JSON.ToObject (s); // long[] {1,2,3,4,5,10}
+			var p = Json.Parse (s);
+			var o = Json.ToObject (s); // long[] {1,2,3,4,5,10}
 
 			Assert.IsNotNull (o);
 		}
@@ -260,10 +260,10 @@ namespace MsUnitTest
 			List<int> ls = new List<int> ();
 			ls.AddRange (new int[] { 1, 2, 3, 4, 5, 10 });
 
-			var s = JSON.ToJSON (ls);
+			var s = Json.ToJson (ls);
 			Console.WriteLine (s);
-			var p = JSON.Parse (s);
-			var o = JSON.ToObject<List<int>> (s);
+			var p = Json.Parse (s);
+			var o = Json.ToObject<List<int>> (s);
 
 			Assert.IsNotNull (o);
 		}
@@ -273,9 +273,9 @@ namespace MsUnitTest
 			List<Retclass> r = new List<Retclass> ();
 			r.Add (new Retclass { Field1 = "111", Field2 = 2, date = DateTime.Now });
 			r.Add (new Retclass { Field1 = "222", Field2 = 3, date = DateTime.Now });
-			var s = JSON.ToJSON (r);
-			Console.WriteLine (JSON.Beautify (s));
-			var o = JSON.ToObject<List<Retclass>> (s);
+			var s = Json.ToJson (r);
+			Console.WriteLine (Json.Beautify (s));
+			var o = Json.ToObject<List<Retclass>> (s);
 			Assert.AreEqual (2, o.Count);
 		}
 
@@ -284,9 +284,9 @@ namespace MsUnitTest
 			List<Retclass> r = new List<Retclass> ();
 			r.Add (new Retclass { Field1 = "111", Field2 = 2, date = DateTime.Now });
 			r.Add (new Retclass { Field1 = "222", Field2 = 3, date = DateTime.Now });
-			var s = JSON.ToJSON (r, new JSONParameters { UseExtensions = false });
-			Console.WriteLine (JSON.Beautify (s));
-			var o = JSON.ToObject<List<Retclass>> (s);
+			var s = Json.ToJson (r, new JsonParameters { UseExtensions = false });
+			Console.WriteLine (Json.Beautify (s));
+			var o = Json.ToObject<List<Retclass>> (s);
 			Assert.AreEqual (2, o.Count);
 		}
 
@@ -295,33 +295,33 @@ namespace MsUnitTest
 			List<RetNestedclass> r = new List<RetNestedclass> ();
 			r.Add (new RetNestedclass { Nested = new Retclass { Field1 = "111", Field2 = 2, date = DateTime.Now } });
 			r.Add (new RetNestedclass { Nested = new Retclass { Field1 = "222", Field2 = 3, date = DateTime.Now } });
-			var s = JSON.ToJSON (r);
-			Console.WriteLine (JSON.Beautify (s));
-			var o = JSON.ToObject<List<RetNestedclass>> (s);
+			var s = Json.ToJson (r);
+			Console.WriteLine (Json.Beautify (s));
+			var o = Json.ToObject<List<RetNestedclass>> (s);
 			Assert.AreEqual (2, o.Count);
 		}
 
 		[TestMethod]
 		public void ListOfList () {
 			var o = new List<List<object>> { new List<object> { 1, 2, 3 }, new List<object> { "aa", 3, "bb" } };
-			var s = JSON.ToJSON (o);
+			var s = Json.ToJson (o);
 			Console.WriteLine (s);
-			var i = JSON.ToObject (s);
+			var i = Json.ToObject (s);
 			var p = new lol { r = o };
-			s = JSON.ToJSON (p);
+			s = Json.ToJson (p);
 			Console.WriteLine (s);
-			i = JSON.ToObject (s);
+			i = Json.ToObject (s);
 			Assert.AreEqual (3, (i as lol).r[0].Count);
 
 			var oo = new List<object[]> { new object[] { 1, 2, 3 }, new object[] { "a", 4, "b" } };
-			s = JSON.ToJSON (oo);
+			s = Json.ToJson (oo);
 			Console.WriteLine (s);
-			var ii = JSON.ToObject (s);
+			var ii = Json.ToObject (s);
 			lol2 l = new lol2 () { r = oo };
 
-			s = JSON.ToJSON (l);
+			s = Json.ToJson (l);
 			Console.WriteLine (s);
-			var iii = JSON.ToObject (s);
+			var iii = Json.ToObject (s);
 			Assert.AreEqual (3, (iii as lol2).r[0].Length);
 
 			var o3 = new List<baseclass[]> { new baseclass[] {
@@ -331,15 +331,15 @@ namespace MsUnitTest
 				new baseclass { Name="d" },
 				null,
 			}, null };
-			s = JSON.ToJSON (o3, new JSONParameters () { UseExtensions = false });
-			var iv = JSON.ToObject<List<baseclass[]>> (s);
-			Console.WriteLine (JSON.ToJSON (iv));
+			s = Json.ToJson (o3, new JsonParameters () { UseExtensions = false });
+			var iv = Json.ToObject<List<baseclass[]>> (s);
+			Console.WriteLine (Json.ToJson (iv));
 		}
 
 		[TestMethod]
 		public void EmbeddedList () {
 			var o = new { list = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, } };
-			string s = JSON.ToJSON (o);//.Where(i => i % 2 == 0) });
+			string s = Json.ToJson (o);//.Where(i => i % 2 == 0) });
 		}
 
 		[TestMethod]
@@ -347,10 +347,10 @@ namespace MsUnitTest
 			var l = new LazyList ();
 			l.LazyGeneric.Add (1);
 			l.LazyGeneric.Add (2);
-			var s = JSON.ToJSON (l, new JSONParameters () { UseExtensions = false });
+			var s = Json.ToJson (l, new JsonParameters () { UseExtensions = false });
 			Console.WriteLine (s);
 
-			var o = JSON.ToObject<LazyList> (s);
+			var o = Json.ToObject<LazyList> (s);
 			CollectionAssert.AreEqual ((ICollection)l.LazyGeneric, (ICollection)o.LazyGeneric);
 		}
 
@@ -368,21 +368,21 @@ namespace MsUnitTest
 			var d = new MultiDimensionalArray () {
 				MDArray = a
 			};
-			var s = JSON.ToJSON (d);
+			var s = Json.ToJson (d);
 			Console.WriteLine (s);
-			var o = JSON.ToObject<MultiDimensionalArray> (s);
+			var o = Json.ToObject<MultiDimensionalArray> (s);
 			Assert.AreEqual (3, o.MDArray.Rank);
 			CollectionAssert.AreEqual (a, o.MDArray);
-			Console.WriteLine (JSON.ToJSON (o));
-			s = JSON.ToJSON (a);
+			Console.WriteLine (Json.ToJson (o));
+			s = Json.ToJson (a);
 			Console.WriteLine (s);
-			var o1 = JSON.ToObject<int[,,]> (s);
+			var o1 = Json.ToObject<int[,,]> (s);
 			CollectionAssert.AreEqual (a, o1);
-			s = JSON.ToJSON (ca);
+			s = Json.ToJson (ca);
 			Console.WriteLine (s);
-			var o2 = JSON.ToObject<baseclass[,]> (s);
+			var o2 = Json.ToObject<baseclass[,]> (s);
 			Assert.AreEqual ("hello", ((class2)ca[1, 2]).description);
-			Console.WriteLine (JSON.ToJSON (o2));
+			Console.WriteLine (Json.ToJson (o2));
 		}
 		#endregion
 
@@ -392,9 +392,9 @@ namespace MsUnitTest
 			Dictionary<string, Retclass> r = new Dictionary<string, Retclass> ();
 			r.Add ("11", new Retclass { Field1 = "111", Field2 = 2, date = DateTime.Now });
 			r.Add ("12", new Retclass { Field1 = "111", Field2 = 2, date = DateTime.Now });
-			var s = JSON.ToJSON (r);
-			Console.WriteLine (JSON.Beautify (s));
-			var o = JSON.ToObject<Dictionary<string, Retclass>> (s);
+			var s = Json.ToJson (r);
+			Console.WriteLine (Json.Beautify (s));
+			var o = Json.ToObject<Dictionary<string, Retclass>> (s);
 			Assert.AreEqual (2, o.Count);
 		}
 
@@ -403,9 +403,9 @@ namespace MsUnitTest
 			Dictionary<string, Retclass> r = new Dictionary<string, Retclass> ();
 			r.Add ("11", new Retclass { Field1 = "111", Field2 = 2, date = DateTime.Now });
 			r.Add ("12", new Retclass { Field1 = "111", Field2 = 2, date = DateTime.Now });
-			var s = JSON.ToJSON (r, new JSONParameters { UseExtensions = false });
-			Console.WriteLine (JSON.Beautify (s));
-			var o = JSON.ToObject<Dictionary<string, Retclass>> (s);
+			var s = Json.ToJson (r, new JsonParameters { UseExtensions = false });
+			Console.WriteLine (Json.Beautify (s));
+			var o = Json.ToObject<Dictionary<string, Retclass>> (s);
 			Assert.AreEqual (2, o.Count);
 		}
 
@@ -414,9 +414,9 @@ namespace MsUnitTest
 			Dictionary<int, Retclass> r = new Dictionary<int, Retclass> ();
 			r.Add (11, new Retclass { Field1 = "111", Field2 = 2, date = DateTime.Now });
 			r.Add (12, new Retclass { Field1 = "111", Field2 = 2, date = DateTime.Now });
-			var s = JSON.ToJSON (r);
-			Console.WriteLine (JSON.Beautify (s));
-			var o = JSON.ToObject<Dictionary<int, Retclass>> (s);
+			var s = Json.ToJson (r);
+			Console.WriteLine (Json.Beautify (s));
+			var o = Json.ToObject<Dictionary<int, Retclass>> (s);
 			Assert.AreEqual (2, o.Count);
 		}
 
@@ -425,9 +425,9 @@ namespace MsUnitTest
 			Dictionary<int, Retclass> r = new Dictionary<int, Retclass> ();
 			r.Add (11, new Retclass { Field1 = "111", Field2 = 2, date = DateTime.Now });
 			r.Add (12, new Retclass { Field1 = "111", Field2 = 2, date = DateTime.Now });
-			var s = JSON.ToJSON (r, new JSONParameters { UseExtensions = false });
-			Console.WriteLine (JSON.Beautify (s));
-			var o = JSON.ToObject<Dictionary<int, Retclass>> (s);
+			var s = Json.ToJson (r, new JsonParameters { UseExtensions = false });
+			Console.WriteLine (Json.Beautify (s));
+			var o = Json.ToObject<Dictionary<int, Retclass>> (s);
 			Assert.AreEqual (2, o.Count);
 		}
 
@@ -436,9 +436,9 @@ namespace MsUnitTest
 			Dictionary<Retstruct, Retclass> r = new Dictionary<Retstruct, Retclass> ();
 			r.Add (new Retstruct { Field1 = "111", Field2 = 1, date = DateTime.Now }, new Retclass { Field1 = "111", Field2 = 2, date = DateTime.Now });
 			r.Add (new Retstruct { Field1 = "222", Field2 = 2, date = DateTime.Now }, new Retclass { Field1 = "111", Field2 = 2, date = DateTime.Now });
-			var s = JSON.ToJSON (r);
-			Console.WriteLine (JSON.Beautify (s));
-			var o = JSON.ToObject<Dictionary<Retstruct, Retclass>> (s);
+			var s = Json.ToJson (r);
+			Console.WriteLine (Json.Beautify (s));
+			var o = Json.ToObject<Dictionary<Retstruct, Retclass>> (s);
 			Assert.AreEqual (2, o.Count);
 		}
 
@@ -447,9 +447,9 @@ namespace MsUnitTest
 			Dictionary<Retstruct, Retclass> r = new Dictionary<Retstruct, Retclass> ();
 			r.Add (new Retstruct { Field1 = "111", Field2 = 1, date = DateTime.Now }, new Retclass { Field1 = "111", Field2 = 2, date = DateTime.Now });
 			r.Add (new Retstruct { Field1 = "222", Field2 = 2, date = DateTime.Now }, new Retclass { Field1 = "111", Field2 = 2, date = DateTime.Now });
-			var s = JSON.ToJSON (r, new JSONParameters { UseExtensions = false });
-			Console.WriteLine (JSON.Beautify (s));
-			var o = JSON.ToObject<Dictionary<Retstruct, Retclass>> (s);
+			var s = Json.ToJson (r, new JsonParameters { UseExtensions = false });
+			Console.WriteLine (Json.Beautify (s));
+			var o = Json.ToObject<Dictionary<Retstruct, Retclass>> (s);
 			Assert.AreEqual (2, o.Count);
 		}
 
@@ -459,14 +459,14 @@ namespace MsUnitTest
 			dd.d = new Dictionary<string, List<string>> ();
 			dd.d.Add ("a", new List<string> { "1", "2", "3" });
 			dd.d.Add ("b", new List<string> { "4", "5", "7" });
-			string s = JSON.ToJSON (dd, new JSONParameters { UseExtensions = false });
-			var o = JSON.ToObject<diclist> (s);
+			string s = Json.ToJson (dd, new JsonParameters { UseExtensions = false });
+			var o = Json.ToObject<diclist> (s);
 			Assert.AreEqual (3, o.d["a"].Count);
 
-			s = JSON.ToJSON (dd.d, new JSONParameters { UseExtensions = false });
-			var oo = JSON.ToObject<Dictionary<string, List<string>>> (s);
+			s = Json.ToJson (dd.d, new JsonParameters { UseExtensions = false });
+			var oo = Json.ToObject<Dictionary<string, List<string>>> (s);
 			Assert.AreEqual (3, oo["a"].Count);
-			var ooo = JSON.ToObject<Dictionary<string, string[]>> (s);
+			var ooo = Json.ToObject<Dictionary<string, string[]>> (s);
 			Assert.AreEqual (3, ooo["b"].Length);
 		}
 
@@ -478,12 +478,12 @@ namespace MsUnitTest
 			var table = new Dictionary<string, object> ();
 			table["dict"] = dict;
 
-			var st = JSON.ToJSON (table);
-			Console.WriteLine (JSON.Beautify (st));
-			var tableDst = JSON.ToObject<Dictionary<string, object>> (st);
-			Console.WriteLine (JSON.Beautify (JSON.ToJSON (tableDst)));
-			var o2 = JSON.ToObject<Dictionary<string, Dictionary<string, int>>> (st);
-			Console.WriteLine (JSON.Beautify (JSON.ToJSON (o2)));
+			var st = Json.ToJson (table);
+			Console.WriteLine (Json.Beautify (st));
+			var tableDst = Json.ToObject<Dictionary<string, object>> (st);
+			Console.WriteLine (Json.Beautify (Json.ToJson (tableDst)));
+			var o2 = Json.ToObject<Dictionary<string, Dictionary<string, int>>> (st);
+			Console.WriteLine (Json.Beautify (Json.ToJson (o2)));
 		}
 
 		[TestMethod]
@@ -493,13 +493,13 @@ namespace MsUnitTest
 			d.Add ("b", 12);
 			d.Add ("c", null);
 
-			string s = JSON.ToJSON (d);
+			string s = Json.ToJson (d);
 			Console.WriteLine (s);
-			s = JSON.ToJSON (d, new JSONParameters () { SerializeNullValues = false });
+			s = Json.ToJson (d, new JsonParameters () { SerializeNullValues = false });
 			Console.WriteLine (s);
 			Assert.AreEqual ("{\"b\":12}", s);
 
-			s = JSON.ToJSON (new nulltest (), new JSONParameters { SerializeNullValues = false, UseExtensions = false });
+			s = Json.ToJson (new nulltest (), new JsonParameters { SerializeNullValues = false, UseExtensions = false });
 			Console.WriteLine (s);
 			Assert.AreEqual ("{\"b\":0}", s);
 		}
@@ -512,8 +512,8 @@ namespace MsUnitTest
 			nv.Add ("item1", "value1");
 			nv.Add ("item1", "value2");
 			nv.Add ("item2", "value3");
-			var s = JSON.ToJSON (nv);
-			var sv = JSON.ToObject<NameValueCollection> (s);
+			var s = Json.ToJson (nv);
+			var sv = Json.ToObject<NameValueCollection> (s);
 			CollectionAssert.AreEqual (nv.GetValues (0), nv.GetValues (0));
 			CollectionAssert.AreEqual (nv.GetValues (1), nv.GetValues (1));
 		}
@@ -523,22 +523,22 @@ namespace MsUnitTest
 			var nv = new NameValueCollection ();
 			nv.Add ("1", "a");
 			nv.Add ("2", "b");
-			var s = JSON.ToJSON (nv);
-			var oo = JSON.ToObject<NameValueCollection> (s);
+			var s = Json.ToJson (nv);
+			var oo = Json.ToObject<NameValueCollection> (s);
 			Assert.AreEqual ("a", oo["1"]);
 			var sd = new StringDictionary ();
 			sd.Add ("1", "a");
 			sd.Add ("2", "b");
-			s = JSON.ToJSON (sd);
-			var o = JSON.ToObject<StringDictionary> (s);
+			s = Json.ToJson (sd);
+			var o = Json.ToObject<StringDictionary> (s);
 			Assert.AreEqual ("b", o["2"]);
 
 			coltest c = new coltest ();
 			c.name = "aaa";
 			c.nv = nv;
 			c.sd = sd;
-			s = JSON.ToJSON (c);
-			var ooo = JSON.ToObject (s);
+			s = Json.ToJson (c);
+			var ooo = Json.ToObject (s);
 			Assert.AreEqual ("a", (ooo as coltest).nv["1"]);
 			Assert.AreEqual ("b", (ooo as coltest).sd["2"]);
 		}
@@ -549,9 +549,9 @@ namespace MsUnitTest
 			h.Add (1, "dsjfhksa");
 			h.Add ("dsds", new class1 ());
 
-			string s = JSON.ToNiceJSON (h, new JSONParameters ());
+			string s = Json.ToNiceJson (h, new JsonParameters ());
 			Console.WriteLine (s);
-			var o = JSON.ToObject<Hashtable> (s);
+			var o = Json.ToObject<Hashtable> (s);
 			Assert.AreEqual (typeof (Hashtable), o.GetType ());
 			Assert.AreEqual (typeof (class1), o["dsds"].GetType ());
 		}
@@ -565,9 +565,9 @@ namespace MsUnitTest
 					new class1 () { Name = "b", guid = Guid.NewGuid () }
 				}
 			};
-			var s = JSON.ToJSON (d, new JSONParameters () { ShowReadOnlyProperties = true });
+			var s = Json.ToJson (d, new JsonParameters () { SerializeReadOnlyProperties = true });
 			Console.WriteLine (s);
-			var o = JSON.ToObject<HashSetClass> (s);
+			var o = Json.ToObject<HashSetClass> (s);
 			CollectionAssert.AreEqual (new List<string> (d.Strings), new List<string>(o.Strings));
 			bool a = false, b = false;
 			foreach (var item in o.Classes) {
@@ -600,14 +600,14 @@ namespace MsUnitTest
 			}
 			internal class MyCollectionConverter : JsonConverter<MyCollection, MyCollection.WrapperClass>
 			{
-				protected override WrapperClass Convert (string fieldName, MyCollection fieldValue) {
-					return new WrapperClass (fieldValue);
+				protected override WrapperClass Convert (MyCollection value) {
+					return new WrapperClass (value);
 				}
 
-				protected override MyCollection Revert (string fieldName, WrapperClass fieldValue) {
+				protected override MyCollection Revert (WrapperClass value) {
 					var c = new MyCollection ();
-					c.AddRange (fieldValue.Items);
-					c.MyField = fieldValue.MyField;
+					c.AddRange (value.Items);
+					c.MyField = value.MyField;
 					return c;
 				}
 			}
@@ -616,11 +616,11 @@ namespace MsUnitTest
 		public void InheritedCollectionOverrideTest () {
 			var c = new MyCollection () { 1, 2, 3 };
 			c.MyField = "field";
-			JSON.Manager.OverrideConverter<MyCollection> (new MyCollection.MyCollectionConverter ());
-			var s = JSON.ToJSON (c);
+			Json.Manager.OverrideConverter<MyCollection> (new MyCollection.MyCollectionConverter ());
+			var s = Json.ToJson (c);
 			Console.WriteLine (s);
 
-			var o = JSON.ToObject<MyCollection> (s);
+			var o = Json.ToObject<MyCollection> (s);
 			Assert.AreEqual (c.MyField, o.MyField);
 			CollectionAssert.AreEqual (c, o);
 
@@ -628,9 +628,9 @@ namespace MsUnitTest
 			a.Name = "test";
 			a.Child = new ExtensiveList () { 4 };
 			a.Child.Name = "child";
-			s = JSON.ToJSON (a);
+			s = Json.ToJson (a);
 			Console.WriteLine (s);
-			var b = JSON.ToObject<ExtensiveList> (s);
+			var b = Json.ToObject<ExtensiveList> (s);
 			CollectionAssert.AreEqual (a, b);
 			Assert.AreEqual (a.Name, b.Name);
 			CollectionAssert.AreEqual (a.Child, b.Child);
@@ -643,9 +643,9 @@ namespace MsUnitTest
 			d.Name = "d";
 			d.Child = new ExtensiveList () { 5 };
 			d.Child.Name = "list";
-			s = JSON.ToJSON (d);
+			s = Json.ToJson (d);
 			Console.WriteLine (s);
-			var d2 = JSON.ToObject<ExtensiveDict> (s);
+			var d2 = Json.ToObject<ExtensiveDict> (s);
 			CollectionAssert.AreEqual (d, d2);
 			Assert.AreEqual (d.Name, d2.Name);
 			CollectionAssert.AreEqual (d.Child, d2.Child);

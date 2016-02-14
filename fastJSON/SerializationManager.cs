@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 
-namespace fastJSON
+namespace PowerJson
 {
 	/// <summary>
 	/// A class controls special serialization for specified types and members.
@@ -17,14 +17,13 @@ namespace fastJSON
 	{
 		static readonly char[] __enumSeperatorCharArray = { ',' };
 
-		readonly SafeDictionary<Type, ReflectionCache> _reflections = new SafeDictionary<Type, ReflectionCache> ();
+		static readonly Dictionary<Type, ReflectionCache> __reflections = new Dictionary<Type, ReflectionCache> ();
+		static readonly object _syncRoot = new object ();
+		readonly Dictionary<Type, SerializationInfo> _overrides = new Dictionary<Type, SerializationInfo> ();
 		readonly IReflectionController _controller;
-		readonly SafeDictionary<Enum, string> _EnumValueCache = new SafeDictionary<Enum, string> ();
-		// JSON custom
-		readonly SafeDictionary<Type, Serialize> _customSerializer = new SafeDictionary<Type, Serialize> ();
-		readonly SafeDictionary<Type, Deserialize> _customDeserializer = new SafeDictionary<Type, Deserialize> ();
-		readonly SafeDictionary<string, string> _typeAliases = new SafeDictionary<string, string>();
-		readonly SafeDictionary<string, string> _reverseTypeAliases = new SafeDictionary<string, string>();
+		readonly Dictionary<Enum, string> _EnumValueCache = new Dictionary<Enum, string> ();
+		readonly Dictionary<Type, string> _typeAliases = new Dictionary<Type, string>();
+		readonly Dictionary<string, Type> _reverseTypeAliases = new Dictionary<string, Type>();
 
 		/// <summary>
 		/// Returns the <see cref="IReflectionController"/> currently used by the <see cref="SerializationManager"/>.
@@ -40,8 +39,7 @@ namespace fastJSON
 		/// Creates a new instance of <see cref="SerializationManager"/>.
 		/// </summary>
 		/// <remarks>The <see cref="ReflectionController"/> will be initialized to a new instance of <see cref="JsonReflectionController"/>.</remarks>
-		public SerializationManager () {
-			_controller = new JsonReflectionController ();
+		public SerializationManager () : this (null) {
 		}
 
 		/// <summary>
@@ -49,129 +47,25 @@ namespace fastJSON
 		/// </summary>
 		/// <param name="controller">The controller to control object reflections before serialization.</param>
 		public SerializationManager (IReflectionController controller) {
-			_controller = controller;
+			_controller = controller ?? new JsonReflectionController ();
 		}
 
 		/// <summary>
-		/// Clears all cached reflection information.
+		/// Clears all cached override information.
 		/// </summary>
-		public void ResetCache () {
-			_reflections.Clear ();
-		}
-
-		#region Custom Type Serialization
-		internal object CreateCustom (string v, Type type) {
-			Deserialize d;
-			_customDeserializer.TryGetValue (type, out d);
-			return d (v);
-		}
-		internal Serialize GetCustomSerializer (Type type) {
-			Serialize s;
-			_customSerializer.TryGetValue (type, out s);
-			return s;
-		}
-		internal bool IsTypeRegistered (Type t) {
-			if (_customSerializer.Count == 0)
-				return false;
-			Serialize s;
-			return _customSerializer.TryGetValue (t, out s);
-		}
-
-		/// <summary>
-		/// <para>Registers custom type handlers for <paramref name="type"/> not natively handled by fastJSON.</para>
-		/// <para>NOTICE: This method will call <see cref="ResetCache"/> to make the custom serializer effective. All reflection overrides will be lost after that.</para>
-		/// </summary>
-		/// <param name="type">The type to be handled.</param>
-		/// <param name="serializer">The delegate to be used in serialization.</param>
-		/// <param name="deserializer">The delegate to be used in deserialization.</param>
-		public void RegisterCustomType (Type type, Serialize serializer, Deserialize deserializer) {
-			if (type != null && serializer != null && deserializer != null) {
-				_customSerializer.Add (type, serializer);
-				_customDeserializer.Add (type, deserializer);
-				// reset property cache
-				ResetCache ();
-			}
-		}
-		#endregion
-
-		#region Type Aliases
-		/// <summary>
-		/// Sets user-defined type aliases for serialized types
-		/// This method is similar to <see cref="RegisterTypeAlias" />, but allows for better flexiblility by relying on strings provided at runtime as part of its argument rather than fixed class attributes.
-		/// </summary>
-		/// <param name="list">List of types to be substituted along with their corresponding type name strings</param>
-		public void SetTypeAlias(Dictionary<Type, string> list)
-		{
-			_typeAliases.Clear();
-			_reverseTypeAliases.Clear();
-			if (null == list)
-				return;
-			// Deserializer needs a reverse lookup dictionary
-			foreach (KeyValuePair<Type, string> item in list)
-			{
-				_typeAliases.Add(item.Key.AssemblyQualifiedName, item.Value);
-				_reverseTypeAliases.Add(item.Value, item.Key.AssemblyQualifiedName);
+		public void ClearSerializationOverrides () {
+			lock (_syncRoot) {
+				_overrides.Clear ();
 			}
 		}
 
-		/// <summary>
-		/// Sets user-defined type aliases for serialized types using the <see cref="JsonTypeAttribute"/>.
-		/// </summary>
-		/// <param name="list">List of types to be aliased</param>
-		public void RegisterTypeAlias(List<Type> list)
-		{
-			_typeAliases.Clear();
-			_reverseTypeAliases.Clear();
-			if (null == list)
-				return;
-			foreach (Type item in list)
-			{
-				JsonTypeAttribute att = AttributeHelper.GetAttribute<JsonTypeAttribute>(item, false);
-				if (null == att)
-					continue;
-
-				_typeAliases.Add(item.AssemblyQualifiedName, att.Name);
-				_reverseTypeAliases.Add(att.Name, item.AssemblyQualifiedName);
-			}
-		}
-
-		internal string ForwardLookupAlias(string assemblyName)
-		{
-			if (null == _typeAliases || null == assemblyName)
-				return assemblyName;
-			string alias = null;
-			_typeAliases.TryGetValue(assemblyName, out alias);
-			if (null == alias)
-				return assemblyName;
-			return alias;
-		}
-
-		internal string ReverseLookupAlias(string aliasedName)
-		{
-			if (null == _typeAliases || null == aliasedName)
-				return aliasedName;
-			string assemblyName = null;
-			_reverseTypeAliases.TryGetValue(aliasedName, out assemblyName);
-			if (null == assemblyName)
-				return aliasedName;
-			return assemblyName;
-		}
-
-		internal int TypeAliasCount()
-		{
-			if (null == _typeAliases || null == _reverseTypeAliases || _typeAliases.Count != _reverseTypeAliases.Count)
-				return 0;
-			return _typeAliases.Count;
-		}
-		#endregion
-
-		internal ReflectionCache GetReflectionCache (Type type) {
+		internal ReflectionCache GetReflectionCache(Type type) {
 			ReflectionCache c;
-			if (_reflections.TryGetValue (type, out c)) {
+			if (__reflections.TryGetValue (type, out c)) {
 				return c;
 			}
 
-			c = _reflections[type] = new ReflectionCache (type);
+			c = __reflections[type] = new ReflectionCache (type);
 			if (c.ArgumentReflections != null) {
 				var ar = c.ArgumentReflections;
 				var at = c.ArgumentTypes;
@@ -179,38 +73,67 @@ namespace fastJSON
 					ar[i] = GetReflectionCache (at[i]);
 				}
 			}
-			ControlTypeSerializationSettings (type, c);
+			//if (c.Members != null) {
+			//	foreach (var m in c.Members) {
+			//		m.MemberTypeReflection = GetReflectionCache (m.MemberType);
+			//	}
+			//}
 			return c;
 		}
+		internal SerializationInfo GetSerializationInfo (Type type) {
+			lock (_syncRoot) {
+				SerializationInfo s;
+				if (_overrides.TryGetValue (type, out s)) {
+					return s;
+				}
 
-		private void ControlTypeSerializationSettings (Type type, ReflectionCache c) {
-			if (c.JsonDataType == JsonDataType.Enum) {
-				c.EnumNames = GetEnumValues (type, _controller);
-			}
-			else if (type.IsClass || type.IsValueType) {
-				c.Converter = _controller.GetConverter (type);
-				c.AlwaysDeserializable = _controller.IsAlwaysDeserializable (type) || type.Namespace == typeof (JSON).Namespace;
-				c.Interceptor = _controller.GetInterceptor (type);
-				c.CollectionName = _controller.GetCollectionContainerName (type);
-				if (c.CollectionName != null) {
-					c.DeserializeMethod = new CompoundDeserializer (c.CollectionName, c.DeserializeMethod).Deserialize;
-				}
-			}
-			if (c.Members != null) {
-				foreach (var item in c.Members) {
-					item.MemberTypeReflection = GetReflectionCache (item.MemberType);
-				}
-				c.Getters = Reflection.GetGetters (type, c.Members, _controller);
-				c.Setters = GetSetters (type, c.Members, _controller);
-				foreach (var item in c.Setters) {
-					var m = item.Value.Member;
-					if (m.MemberTypeReflection == null) {
-						m.MemberTypeReflection = GetReflectionCache (m.MemberType);
-					}
-				}
+				s = new SerializationInfo (GetReflectionCache (type));
+				_overrides[type] = s;
+				return LoadSerializationInfo (s);
 			}
 		}
 
+		/// <summary>
+		/// Loads the serialization information into the overrides dictionary and return the information.
+		/// </summary>
+		/// <param name="s">The <see cref="SerializationInfo"/> which holds the serialization information.</param>
+		/// <returns>The newly loaded <see cref="SerializationInfo"/>.</returns>
+		private SerializationInfo LoadSerializationInfo (SerializationInfo s) {
+			var c = s.Reflection;
+			var type = c.Type;
+			if (s.Reflection.JsonDataType == JsonDataType.Enum) {
+				s.EnumNames = GetEnumValues (type, _controller);
+				return s;
+			}
+			if (type.IsClass || type.IsValueType) {
+				OverrideSerializationInfo (s, new TypeOverride {
+					Alias = _controller.GetTypeAlias (type),
+					Deserializable = _controller.IsAlwaysDeserializable (type) || type.Namespace == typeof (Json).Namespace,
+					Converter = _controller.GetConverter (type),
+					Interceptor = _controller.GetInterceptor (type),
+					CollectionContainer = _controller.GetCollectionContainerName (type)
+				});
+			}
+			if (s.Reflection.Members != null) {
+				s.Getters = GetGetters (s, s.Reflection.Members, _controller);
+				s.Setters = GetSetters (s, s.Reflection.Members, _controller);
+			}
+			if (c.ArgumentReflections != null) {
+				s.TypeParameters = new SerializationInfo[c.ArgumentReflections.Length];
+				for (int i = 0; i < c.ArgumentReflections.Length; i++) {
+					s.TypeParameters[i] = GetSerializationInfo (c.ArgumentReflections[i].Type);
+				}
+			}
+			return s;
+		}
+
+		internal SerializationInfo GetSerializationInfo (string alias) {
+			Type t;
+			if (_reverseTypeAliases.TryGetValue (alias, out t)) {
+				return GetSerializationInfo (t);
+			}
+			return null;
+		}
 		#region Enum Cache
 		internal Dictionary<string, Enum> GetEnumValues (Type type, IReflectionController controller) {
 			var ns = Enum.GetNames (type);
@@ -218,7 +141,7 @@ namespace fastJSON
 			var vm = new Dictionary<string, Enum> (ns.Length);
 			var vc = _EnumValueCache;
 			var n = controller.GetEnumValueFormat (type);
-			NamingStrategy s = n != EnumValueFormat.Numeric ? NamingStrategy.GetStrategy ((NamingConvention)n) : null;
+			var s = n != EnumValueFormat.Numeric ? NamingStrategy.GetStrategy ((NamingConvention)n) : null;
 			for (int i = ns.Length - 1; i >= 0; i--) {
 				var en = ns[i];
 				var ev = (Enum)vs.GetValue (i);
@@ -240,19 +163,17 @@ namespace fastJSON
 				return t;
 			}
 			var et = value.GetType ();
-			var c = GetReflectionCache (et);
+			var c = GetSerializationInfo (et);
 			if (_EnumValueCache.TryGetValue (value, out t)) {
 				return t;
 			}
-			if (c.IsFlaggedEnum) {
+			if (c.Reflection.IsFlaggedEnum) {
 				var vs = Enum.GetValues (et);
 				var iv = (ulong)Convert.ToInt64 (value);
-				var ov = iv;
 				if (iv == 0) {
 					return "0"; // should not be here
 				}
 				var sl = new List<string> ();
-				var vm = c.EnumNames;
 				for (int i = vs.Length - 1; i > 0; i--) {
 					var ev = (ulong)Convert.ToInt64 (vs.GetValue (i));
 					if (ev == 0) {
@@ -269,18 +190,18 @@ namespace fastJSON
 				sl.Reverse ();
 				t = String.Join (",", sl.ToArray ());
 				_EnumValueCache.Add (value, t);
-				GetReflectionCache (et).EnumNames[t] = value;
+				GetSerializationInfo (et).EnumNames[t] = value;
 			}
 			return t;
 		}
 
 		internal Enum GetEnumValue (Type type, string name) {
-			var c = GetReflectionCache (type);
+			var c = GetSerializationInfo (type);
 			Enum e;
 			if (c.EnumNames.TryGetValue (name, out e)) {
 				return e;
 			}
-			if (c.IsFlaggedEnum) {
+			if (c.Reflection.IsFlaggedEnum) {
 				ulong v = 0;
 				var s = name.Split (__enumSeperatorCharArray);
 				foreach (var item in s) {
@@ -336,91 +257,153 @@ namespace fastJSON
 			if (overrideInfo == null) {
 				throw new ArgumentNullException ("overrideInfo");
 			}
-			var c = GetReflectionCache (type);
-			if (purgeExisting) {
-				ControlTypeSerializationSettings (type, c);
-			}
-			if (overrideInfo.OverrideInterceptor) {
-				c.Interceptor = overrideInfo.Interceptor;
-			}
-			if (overrideInfo.OverrideConverter) {
-				c.Converter = overrideInfo.Converter;
-			}
-			if (overrideInfo.OverrideContainerName) {
-				c.CollectionName = overrideInfo.CollectionContainer;
-				c.DeserializeMethod = overrideInfo.CollectionContainer == null
-					? JsonDeserializer.GetReadJsonMethod (type)
-					: new CompoundDeserializer (c.CollectionName, c.DeserializeMethod).Deserialize;
-			}
-			if (overrideInfo.Deserializable.HasValue) {
-				c.AlwaysDeserializable = overrideInfo.Deserializable == true;
-			}
-			if (overrideInfo._MemberOverrides == null || overrideInfo._MemberOverrides.Count == 0) {
-				return;
-			}
-			var s = c.Setters;
-			// add properties ignored by _controller in GetProperties method
-			foreach (var ov in overrideInfo._MemberOverrides) {
-				if (ov.Deserializable != true) {
-					continue;
+			lock (_syncRoot) {
+				var s = GetSerializationInfo (type);
+				if (purgeExisting) {
+					LoadSerializationInfo (s);
 				}
-				var p = c.FindProperties (ov.MemberName);
-				if (p.Count == 0) {
-					var m = c.FindMemberCache (ov.MemberName);
-					if (m == null) {
-						throw new MissingMemberException (c.TypeName, ov.MemberName);
+				OverrideSerializationInfo (s, overrideInfo);
+				if (overrideInfo._MemberOverrides == null || overrideInfo._MemberOverrides.Count == 0) {
+					return;
+				}
+				// add properties ignored by _controller in GetProperties method
+				foreach (var ov in overrideInfo._MemberOverrides) {
+					if (ov.Deserializable != true) {
+						continue;
 					}
-					var pi = new JsonMemberSetter (m);
-					// TODO: load serialization control settings
-					var ds = LoadMemberDeserializationSettings (pi, _controller);
-					if (ds != null) {
-						foreach (var item in ds) {
-							item.Value.Member.MemberTypeReflection = GetReflectionCache (item.Value.Member.MemberType);
-							AddPropertyInfo (c.Setters, item.Key, item.Value);
+					var p = s.FindProperties (ov.MemberName);
+					if (p.Count == 0) {
+						var m = s.Reflection.FindMemberCache (ov.MemberName);
+						if (m == null) {
+							throw new MissingMemberException (s.Reflection.TypeName, ov.MemberName);
+						}
+						var pi = new JsonMemberSetter (s, m, this);
+						// TODO: load serialization control settings
+						var ds = LoadMemberDeserializationSettings (pi, _controller);
+						if (ds != null) {
+							foreach (var item in ds) {
+								AddSetter (s.Setters, item.Key, item.Value);
+							}
 						}
 					}
 				}
-			}
-			foreach (var ov in overrideInfo._MemberOverrides) {
-				var g = c.FindGetters (ov.MemberName);
-				if (g == null) {
-					throw new MissingMemberException (type.FullName, ov.MemberName);
+				foreach (var ov in overrideInfo._MemberOverrides) {
+					var g = s.FindGetters (ov.MemberName);
+					if (g == null) {
+						throw new MissingMemberException (type.FullName, ov.MemberName);
+					}
+					OverrideGetter (g, ov);
+					OverrideSetter (s.Setters, ov, g);
 				}
-				OverrideGetters (g, ov);
-				OverridePropInfo (type, s, ov, g);
 			}
 		}
 
-		static Dictionary<string, JsonMemberSetter> GetSetters (Type type, MemberCache[] members, IReflectionController controller) {
+		private void OverrideSerializationInfo (SerializationInfo info, TypeOverride overrideInfo) {
+			if (overrideInfo.OverrideAlias) {
+				var a = overrideInfo.Alias;
+				if (String.IsNullOrEmpty (a)) {
+					_typeAliases.Remove (info.Reflection.Type);
+					if (info.Alias != null) {
+						_reverseTypeAliases.Remove (info.Alias);
+					}
+				}
+				else {
+					Type t;
+					if (_reverseTypeAliases.TryGetValue (a, out t)) {
+						if (t.Equals (info.Reflection.Type) == false) {
+							throw new JsonSerializationException ("Type alias (" + a + ") has been used by type " + t.AssemblyQualifiedName);
+						}
+					}
+					else {
+						if (info.Alias != null) {
+							_reverseTypeAliases.Remove (info.Alias);
+						}
+						info.Alias = overrideInfo.Alias;
+						_typeAliases[info.Reflection.Type] = info.Alias;
+						_reverseTypeAliases[a] = info.Reflection.Type;
+					}
+				}
+			}
+			if (overrideInfo.OverrideInterceptor) {
+				info.Interceptor = overrideInfo.Interceptor;
+			}
+			if (overrideInfo.OverrideConverter) {
+				info.Converter = overrideInfo.Converter;
+			}
+			if (overrideInfo.OverrideContainerName) {
+				info.CollectionName = overrideInfo.CollectionContainer;
+				info.DeserializeMethod = overrideInfo.CollectionContainer == null
+					? JsonDeserializer.GetReadJsonMethod (info.Reflection.Type)
+					: new CompoundDeserializer (info.CollectionName, info.Reflection.DeserializeMethod).Deserialize;
+			}
+			if (overrideInfo.Deserializable.HasValue) {
+				info.AlwaysDeserializable = overrideInfo.Deserializable == true;
+			}
+		}
+
+		JsonMemberGetter[] GetGetters (SerializationInfo typeInfo, MemberCache[] members, IReflectionController controller) {
+			var r = new JsonMemberGetter[members.Length];
+			for (int i = r.Length - 1; i >= 0; i--) {
+				var m = members[i];
+				var g = r[i] = new JsonMemberGetter (typeInfo, m, this);
+				var mi = m.MemberInfo;
+				g.Serializable = Constants.ToTriState (controller.IsMemberSerializable (mi, m));
+				g.Converter = controller.GetMemberConverter (mi);
+				g.ItemConverter = controller.GetMemberItemConverter (mi);
+				var dv = controller.GetNonSerializedValues (mi);
+				if (dv != null) {
+					var v = new List<object> ();
+					foreach (var item in dv) {
+						v.Add (item);
+					}
+					g.NonSerializedValues = v.ToArray ();
+				}
+				g.HasNonSerializedValue = g.NonSerializedValues != null;
+				var tn = controller.GetSerializedNames (mi);
+				if (tn != null) {
+					if (String.IsNullOrEmpty (tn.DefaultName) == false && tn.DefaultName != g.SerializedName) {
+						g.SpecificName = true;
+					}
+					g.SerializedName = tn.DefaultName ?? g.SerializedName;
+					if (tn.Count > 0) {
+						g.TypedNames = new Dictionary<Type, string> (tn);
+						g.SpecificName = true;
+					}
+				}
+			}
+			return r;
+		}
+
+		Dictionary<string, JsonMemberSetter> GetSetters (SerializationInfo typeInfo, MemberCache[] members, IReflectionController controller) {
 			var sd = new Dictionary<string, JsonMemberSetter> (StringComparer.OrdinalIgnoreCase);
 			foreach (var p in members) {
-				var d = new JsonMemberSetter (p);
-				var dp = GetDeserializingProperties (d, controller);
+				var s = new JsonMemberSetter (typeInfo, p, this);
+				var dp = GetDeserializingProperties (s, controller);
 				if (dp == null) {
 					continue;
 				}
 				foreach (var item in dp) {
-					AddPropertyInfo (sd, item.Key, item.Value);
+					AddSetter (sd, item.Key, item.Value);
 				}
 			}
 			return sd;
 		}
 
-		static Dictionary<string, JsonMemberSetter> GetDeserializingProperties (JsonMemberSetter d, IReflectionController controller) {
-			var member = d.Member.MemberInfo;
+		Dictionary<string, JsonMemberSetter> GetDeserializingProperties (JsonMemberSetter setter, IReflectionController controller) {
+			var member = setter.Member.MemberInfo;
 			if (controller == null) {
-				return new Dictionary<string, JsonMemberSetter> () { { d.MemberName, d } };
+				return new Dictionary<string, JsonMemberSetter> { { setter.MemberName, setter } };
 			}
-			if (controller.IsMemberDeserializable (member, d.Member) == false) {
-				d.CanWrite = false;
-				if (d.Member.MemberTypeReflection.AppendItem == null || member is PropertyInfo == false) {
+			if (controller.IsMemberDeserializable (member, setter.Member) == false) {
+				setter.CanWrite = false;
+				if (/*d.TypeInfo.Reflection.AppendItem == null || */member is PropertyInfo == false) {
 					return null;
 				}
 			}
-			return LoadMemberDeserializationSettings (d, controller);
+			return LoadMemberDeserializationSettings (setter, controller);
 		}
 
-		static Dictionary<string, JsonMemberSetter> LoadMemberDeserializationSettings (JsonMemberSetter d, IReflectionController controller) {
+		Dictionary<string, JsonMemberSetter> LoadMemberDeserializationSettings (JsonMemberSetter d, IReflectionController controller) {
 			var member = d.Member.MemberInfo;
 			var sd = new Dictionary<string, JsonMemberSetter> ();
 			d.Converter = controller.GetMemberConverter (member);
@@ -435,15 +418,16 @@ namespace fastJSON
 			foreach (var item in tn) {
 				var st = item.Key;
 				var sn = item.Value;
-				var dt = new JsonMemberSetter (new MemberCache (st, d.MemberName, d.Member));
-				dt.Converter = d.Converter;
-				dt.ItemConverter = d.ItemConverter;
+				var dt = new JsonMemberSetter (d.OwnerTypeInfo, new MemberCache (st, d.MemberName, d.Member), this) {
+					Converter = d.Converter,
+					ItemConverter = d.ItemConverter
+				};
 				sd.Add (sn, dt);
 			}
 			return sd;
 		}
 
-		static void AddPropertyInfo (Dictionary<string, JsonMemberSetter> sd, string name, JsonMemberSetter item) {
+		static void AddSetter (Dictionary<string, JsonMemberSetter> sd, string name, JsonMemberSetter item) {
 			if (String.IsNullOrEmpty (name)) {
 				throw new JsonSerializationException (item.MemberName + " should not be serialized to an empty name");
 			}
@@ -453,7 +437,7 @@ namespace fastJSON
 			sd.Add (name, item);
 		}
 
-		void OverridePropInfo (Type type, Dictionary<string, JsonMemberSetter> s, MemberOverride mo, JsonMemberGetter g) {
+		void OverrideSetter (Dictionary<string, JsonMemberSetter> s, MemberOverride mo, JsonMemberGetter g) {
 			JsonMemberSetter mp = null;
 			if (mo.OverrideTypedNames) {
 				// remove previous polymorphic deserialization info
@@ -481,7 +465,7 @@ namespace fastJSON
 							throw new InvalidCastException ("The type (" + t.FullName + ") does not derive from the member type (" + g.Member.MemberType.FullName + ")");
 						}
 						var n = item.Value;
-						var p = new JsonMemberSetter (new MemberCache (t, g.MemberName, mp.Member) { MemberTypeReflection = GetReflectionCache (t) });
+						var p = new JsonMemberSetter (g.OwnerTypeInfo, new MemberCache (t, g.MemberName, mp.Member), this);
 						JsonMemberSetter tp;
 						if (s.TryGetValue (n, out tp) && Equals (tp.Member.MemberType, g.Member.MemberType)) {
 							s[n] = p;
@@ -498,30 +482,30 @@ namespace fastJSON
 					s.Add (mo.SerializedName, mp);
 				}
 			}
-			OverrideJsonPropertyInfo (s, mo, mp);
+			OverrideJsonSetter (s, mo);
 			if (mo.OverrideSerializedName) {
 				g.SerializedName = mo.SerializedName;
 			}
 		}
 
-		private static void OverrideJsonPropertyInfo (Dictionary<string, JsonMemberSetter> s, MemberOverride mo, JsonMemberSetter mp) {
-			foreach (var item in s) {
-				mp = item.Value;
-				if (mp.MemberName == mo.MemberName) {
-					if (mo.OverrideConverter) {
-						mp.Converter = mo.Converter;
+		private static void OverrideJsonSetter (Dictionary<string, JsonMemberSetter> setters, MemberOverride memberOverride) {
+			foreach (var item in setters) {
+				var setter = item.Value;
+				if (setter.MemberName == memberOverride.MemberName) {
+					if (memberOverride.OverrideConverter) {
+						setter.Converter = memberOverride.Converter;
 					}
-					if (mo.OverrideItemConverter) {
-						mp.ItemConverter = mo.ItemConverter;
+					if (memberOverride.OverrideItemConverter) {
+						setter.ItemConverter = memberOverride.ItemConverter;
 					}
-					if (mo.Deserializable.HasValue) {
-						mp.CanWrite = mo.Deserializable == true;
+					if (memberOverride.Deserializable.HasValue) {
+						setter.CanWrite = memberOverride.Deserializable == true;
 					}
 				}
 			}
 		}
 
-		static void OverrideGetters (JsonMemberGetter getter, MemberOverride mo) {
+		static void OverrideGetter (JsonMemberGetter getter, MemberOverride mo) {
 			if (mo.Serializable.HasValue) {
 				getter.Serializable = Constants.ToTriState (mo.Serializable);
 			}
@@ -549,7 +533,6 @@ namespace fastJSON
 				getter.ItemConverter = mo.ItemConverter;
 			}
 		} 
-		#endregion
 
 		/// <summary>
 		/// <para>Assigns an <see cref="IJsonInterceptor"/> to process a specific type.</para>
@@ -559,18 +542,17 @@ namespace fastJSON
 		/// <param name="interceptor">The interceptor to intercept the serialization and deserialization.</param>
 		/// <remarks>If the type has already gotten an <see cref="IJsonInterceptor"/>, the new <paramref name="interceptor"/> will replace it. If the new interceptor is null, existing interceptor will be removed from the type.</remarks>
 		public void OverrideInterceptor<T> (IJsonInterceptor interceptor) {
-			OverrideInterceptor (typeof (T), interceptor);
+			Override (typeof (T), new TypeOverride { Interceptor = interceptor }, false);
 		}
 
 		/// <summary>
-		/// <para>Assigns an <see cref="IJsonInterceptor"/> to process a specific type.</para>
-		/// <para>This is a simplified version of <see cref="Override{T}(TypeOverride)"/> method replacing the <see cref="IJsonInterceptor"/> of a type.</para>
+		/// <para>Assigns an alias for a specific type.</para>
+		/// <para>This is a simplified version of <see cref="Override{T}(TypeOverride)"/> method replacing the <see cref="TypeOverride.Alias"/> of a type.</para>
 		/// </summary>
-		/// <param name="type">The type to be processed by the interceptor.</param>
-		/// <param name="interceptor">The interceptor to intercept the serialization and deserialization.</param>
-		/// <remarks>If the type has already gotten an <see cref="IJsonInterceptor"/>, the new <paramref name="interceptor"/> will replace it. If the new interceptor is null, existing interceptor will be removed from the type.</remarks>
-		public void OverrideInterceptor (Type type, IJsonInterceptor interceptor) {
-			Override (type, new TypeOverride () { Interceptor = interceptor }, false);
+		/// <param name="alias">The alias for the type.</param>
+		/// <remarks>If the type has already gotten an alias, the new alias will replace it. If the new alias is null, existing alias will be removed.</remarks>
+		public void OverrideTypeAlias<T> (string alias) {
+			Override (typeof (T), new TypeOverride (alias), false);
 		}
 
 		/// <summary>
@@ -582,7 +564,7 @@ namespace fastJSON
 		/// <remarks>If the type has already gotten an <see cref="IJsonConverter"/>, the new <paramref name="converter"/> will replace it.
 		/// If the new converter is null, existing converter will be removed from the type.</remarks>
 		public void OverrideConverter<T>(IJsonConverter converter) {
-			Override (typeof(T), new TypeOverride () { Converter = converter }, false);
+			Override (typeof(T), new TypeOverride  { Converter = converter }, false);
 		}
 
 		/// <summary>
@@ -606,7 +588,7 @@ namespace fastJSON
 		/// <param name="serializedName">The serialized name of the member.</param>
 		/// <remarks>If <paramref name="serializedName"/> is null or <see cref="String.Empty"/>, the field or property name will be used.</remarks>
 		public void OverrideMemberName (Type type, string memberName, string serializedName) {
-			Override (type, new TypeOverride () {
+			Override (type, new TypeOverride  {
 				MemberOverrides = { new MemberOverride (memberName, serializedName) }
 			}, false);
 		}
@@ -622,7 +604,7 @@ namespace fastJSON
 		/// If the new converter is null, existing converter will be removed from the type.</remarks>
 		/// <exception cref="MissingMemberException">No field or property matches <paramref name="memberName"/> in <paramref name="type"/>.</exception>
 		public void OverrideMemberConverter (Type type, string memberName, IJsonConverter converter) {
-			Override (type, new TypeOverride () {
+			Override (type, new TypeOverride  {
 				MemberOverrides = { new MemberOverride (memberName, converter) }
 			}, false);
 		}
@@ -651,18 +633,21 @@ namespace fastJSON
 			if (nameMapper == null) {
 				throw new ArgumentNullException ("nameMapper");
 			}
-			var d = GetReflectionCache (type);
-			if (d.EnumNames == null) {
-				throw new InvalidOperationException (type.Name + " is not an Enum type.");
-			}
-			foreach (var item in d.EnumNames) {
-				_EnumValueCache.Remove (item.Value);
-			}
-			d.EnumNames.Clear ();
-			foreach (var item in GetEnumValues (type, new RemapEnumValueController (nameMapper))) {
-				d.EnumNames.Add (item.Key, item.Value);
+			lock (_syncRoot) {
+				var d = GetSerializationInfo (type);
+				if (d.EnumNames == null) {
+					throw new InvalidOperationException (type.Name + " is not an Enum type.");
+				}
+				foreach (var item in d.EnumNames) {
+					_EnumValueCache.Remove (item.Value);
+				}
+				d.EnumNames.Clear ();
+				foreach (var item in GetEnumValues (type, new RemapEnumValueController (nameMapper))) {
+					d.EnumNames.Add (item.Key, item.Value);
+				}
 			}
 		}
+		#endregion
 
 		sealed class RemapEnumValueController : DefaultReflectionController
 		{
@@ -670,6 +655,7 @@ namespace fastJSON
 			public RemapEnumValueController (IDictionary<string,string> mapper) {
 				_mapper = mapper;
 			}
+			[System.Diagnostics.CodeAnalysis.SuppressMessage ("Microsoft.Design", "CA1062", MessageId = "0")]
 			public override string GetEnumValueName (MemberInfo member) {
 				string name;
 				if (_mapper.TryGetValue (member.Name, out name)) {
@@ -687,6 +673,19 @@ namespace fastJSON
 	/// <preliminary />
 	public sealed class TypeOverride
 	{
+		internal bool OverrideAlias;
+		string _Alias;
+		/// <summary>
+		/// Specifies the alias to identify the type.
+		/// </summary>
+		public string Alias {
+			get { return _Alias; }
+			set {
+				_Alias = value;
+				OverrideAlias = true;
+			}
+		}
+
 		/// <summary>
 		/// Specifies whether the type is deserializable disregarding its visibility.
 		/// </summary>
@@ -739,6 +738,19 @@ namespace fastJSON
 				}
 				return _MemberOverrides;
 			}
+		}
+
+		/// <summary>
+		/// Initializes a new instance of the <see cref="TypeOverride"/> class.
+		/// </summary>
+		public TypeOverride () {}
+
+		/// <summary>
+		/// Initializes a new instance of the <see cref="TypeOverride"/> class.
+		/// </summary>
+		/// <param name="alias">The alias for the type.</param>
+		public TypeOverride (string alias) {
+			Alias = alias;
 		}
 	}
 

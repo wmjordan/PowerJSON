@@ -75,9 +75,9 @@
     <Compile Include="PolymorphicTests.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\fastJSON\PowerJSON.csproj">
+    <ProjectReference Include="..\fastJSON\PowerJson.csproj">
       <Project>{508e9933-382c-46e9-950b-0264b21a8a7b}</Project>
-      <Name>PowerJSON</Name>
+      <Name>PowerJson</Name>
     </ProjectReference>
   </ItemGroup>
   <Choose>

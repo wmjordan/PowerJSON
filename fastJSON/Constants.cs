@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace fastJSON
+namespace PowerJson
 {
 	/// <summary>
 	/// Controls the naming format of serialized enum values.

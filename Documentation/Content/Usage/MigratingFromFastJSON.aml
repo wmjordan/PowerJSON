@@ -1,0 +1,114 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<topic id="e443606a-425f-4290-b587-f5b1188b6b47" revisionNumber="1">
+	<developerHowToDocument
+	  xmlns="http://ddue.schemas.microsoft.com/authoring/2003/5"
+	  xmlns:xlink="http://www.w3.org/1999/xlink">
+
+		<summary>
+			<para>This work-through will introduce the steps for programmers to migrate from fastJSON.</para>
+		</summary>
+
+		<introduction>
+			<para>From version 3.0, PowerJson began to use a set of new APIs and follow the naming conventions of .NET Framework. Therefore, programmers who used to use fastJSON will need to do something to migrate to the new APIs.</para>
+		</introduction>
+
+		<!-- Optional procedures followed by optional code example but must have
+		 at least one procedure or code example -->
+		<procedure>
+			<title>Migration procedures</title>
+			<steps class="ordered">
+				<step>
+					<content>
+						<para>Change the assembly reference from fastJSON.dll to PowerJson.dll.</para>
+					</content>
+				</step>
+				<step>
+					<content>
+						<para>Replace all fastJSON namespace to PowerJson.</para>
+					</content>
+				</step>
+				<step>
+					<content>
+						<para>
+							Change <codeInline>JSON</codeInline> to <codeInline>Json</codeInline> in all API types and methods. Typically the <codeInline>JSON</codeInline> class and its <codeInline>ToJSON</codeInline> method overloads, and the <codeInline>JSONParameters</codeInline> class.
+						</para>
+					</content>
+				</step>
+				<step>
+					<content>
+						<para>
+							Default values in the <codeInline>JsonParameters</codeInline> class has changed. <codeInline>SerializeStaticMembers</codeInline>, <codeInline>UseFastGuid</codeInline> and <codeInline>UseEscapedUnicode</codeInline> will have the default value of <codeInline>false</codeInline> instead of <codeInline>true</codeInline> in previous versions.
+						</para>
+					</content>
+				</step>
+				<step>
+					<content>
+						<para>
+							Some settings in <codeInline>JsonParameters</codeInline> class has been renamed. <codeInline>ShowReadOnlyProperties</codeInline>, <codeInline>ShowReadOnlyFields</codeInline> shall be changed to <codeInline>SerializeReadOnlyProperties</codeInline> and <codeInline>SerializeReadOnlyFields</codeInline> respectively.
+						</para>
+					</content>
+				</step>
+				<step>
+					<content>
+						<para>
+							<codeInline>UsingGlobalTypes</codeInline> in <codeInline>JsonParameters</codeInline> are no longer used. No global types will be written to the serialized JSON string.
+						</para>
+						<para>
+							The <codeInline>$type</codeInline> extension will show the alias (settable by calling the <codeEntityReference>M:PowerJson.SerializationManager.OverrideTypeAlias``1(System.String)</codeEntityReference> method, or applying to the type with the <codeEntityReference>T:PowerJson.JsonTypeAliasAttribute</codeEntityReference>) or <codeEntityReference>P:System.Type.FullName</codeEntityReference> instead of the <codeEntityReference>P:System.Type.AssemblyQualifiedName</codeEntityReference> of the type.
+						</para>
+					</content>
+				</step>
+				<step>
+					<content>
+						<para>All obsolete features in previous versions are removed.</para>
+					</content>
+				</step>
+			</steps>
+			<!-- <conclusion>Optional conclusion</conclusion> -->
+		</procedure>
+
+		<!-- <codeExample>Optional code example</codeExample> -->
+
+		<!-- <buildInstructions>Optional instructions for building a
+		 code example.</buildInstructions> -->
+
+		<!-- <robustProgramming>Optional discussion of error handling and other
+		 issues related to writing solid code.</robustProgramming> -->
+
+		<!-- <security>Optional discussion of security issues.</security> -->
+
+		<relatedTopics>
+			<!-- One or more of the following:
+		   - A local link
+		   - An external link
+		   - A code entity reference
+
+	  <link xlink:href="Other Topic's ID">Link text</link>
+	  <externalLink>
+		  <linkText>Link text</linkText>
+		  <linkAlternateText>Optional alternate link text</linkAlternateText>
+		  <linkUri>URI</linkUri>
+	  </externalLink>
+	  <codeEntityReference>API member ID</codeEntityReference>
+
+	  Examples:
+
+	  <link xlink:href="00e97994-e9e6-46e0-b420-5be86b2f8278">Some other topic</link>
+
+	  <externalLink>
+		  <linkText>SHFB on GitHub</linkText>
+		  <linkAlternateText>Go to GitHub</linkAlternateText>
+		  <linkUri>https://GitHub.com/EWSoftware/SHFB</linkUri>
+	  </externalLink>
+
+	  <codeEntityReference>T:TestDoc.TestClass</codeEntityReference>
+	  <codeEntityReference>P:TestDoc.TestClass.SomeProperty</codeEntityReference>
+	  <codeEntityReference>M:TestDoc.TestClass.#ctor</codeEntityReference>
+	  <codeEntityReference>M:TestDoc.TestClass.#ctor(System.String,System.Int32)</codeEntityReference>
+	  <codeEntityReference>M:TestDoc.TestClass.ToString</codeEntityReference>
+	  <codeEntityReference>M:TestDoc.TestClass.FirstMethod</codeEntityReference>
+	  <codeEntityReference>M:TestDoc.TestClass.SecondMethod(System.Int32,System.String)</codeEntityReference>
+	  -->
+		</relatedTopics>
+	</developerHowToDocument>
+</topic>

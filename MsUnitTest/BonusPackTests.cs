@@ -1,10 +1,11 @@
 ﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using fastJSON;
-using fastJSON.BonusPack;
+using PowerJson;
+using PowerJson.ExtraConverters;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Xml;
+using PowerJson.Extensions;
 
 namespace MsUnitTest
 {
@@ -13,11 +14,11 @@ namespace MsUnitTest
 	{
 		[TestInitialize]
 		public void Bootstrap () {
-			JSON.Parameters.UseExtensions = false;
+			Json.Parameters.UseExtensions = false;
 		}
 		[TestCleanup]
 		public void CleanUp () {
-			JSON.Parameters.UseExtensions = true;
+			Json.Parameters.UseExtensions = true;
 		}
 
 		#region EnumerableDataReader
@@ -97,31 +98,31 @@ namespace MsUnitTest
 </test:child>text1<child attr=""a1"" attr2=""a2"">&lt;child2&gt;</child>
 <child><![CDATA[markup <html """"> ]]></child>
 </root>");
-			JSON.Manager.OverrideConverter<XmlDocument> (Converters.XmlNode);
-			JSON.Manager.OverrideConverter<XmlElement> (Converters.XmlNode);
-			var s = JSON.ToJSON (d);
+			Json.Manager.OverrideConverter<XmlDocument> (Converters.XmlNode);
+			Json.Manager.OverrideConverter<XmlElement> (Converters.XmlNode);
+			var s = Json.ToJson (d);
 			Console.WriteLine (s);
-			s = JSON.ToJSON (d.DocumentElement);
+			s = Json.ToJson (d.DocumentElement);
 			Console.WriteLine (s);
 		}
 
 		[TestMethod]
 		public void ConvertVersion () {
-			JSON.Manager.OverrideConverter<Version> (Converters.Version);
+			Json.Manager.OverrideConverter<Version> (Converters.Version);
 			var v = new Version (1, 2, 3, 1234);
-			var s = JSON.ToJSON (v);
+			var s = Json.ToJson (v);
 			Console.WriteLine (s);
-			var o = JSON.ToObject<Version> (s);
+			var o = Json.ToObject<Version> (s);
 			Assert.AreEqual (v, o);
 		}
 
 		[TestMethod]
 		public void RegexSerialization () {
 			var r = new Regex ("[0-9]+", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-			JSON.Manager.OverrideConverter<Regex> (Converters.Regex);
-			var s = JSON.ToJSON (r);
+			Json.Manager.OverrideConverter<Regex> (Converters.Regex);
+			var s = Json.ToJson (r);
 			Console.WriteLine (s);
-			var o = JSON.ToObject<Regex> (s);
+			var o = Json.ToObject<Regex> (s);
 			Assert.AreEqual (r.ToString (), o.ToString ());
 			Assert.AreEqual (r.Options, o.Options);
 		}

@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
-using fastJSON;
 
-namespace consoletest
+namespace PowerJson.Benchmarks
 {
 
 	#region [   data objects   ]
@@ -106,18 +104,20 @@ namespace consoletest
 			return null;
 		}
 
-		public void SerializationConvert (JsonItem item) {
-			var l = item.Value as int[];
+		public object SerializationConvert (object value) {
+			var l = value as int[];
 			if (l != null) {
-				item.Value = String.Join (",", Array.ConvertAll (l, Convert.ToString));
+				return String.Join (",", Array.ConvertAll (l, Convert.ToString));
 			}
+			return value;
 		}
 
-		public void DeserializationConvert (JsonItem item) {
-			var s = item.Value as string;
+		public object DeserializationConvert (object value) {
+			var s = value as string;
 			if (s != null) {
-				item.Value = Array.ConvertAll (s.Split (','), Int32.Parse);
+				return Array.ConvertAll (s.Split (','), Int32.Parse);
 			}
+			return value;
 		}
 	}
 

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 
-namespace fastJSON
+namespace PowerJson
 {
 	/// <summary>
 	/// Indicates whether non-public classes, structs, fields or properties could be serialized and deserialized.
@@ -45,7 +45,7 @@ namespace fastJSON
 	{
 		/// <summary>
 		/// Gets the name of the serialized field or property.
-		/// The case of the serialized name defined in this attribute will not be changed by <see cref="JSONParameters.NamingConvention"/> setting in <see cref="JSONParameters"/>.
+		/// The case of the serialized name defined in this attribute will not be changed by <see cref="JsonParameters.NamingConvention"/> setting in <see cref="JsonParameters"/>.
 		/// </summary>
 		public string Name { get; private set; }
 
@@ -74,27 +74,22 @@ namespace fastJSON
 	}
 
 	/// <summary>
-	/// Indicates the name of the serialized data type.
-	/// If unset, the assembly qualified name is used.
+	/// Indicates the name of the serialized data type, which will be used during polymorphic deserialization for instances of abstract types, interface types or the <see cref="object"/> type.
 	/// </summary>
-	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
-	public sealed class JsonTypeAttribute :Attribute
+	[AttributeUsage (AttributeTargets.Class | AttributeTargets.Struct)]
+	public sealed class JsonTypeAliasAttribute : Attribute
 	{
 		/// <summary>
 		/// Gets the name of the serialized class.
-		/// The case of the serialized name defined in this attribute will not be changed by <see cref="JSONParameters.NamingConvention"/> setting in <see cref="JSONParameters"/>.
+		/// The case of the serialized name defined in this attribute will not be changed by <see cref="JsonParameters.NamingConvention"/> setting in <see cref="JsonParameters"/>.
 		/// </summary>
-		public string Name
-		{
-			get; private set;
-		}
+		public string Name { get; private set; }
 
 		/// <summary>
-		/// Specifies the name of the serialized field or property.
+		/// Specifies the name of the serialized type.
 		/// </summary>
-		/// <param name="name">The name of the serialized field or property.</param>
-		public JsonTypeAttribute(string name)
-		{
+		/// <param name="name">The name of the serialized type.</param>
+		public JsonTypeAliasAttribute (string name) {
 			Name = name;
 		}
 	}
@@ -130,9 +125,9 @@ namespace fastJSON
 		/// <summary>
 		/// Specifies the format of an enum type.
 		/// </summary>
-		/// <param name="valueFormat">The format of the serialized enum type.</param>
-		public JsonEnumFormatAttribute (EnumValueFormat valueFormat) {
-			_format = valueFormat;
+		/// <param name="format">The format of the serialized enum type.</param>
+		public JsonEnumFormatAttribute (EnumValueFormat format) {
+			_format = format;
 		}
 
 		/// <summary>

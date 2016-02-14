@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace fastJSON
+namespace PowerJson
 {
 	static class ValueConverter
 	{

@@ -6,7 +6,7 @@ using System.Data;
 using System.Reflection;
 using System.Reflection.Emit;
 
-namespace fastJSON
+namespace PowerJson
 {
 	sealed class Reflection
 	{
@@ -192,42 +192,6 @@ namespace fastJSON
 			c = c.FindAll (m => { return (m.HasPublicGetter || m.HasPublicSetter) || AttributeHelper.HasAttribute<System.Runtime.CompilerServices.CompilerGeneratedAttribute> (m.MemberInfo, true) == false; });
 			var r = new MemberCache[c.Count];
 			c.CopyTo (r, 0);
-			return r;
-		}
-
-		internal static JsonMemberGetter[] GetGetters (Type type, MemberCache[] members, IReflectionController controller) {
-			var r = new JsonMemberGetter[members.Length];
-			for (int i = r.Length - 1; i >= 0; i--) {
-				var m = members[i];
-				var g = r[i] = new JsonMemberGetter (m);
-				if (controller == null) {
-					continue;
-				}
-				var mi = m.MemberInfo;
-				g.Serializable = Constants.ToTriState (controller.IsMemberSerializable (mi, m));
-				g.Converter = controller.GetMemberConverter (mi);
-				g.ItemConverter = controller.GetMemberItemConverter (mi);
-				var dv = controller.GetNonSerializedValues (mi);
-				if (dv != null) {
-					var v = new List<object> ();
-					foreach (var item in dv) {
-						v.Add (item);
-					}
-					g.NonSerializedValues = v.ToArray ();
-				}
-				g.HasNonSerializedValue = g.NonSerializedValues != null;
-				var tn = controller.GetSerializedNames (mi);
-				if (tn != null) {
-					if (String.IsNullOrEmpty (tn.DefaultName) == false && tn.DefaultName != g.SerializedName) {
-						g.SpecificName = true;
-					}
-					g.SerializedName = tn.DefaultName ?? g.SerializedName;
-					if (tn.Count > 0) {
-						g.TypedNames = new Dictionary<Type, string> (tn);
-						g.SpecificName = true;
-					}
-				}
-			}
 			return r;
 		}
 
@@ -451,7 +415,7 @@ namespace fastJSON
 			var dv = dr.Equals (typeof (void));
 			var mv = mr.Equals (typeof (void));
 			if (mv == false && dv == false) {
-				var rv = il.DeclareLocal (mr);
+				il.DeclareLocal (mr);
 			}
 			var dro = dr.Equals (typeof (object));
 			var mro = dr.Equals (typeof (object));
@@ -550,13 +514,21 @@ namespace fastJSON
 				return val;
 			else
 			{
-				Type t = Type.GetType(typename);
-				//if (t == null) // RaptorDB : loading runtime assemblies
-				//{
-				//    t = Type.GetType(typename, (name) => {
-				//        return AppDomain.CurrentDomain.GetAssemblies().Where(z => z.FullName == name.FullName).FirstOrDefault();
-				//    }, null, true);
-				//}
+				var t = Type.GetType(typename);
+				if (t == null) // RaptorDB : loading runtime assemblies
+				{
+					foreach (var asm in AppDomain.CurrentDomain.GetAssemblies ()) {
+						foreach (var type in asm.GetTypes ()) {
+							if (type.FullName == typename) {
+								t = type;
+								break;
+							}
+						}
+					}
+				}
+				if (t == null) {
+					throw new JsonSerializationException ("Could not find type with type name: " + typename);
+				}
 				_typecache.Add(typename, t);
 				return t;
 			}

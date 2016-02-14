@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using fastJSON;
+using PowerJson;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace MsUnitTest
@@ -45,8 +45,8 @@ namespace MsUnitTest
 			var stringField = new OneOtherConcreteClass ("lol");
 			var list = new List<abstractClass> () { intField, stringField };
 
-			var json = JSON.ToJSON (list);
-			var objects = JSON.ToObject<List<abstractClass>> (json);
+			var json = Json.ToJson (list);
+			var objects = Json.ToObject<List<abstractClass>> (json);
 		}
 
 	}

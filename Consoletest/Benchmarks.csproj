@@ -5,8 +5,8 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
     <OutputType>Exe</OutputType>
-    <RootNamespace>consoletest</RootNamespace>
-    <AssemblyName>consoletest</AssemblyName>
+    <RootNamespace>PowerJson.Benchmarks</RootNamespace>
+    <AssemblyName>PowerJson.Benchmarks</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
@@ -60,9 +60,18 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Newtonsoft.Json, Version=8.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.8.0.2\lib\net40\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="ServiceStack.Text, Version=4.0.52.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\ServiceStack.Text.4.0.52\lib\net40\ServiceStack.Text.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
   </ItemGroup>
@@ -72,10 +81,13 @@
     <Compile Include="Program.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\fastJSON\fastJSON.csproj">
-      <Project>{207E91B1-C9F8-4913-88E1-3549EF5F3273}</Project>
-      <Name>fastJSON</Name>
+    <ProjectReference Include="..\fastJSON\PowerJson.csproj">
+      <Project>{508e9933-382c-46e9-950b-0264b21a8a7b}</Project>
+      <Name>PowerJson</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.Targets" />
 </Project>

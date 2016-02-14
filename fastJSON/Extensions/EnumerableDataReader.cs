@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Text;
 
-namespace fastJSON.BonusPack
+namespace PowerJson.Extensions
 {
 	/// <summary>
 	/// Turns an <see cref="IEnumerable{T}"/> collection into an <see cref="EnumerableDataReader"/>.
@@ -11,11 +11,11 @@ namespace fastJSON.BonusPack
 	public static class EnumerableDataReader
 	{
 		/// <summary>
-		/// Creates an <see cref="EnumerableDataReader&lt;T&gt;"/> instance from a given <see cref="IEnumerable&lt;T&gt;"/> instance.
+		/// Creates an <see cref="EnumerableDataReader{T}"/> instance from a given <see cref="IEnumerable{T}"/> instance.
 		/// </summary>
 		/// <typeparam name="T">The type of the data.</typeparam>
 		/// <param name="collection">The data to be read.</param>
-		/// <returns>An <see cref="EnumerableDataReader&lt;T&gt;"/> instance.</returns>
+		/// <returns>An <see cref="EnumerableDataReader{T}"/> instance.</returns>
 		public static EnumerableDataReader<T> Create<T> (IEnumerable<T> collection) {
 			return new EnumerableDataReader<T> (collection);
 		}
@@ -29,12 +29,12 @@ namespace fastJSON.BonusPack
 	/// 1) https://github.com/matthewschrager/Repository/blob/master/Repository.EntityFramework/EntityDataReader.cs;
 	/// 2) http://www.codeproject.com/Articles/876276/Bulk-Insert-Into-SQL-From-Csharp</remarks>
 	/// <typeparam name="T">The data type in the data source.</typeparam>
-	public class EnumerableDataReader<T> : IDataReader
+	public sealed class EnumerableDataReader<T> : IDataReader
 	{
 		readonly static Dictionary<Type, byte> _scalarTypes = InitScalarTypes ();
 
 		static Dictionary<Type, byte> InitScalarTypes () {
-			return new Dictionary<Type, byte> () {
+			return new Dictionary<Type, byte> {
 				{ typeof(string), 0 },
 
 				{ typeof(byte), 0 },
@@ -97,7 +97,7 @@ namespace fastJSON.BonusPack
 				throw new NotSupportedException (t.FullName + " is not supported.");
 			}
 			_enumerator = collection.GetEnumerator ();
-			var p = SerializationManager.Instance.GetReflectionCache (t).Getters;
+			var p = SerializationManager.Instance.GetSerializationInfo (t).Getters;
 			_fieldCount = p.Length;
 			_memberNames = new string[_fieldCount];
 			_members = new MemberCache[_fieldCount];
@@ -143,9 +143,9 @@ namespace fastJSON.BonusPack
 				row["ColumnName"] = GetName (i);
 				row["ColumnOrdinal"] = i;
 				Type type = GetFieldType (i);
-				var c = SerializationManager.Instance.GetReflectionCache (type);
+				var c = SerializationManager.Instance.GetSerializationInfo (type);
 				if (c.CommonType == ComplexType.Nullable) {
-					type = c.ArgumentTypes[0];
+					type = c.TypeParameters[0].Reflection.Type;
 				}
 				row["DataType"] = type;
 				row["DataTypeName"] = GetDataTypeName (i);
@@ -423,9 +423,9 @@ namespace fastJSON.BonusPack
 		/// <param name="values">The array which holds the field values.</param>
 		/// <returns>The number of fields loaded into the array.</returns>
 		public int GetValues (object[] values) {
-            if (values == null) {
-                throw new ArgumentNullException ("values");
-            }
+			if (values == null) {
+				throw new ArgumentNullException ("values");
+			}
 			var vl = values.Length;
 			var l = _fieldCount > vl ? vl : _fieldCount;
 			for (int i = l - 1; i >= 0; i--) {

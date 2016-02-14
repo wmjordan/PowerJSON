@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
-using fastJSON;
+using PowerJson;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace UnitTests
@@ -10,9 +10,10 @@ namespace UnitTests
 	[TestClass]
 	public class SerializationAttributeTests
 	{
-		JSONParameters _JP = new JSONParameters () {
+		JsonParameters _JP = new JsonParameters () {
 			UseExtensions = false,
-			UseUTCDateTime = false
+			UseUTCDateTime = false,
+			SerializeStaticMembers = true
 		};
 
 		#region Non-public types
@@ -53,8 +54,8 @@ namespace UnitTests
 					Field = 3
 				}
 			};
-			var ss = JSON.ToJSON (so, _JP);
-			var ps = JSON.ToObject<PrivateStruct> (ss);
+			var ss = Json.ToJson (so, _JP);
+			var ps = Json.ToObject<PrivateStruct> (ss);
 			Console.WriteLine (ss);
 			Assert.AreEqual (so.Field, ps.Field);
 			Assert.AreEqual (2, ps.Field);
@@ -62,33 +63,33 @@ namespace UnitTests
 
 			var o = new PrivateClass ();
 			o.StructData = new PrivateStruct () { Field = 4 };
-			var s = JSON.ToJSON (o, _JP);
+			var s = Json.ToJson (o, _JP);
 			Console.WriteLine (s);
 			Assert.IsTrue (s.Contains (@"""PrivateField"":1"));
 			s = s.Replace (@"""PrivateField"":1", @"""PrivateField"":2");
-			var p = JSON.ToObject<PrivateClass> (s);
+			var p = Json.ToObject<PrivateClass> (s);
 			Assert.AreEqual (o.Field, p.Field);
 			Assert.AreEqual (4, p.StructData.Field);
 			Assert.AreEqual (2, p.GetPrivateField ());
 
 			var l = new List<PrivateClass> () { new PrivateClass () { Field = 1 } };
-			var sl = JSON.ToJSON (l, _JP);
+			var sl = Json.ToJson (l, _JP);
 			Console.WriteLine (sl);
-			var pl = JSON.ToObject<List<PrivateClass>> (sl);
+			var pl = Json.ToObject<List<PrivateClass>> (sl);
 			Assert.AreEqual (l[0].Field, pl[0].Field);
 
 			var a = new PrivateClass[] { new PrivateClass () { Field = 1 } };
-			var sa = JSON.ToJSON (a, _JP);
-			var pa = JSON.ToObject<PrivateClass[]> (sa);
+			var sa = Json.ToJson (a, _JP);
+			var pa = Json.ToObject<PrivateClass[]> (sa);
 			Console.WriteLine (sa);
 			Assert.AreEqual (a[0].Field, pa[0].Field);
 
 			var d = new Dictionary<string, List<PrivateClass>> () { 
 				{ "test", l }
 			};
-			var sd = JSON.ToJSON (d, _JP);
+			var sd = Json.ToJson (d, _JP);
 			Console.WriteLine (sd);
-			var pd = JSON.ToObject<Dictionary<string, List<PrivateClass>>> (sd);
+			var pd = Json.ToObject<Dictionary<string, List<PrivateClass>>> (sd);
 			Assert.AreEqual (l[0].Field, d["test"][0].Field);
 		}
 
@@ -96,9 +97,9 @@ namespace UnitTests
 		[ExpectedException (typeof (JsonSerializationException))]
 		public void FailOnNonPublicClass () {
 			var ns = new NonSerializableClass () { Field = 1 };
-			var s = JSON.ToJSON (ns, _JP);
+			var s = Json.ToJson (ns, _JP);
 			Console.WriteLine (s);
-			var np = JSON.ToObject<NonSerializableClass> (s);
+			var np = Json.ToObject<NonSerializableClass> (s);
 			np.Field = 2;
 		}
 
@@ -106,9 +107,9 @@ namespace UnitTests
 		[ExpectedException (typeof (JsonSerializationException))]
 		public void FailOnNonPublicNestedClass () {
 			var ns = new NonSerializableClass.NonSerializablePublicClass () { Data = 1 };
-			var s = JSON.ToJSON (ns, _JP);
+			var s = Json.ToJson (ns, _JP);
 			Console.WriteLine (s);
-			var np = JSON.ToObject<NonSerializableClass.NonSerializablePublicClass> (s);
+			var np = Json.ToObject<NonSerializableClass.NonSerializablePublicClass> (s);
 			np.Data = 2;
 		}
 		#endregion
@@ -135,10 +136,10 @@ namespace UnitTests
 			o.ShowMe = 1;
 			o.IgnoreThisField = 2;
 			o.IgnoreThisProperty = 3;
-			var s = JSON.ToJSON (o, _JP);
+			var s = Json.ToJson (o, _JP);
 			Console.WriteLine (s);
 			Assert.IsFalse (s.Contains (@"""ReadonlyProperty"":"));
-			var p = JSON.ToObject<IncludeAttributeTest> (s);
+			var p = Json.ToObject<IncludeAttributeTest> (s);
 			Assert.AreEqual (1, p.ShowMe);
 			Assert.AreEqual (0, p.IgnoreThisProperty);
 			Assert.AreEqual (0, p.IgnoreThisField);
@@ -164,12 +165,12 @@ namespace UnitTests
 		}
 		public class NumericEnumConverter : JsonConverter<Fruits, int>
 		{
-			protected override Fruits Revert (string fieldName, int fieldValue) {
-				return (Fruits)fieldValue;
+			protected override Fruits Revert (int value) {
+				return (Fruits)value;
 			}
 
-			protected override int Convert (string fieldName, Fruits fieldValue) {
-				return (int)fieldValue;
+			protected override int Convert (Fruits value) {
+				return (int)value;
 			}
 		}
 		public class EnumTestSample
@@ -196,13 +197,13 @@ namespace UnitTests
 		[TestMethod]
 		public void JsonEnumValueTest () {
 			var so = new EnumTestSample ();
-			var ss = JSON.ToJSON (so, _JP);
+			var ss = Json.ToJson (so, _JP);
 			Console.WriteLine (ss);
 			StringAssert.Contains (ss, @"""NumericFruit"":13");
-			var ps = JSON.ToObject<EnumTestSample> (ss);
+			var ps = Json.ToObject<EnumTestSample> (ss);
 			Console.WriteLine (ss);
-			Assert.AreEqual ("\"bananaaaa\"", JSON.ToJSON (Fruits.Banana));
-			Assert.AreEqual ("33", JSON.ToJSON ((Fruits)33));
+			Assert.AreEqual ("\"bananaaaa\"", Json.ToJson (Fruits.Banana));
+			Assert.AreEqual ("33", Json.ToJson ((Fruits)33));
 			Assert.AreEqual (Fruits.Apple, ps.Apple);
 			Assert.AreEqual (Fruits.Apple | Fruits.Banana, ps.MixedFruit);
 			Assert.AreEqual ((Fruits)5, ps.ConvertedFruit);
@@ -251,10 +252,10 @@ namespace UnitTests
 				Variant = "test",
 				InterfaceProperty = new NamedClassA () { Name = "a", Value = true }
 			};
-			var s = JSON.ToJSON (o, _JP);
+			var s = Json.ToJson (o, _JP);
 			Console.WriteLine (s);
 			StringAssert.Contains (s, "my_property");
-			var p = JSON.ToObject<JsonFieldTestSample> (s);
+			var p = Json.ToObject<JsonFieldTestSample> (s);
 			Assert.AreEqual ("test", p.Variant);
 			Assert.AreEqual ("NamedClassA", p.InterfaceProperty.GetType ().Name);
 			Assert.AreEqual (true, (p.InterfaceProperty as NamedClassA).Value);
@@ -263,9 +264,9 @@ namespace UnitTests
 			var n = DateTime.Now;
 			o.Variant = n;
 			o.InterfaceProperty = new NamedClassB () { Name = "b", Value = 1 };
-			s = JSON.ToJSON (o, _JP);
+			s = Json.ToJson (o, _JP);
 			Console.WriteLine (s);
-			p = JSON.ToObject<JsonFieldTestSample> (s);
+			p = Json.ToObject<JsonFieldTestSample> (s);
 			Assert.AreEqual (n.ToLongDateString (), ((DateTime)p.Variant).ToLongDateString ());
 			Assert.AreEqual (n.ToLongTimeString (), ((DateTime)p.Variant).ToLongTimeString ());
 			Assert.AreEqual (1, (p.InterfaceProperty as NamedClassB).Value);
@@ -273,23 +274,23 @@ namespace UnitTests
 
 			// since the type of 1.3f, float, is not defined in JsonFieldAttribute of the Variant property, the serializer will use default type handling methods to serialize and deserialize the value.
 			var d = o.Variant = 1.3f;
-			s = JSON.ToJSON (o, _JP);
+			s = Json.ToJson (o, _JP);
 			Console.WriteLine (s);
-			p = JSON.ToObject<JsonFieldTestSample> (s);
+			p = Json.ToObject<JsonFieldTestSample> (s);
 			Assert.AreEqual ((float)d, (float)(double)p.Variant);
 
 			var a = o.Variant = new int[] { 1, 2, 3 };
-			s = JSON.ToJSON (o, _JP);
+			s = Json.ToJson (o, _JP);
 			Console.WriteLine (s);
-			p = JSON.ToObject<JsonFieldTestSample> (s);
+			p = Json.ToObject<JsonFieldTestSample> (s);
 			// without data type information the deserialized collection would not match the type of the original, thus the following assertion will fail
 			// CollectionAssert.AreEqual ((ICollection)a, (ICollection)p.Variant);
 			Console.WriteLine (p.Variant.GetType ().FullName);
 
 			var b = o.Variant = new NamedClassA () { Name = "a", Value = true };
-			s = JSON.ToJSON (o, _JP);
+			s = Json.ToJson (o, _JP);
 			Console.WriteLine (s);
-			p = JSON.ToObject<JsonFieldTestSample> (s);
+			p = Json.ToObject<JsonFieldTestSample> (s);
 			//Assert.AreEqual (((NamedClassA)b).Name, ((NamedClassA)p.Variant).Name);
 			Console.WriteLine (p.Variant.GetType ().FullName);
 		} 
@@ -304,11 +305,11 @@ namespace UnitTests
 		[TestMethod]
 		public void IgnoreDefaultValue () {
 			var o = new DefaultValueTest () { MyProperty = 0 };
-			var s = JSON.ToJSON (o, _JP);
+			var s = Json.ToJson (o, _JP);
 			Assert.AreEqual ("{}", s);
 			o.MyProperty = 1;
-			s = JSON.ToJSON (o, _JP);
-			var p = JSON.ToObject<DefaultValueTest> (s);
+			s = Json.ToJson (o, _JP);
+			var p = Json.ToObject<DefaultValueTest> (s);
 			Assert.AreEqual (1, p.MyProperty);
 		} 
 		#endregion
@@ -365,18 +366,18 @@ namespace UnitTests
 		[TestMethod]
 		public void IntercepterTest () {
 			var d = new InterceptorTestSample ();
-			var s = JSON.ToJSON (d, _JP);
+			var s = Json.ToJson (d, _JP);
 			Console.WriteLine (s);
 			Assert.AreEqual (2, d.Value);
 			StringAssert.Contains (s,"HideWhenToggleTrue");
 			StringAssert.Contains (s, @"""Text"":""Changed at " + d.Timestamp.ToString () + @"""");
 
-			var o = JSON.ToObject<InterceptorTestSample> (s);
+			var o = Json.ToObject<InterceptorTestSample> (s);
 			Assert.AreEqual (4, o.Value);
 			Assert.AreEqual ("1", o.Text);
 
 			d.Toggle = true;
-			s = JSON.ToJSON (d, _JP);
+			s = Json.ToJson (d, _JP);
 			Console.WriteLine (s);
 			Assert.IsFalse (s.Contains ("HideWhenToggleTrue"));
 		} 
@@ -389,17 +390,19 @@ namespace UnitTests
 				// no type conversion is required
 				return null;
 			}
-			public void SerializationConvert (JsonItem item) {
-				var s = item.Value as string;
+			public object SerializationConvert (object value) {
+				var s = value as string;
 				if (s != null) {
-					item.Value = "Encrypted: " + s; // returns an encrypted string
+					return "Encrypted: " + s; // returns an encrypted string
 				}
+				return value;
 			}
-			public void DeserializationConvert (JsonItem item) {
-				var s = item.Value as string;
+			public object DeserializationConvert (object value) {
+				var s = value as string;
 				if (s != null && s.StartsWith ("Encrypted: ", StringComparison.Ordinal)) {
-					item.Value = s.Substring ("Encrypted: ".Length);
+					return s.Substring ("Encrypted: ".Length);
 				}
+				return value;
 			}
 		}
 		public class JsonConverterTestSample
@@ -411,11 +414,11 @@ namespace UnitTests
 		public void SimpleConvertData () {
 			var s = "connection string";
 			var d = new JsonConverterTestSample () { MyProperty = s };
-			var ss = JSON.ToJSON (d, _JP);
+			var ss = Json.ToJson (d, _JP);
 			Console.WriteLine (ss);
 			StringAssert.Contains (ss, "Encrypted: ");
 
-			var o = JSON.ToObject<JsonConverterTestSample> (ss);
+			var o = Json.ToObject<JsonConverterTestSample> (ss);
 			Assert.AreEqual (s, o.MyProperty);
 		}
 
@@ -462,61 +465,63 @@ namespace UnitTests
 				return null;
 			}
 
-			public void DeserializationConvert (JsonItem item) {
-				var s = item.Value as string;
+			public object DeserializationConvert (object value) {
+				var s = value as string;
 				if (s != null) {
-					item.Value = Array.ConvertAll (s.Split (','), Int32.Parse);
+					return Array.ConvertAll (s.Split (','), Int32.Parse);
 				}
+				return value;
 			}
 
-			public void SerializationConvert (JsonItem item) {
-				var l = item.Value as int[];
+			public object SerializationConvert (object value) {
+				var l = value as int[];
 				if (l != null) {
-					item.Value = String.Join (",", Array.ConvertAll (l, Convert.ToString));
+					return String.Join (",", Array.ConvertAll (l, Convert.ToString));
 				}
+				return value;
 			}
 		}
 		class PersonInfoConverter : JsonConverter<string, PersonInfo>
 		{
-			protected override PersonInfo Convert (string fieldName, string fieldValue) {
+			protected override PersonInfo Convert (string value) {
 				return new PersonInfo () {
-					Name = fieldValue.EndsWith ("*") ? fieldValue.Substring (0, fieldValue.Length - 1) : fieldValue,
-					Vip = fieldValue.EndsWith ("*")
+					Name = value.EndsWith ("*") ? value.Substring (0, value.Length - 1) : value,
+					Vip = value.EndsWith ("*")
 				};
 			}
 
-			protected override string Revert (string fieldName, PersonInfo fieldValue) {
-				return fieldValue.Name + (fieldValue.Vip ? "*" : null);
+			protected override string Revert (PersonInfo value) {
+				return value.Name + (value.Vip ? "*" : null);
 			}
 		}
 		class DateConverter : JsonConverter<DateTime, DateTime>
 		{
-			protected override DateTime Convert (string fieldName, DateTime fieldValue) {
-				return fieldValue.AddHours (1);
+			protected override DateTime Convert (DateTime value) {
+				return value.AddHours (1);
 			}
 
-			protected override DateTime Revert (string fieldName, DateTime fieldValue) {
-				return fieldValue.AddHours (-1);
+			protected override DateTime Revert (DateTime value) {
+				return value.AddHours (-1);
 			}
 		}
 		class IdConverter : JsonConverter<string, int>
 		{
-			protected override int Convert (string fieldName, string fieldValue) {
-				return Int32.Parse (fieldValue.Substring (2));
+			protected override int Convert (string value) {
+				return Int32.Parse (value.Substring (2));
 			}
 
-			protected override string Revert (string fieldName, int fieldValue) {
-				return "id" + fieldValue.ToString ();
+			protected override string Revert (int value) {
+				return "id" + value.ToString ();
 			}
 		}
 		class IdListConverter : JsonConverter<List<string>, List<int>>
 		{
-			protected override List<int> Convert (string fieldName, List<string> fieldValue) {
-				return fieldValue.ConvertAll ((s) => { return Int32.Parse (s.Substring (2)); });
+			protected override List<int> Convert (List<string> value) {
+				return value.ConvertAll ((s) => { return Int32.Parse (s.Substring (2)); });
 			}
 
-			protected override List<string> Revert (string fieldName, List<int> fieldValue) {
-				return fieldValue.ConvertAll ((i) => { return "id" + i.ToString (); });
+			protected override List<string> Revert (List<int> value) {
+				return value.ConvertAll ((i) => { return "id" + i.ToString (); });
 			}
 		}
 		class NamedClassConverter : JsonConverter<IName, IName>
@@ -541,11 +546,11 @@ namespace UnitTests
 				}
 				return null;
 			}
-			protected override IName Convert (string fieldName, IName fieldValue) {
-				return fieldValue;
+			protected override IName Convert (IName value) {
+				return value;
 			}
-			protected override IName Revert (string fieldName, IName fieldValue) {
-				return fieldValue;
+			protected override IName Revert (IName value) {
+				return value;
 			}
 		}
 		[TestMethod]
@@ -562,13 +567,13 @@ namespace UnitTests
 				Date = new DateTime (1999, 12, 31, 23, 0, 0),
 				NamedObject = new PersonInfo () { Name = "person", Vip = false }
 			};
-			var t = JSON.ToJSON (c, _JP);
+			var t = Json.ToJson (c, _JP);
 			Console.WriteLine (t);
 			StringAssert.Contains (t, "\"Vip\":true");
 			StringAssert.Contains (t, "\"Id\":123");
 			StringAssert.Contains (t, "\"Date\":\"2000-01-01T00:00:00\"");
-			var o = JSON.ToObject<CustomConverterType> (t, _JP);
-			Console.WriteLine (JSON.ToJSON (o, _JP));
+			var o = Json.ToObject<CustomConverterType> (t, _JP);
+			Console.WriteLine (Json.ToJson (o, _JP));
 			CollectionAssert.AreEqual (c.Array, o.Array);
 			CollectionAssert.AreEqual (c.NormalArray, o.NormalArray);
 			CollectionAssert.AreEqual ((ICollection)c.Variable1, (ICollection)o.Variable1);
@@ -582,20 +587,20 @@ namespace UnitTests
 			Assert.IsTrue (c.NamedObject is PersonInfo);
 
 			c.NamedObject = new NamedClassA () { Name = "classA", Value = true };
-			t = JSON.ToJSON (c, _JP);
+			t = Json.ToJson (c, _JP);
 			Console.WriteLine (t);
-			o = JSON.ToObject<CustomConverterType> (t, _JP);
+			o = Json.ToObject<CustomConverterType> (t, _JP);
 			Assert.AreEqual (c.NamedObject.Name, o.NamedObject.Name);
 			Assert.IsTrue (c.NamedObject is NamedClassA);
 
 			c.NamedObject = new NamedClassB() { Name = "classB", Value = 1 };
-			t = JSON.ToJSON (c, _JP);
+			t = Json.ToJson (c, _JP);
 			Console.WriteLine (t);
-			o = JSON.ToObject<CustomConverterType> (t, _JP);
+			o = Json.ToObject<CustomConverterType> (t, _JP);
 			Assert.AreEqual (c.NamedObject.Name, o.NamedObject.Name);
 			Assert.IsTrue (c.NamedObject is NamedClassB);
 
-			o = JSON.ToObject<CustomConverterType> ("{\"Id\":\"id123\", \"intArray1\": [ 1, 2, 3 ] }");
+			o = Json.ToObject<CustomConverterType> ("{\"Id\":\"id123\", \"intArray1\": [ 1, 2, 3 ] }");
 			Assert.AreEqual ("id123", o.Id);
 			CollectionAssert.AreEqual (new int[] { 1, 2, 3 }, (ICollection)o.Variable1);
 		}
@@ -612,23 +617,23 @@ namespace UnitTests
 		}
 		class KVConverter : JsonConverter<KeyValuePair<string, string>, string>
 		{
-			protected override string Convert (string fieldName, KeyValuePair<string, string> fieldValue) {
-				return fieldValue.Key + ":" + fieldValue.Value;
+			protected override string Convert (KeyValuePair<string, string> value) {
+				return value.Key + ":" + value.Value;
 			}
 
-			protected override KeyValuePair<string, string> Revert (string fieldName, string fieldValue) {
-				var p = fieldValue.IndexOf (':');
-				return new KeyValuePair<string, string> (fieldValue.Substring (0, p), fieldValue.Substring (p + 1));
+			protected override KeyValuePair<string, string> Revert (string value) {
+				var p = value.IndexOf (':');
+				return new KeyValuePair<string, string> (value.Substring (0, p), value.Substring (p + 1));
 			}
 		}
 		class DateNumberConverter : JsonConverter<DateTime, long>
 		{
-			protected override long Convert (string fieldName, DateTime fieldValue) {
-				return fieldValue.Ticks;
+			protected override long Convert (DateTime value) {
+				return value.Ticks;
 			}
 
-			protected override DateTime Revert (string fieldName, long fieldValue) {
-				return new DateTime (fieldValue);
+			protected override DateTime Revert (long value) {
+				return new DateTime (value);
 			}
 		}
 		[TestMethod]
@@ -643,11 +648,11 @@ namespace UnitTests
 					new DateTime (1999,12,31)
 				}
 			};
-			var s = JSON.ToJSON (d, _JP);
+			var s = Json.ToJson (d, _JP);
 			StringAssert.Contains (s, "a:1");
 			StringAssert.Contains (s, "b:2");
 			Console.WriteLine (s);
-			var o = JSON.ToObject<ItemConverterTestSample> (s);
+			var o = Json.ToObject<ItemConverterTestSample> (s);
 			CollectionAssert.AreEqual (d.Pairs, o.Pairs);
 			CollectionAssert.AreEqual (d.Dates, o.Dates);
 		}
@@ -669,17 +674,17 @@ namespace UnitTests
 				NormalProperty = 2,
 				ReadWriteProperty = 3
 			};
-			var s = JSON.ToJSON (d, _JP);
+			var s = Json.ToJson (d, _JP);
 			Console.WriteLine (s);
 			d.ReadOnlyProperty = 4;
 			d.NormalProperty = 5;
 			d.ReadWriteProperty = 6;
-			Console.WriteLine (JSON.ToJSON (d, _JP));
-			JSON.FillObject (d, s); // fills the serialized value into the class
+			Console.WriteLine (Json.ToJson (d, _JP));
+			Json.FillObject (d, s); // fills the serialized value into the class
 			Assert.AreEqual (4, d.ReadOnlyProperty);
 			Assert.AreEqual (2, d.NormalProperty); // value got reset
 			Assert.AreEqual (3, d.ReadWriteProperty); // value got reset
-			s = JSON.ToJSON (d, _JP);
+			s = Json.ToJson (d, _JP);
 			Console.WriteLine (s);
 		} 
 		#endregion
@@ -699,30 +704,30 @@ namespace UnitTests
 		public void SerializeStaticFields () {
 			var d = new StaticFieldTestSample ();
 			StaticFieldTestSample.StaticProperty = 1;
-			var s = JSON.ToJSON (d, _JP);
+			var s = Json.ToJson (d, _JP);
 			Console.WriteLine (s);
 			Assert.IsFalse (s.Contains (@"""MaxValue"":"));
 			StringAssert.Contains (s, @"""StaticProperty"":");
 			StaticFieldTestSample.StaticProperty = 2;
 			StaticFieldTestSample.ChangeReadOnlyProperty ();
-			var o = JSON.ToObject<StaticFieldTestSample> (s);
+			var o = Json.ToObject<StaticFieldTestSample> (s);
 			Assert.AreEqual (1, StaticFieldTestSample.StaticProperty);
 			Assert.AreEqual (3, StaticFieldTestSample.StaticReadOnlyProperty);
-			s = JSON.ToJSON (d, new JSONParameters () {
+			s = Json.ToJson (d, new JsonParameters () {
 				UseExtensions = false,
 				SerializeStaticMembers = false
 			});
 			Assert.AreEqual ("{}", s);
 			Console.WriteLine (s);
-			Console.WriteLine (JSON.ToJSON (d, _JP));
-			o = JSON.ToObject<StaticFieldTestSample> (@"{""MaxValue"":35}");
+			Console.WriteLine (Json.ToJson (d, _JP));
+			o = Json.ToObject<StaticFieldTestSample> (@"{""MaxValue"":35}");
 			Assert.AreEqual (30, StaticFieldTestSample.MaxValue);
-			Console.WriteLine (JSON.ToJSON (o, _JP));
-			s = JSON.ToJSON (d, new JSONParameters () {
+			Console.WriteLine (Json.ToJson (o, _JP));
+			s = Json.ToJson (d, new JsonParameters () {
 				UseExtensions = false,
 				SerializeStaticMembers = true,
-				ShowReadOnlyProperties = true,
-				ShowReadOnlyFields = true
+				SerializeReadOnlyProperties = true,
+				SerializeReadOnlyFields = true
 			});
 			StringAssert.Contains (s, @"""MaxValue"":");
 			StringAssert.Contains (s, @"""StaticProperty"":");
@@ -756,10 +761,10 @@ namespace UnitTests
 		}
 		[TestMethod]
 		public void SerializationManagerTest () {
-			var p = new JSONParameters () {
+			var p = new JsonParameters () {
 				UseExtensions = false,
 				UseEscapedUnicode = false,
-				ShowReadOnlyProperties = true,
+				SerializeReadOnlyProperties = true,
 				NamingConvention = NamingConvention.CamelCase
 			};
 			SerializationManager manager = SerializationManager.Instance;
@@ -774,7 +779,7 @@ namespace UnitTests
 				}
 			}
 			catch (System.Net.WebException ex) {
-				string s = JSON.ToJSON (ex, p);
+				string s = Json.ToJson (ex, p);
 				Console.WriteLine (s);
 				StringAssert.Contains (s, @"""http_status"":");
 				StringAssert.Contains (s, @"""exceptionTime"":");
@@ -783,14 +788,14 @@ namespace UnitTests
 				manager.Override<System.Net.WebException> (new TypeOverride () {
 					MemberOverrides = { new MemberOverride ("Status", "code") }
 				});
-				s = JSON.ToJSON (ex, p);
+				s = Json.ToJson (ex, p);
 				Console.WriteLine (s);
 				StringAssert.Contains (s, @"""code"":");
 
 				manager.Override<System.Net.WebException> (new TypeOverride () {
 					MemberOverrides = { new MemberOverride ("TargetSite") { Serializable = false } }
 				}, true);
-				s = JSON.ToJSON (ex, p);
+				s = Json.ToJson (ex, p);
 				Console.WriteLine (s);
 				StringAssert.Contains (s, @"""status"":");
 			}
@@ -846,24 +851,24 @@ namespace UnitTests
 					OverrideEnumSample.All
 				}
 			};
-            var s = JSON.ToJSON (d, _JP);
-            Console.WriteLine (s);
-			var o = JSON.ToObject<PolymorphicSample> (s, _JP);
+			var s = Json.ToJson (d, _JP);
+			Console.WriteLine (s);
+			var o = Json.ToObject<PolymorphicSample> (s, _JP);
 			Assert.AreEqual (d.A.Name, o.A.Name);
 			Assert.AreEqual (true, ((NamedClassA)o.A).Value);
 			Assert.AreEqual (d.ID, o.ID);
 			CollectionAssert.AreEqual (d.Array, o.Array);
 			CollectionAssert.AreEqual (d.Enums, o.Enums);
-			s = JSON.ToJSON (new PolymorphicSample ()
+			s = Json.ToJson (new PolymorphicSample ()
 			{
 				ID = null,
 				A = new NamedClassB () { Name = "b", Value = 1 }
 			}, _JP);
-			o = JSON.ToObject<PolymorphicSample> (s, _JP);
+			o = Json.ToObject<PolymorphicSample> (s, _JP);
 			Assert.AreEqual ("b", o.A.Name);
 			Assert.AreEqual (1, ((NamedClassB)o.A).Value);
 			Assert.AreEqual (null, o.ID);
-            Console.WriteLine (s);
+			Console.WriteLine (s);
 		}
 		[TestMethod]
 		[ExpectedException (typeof(InvalidCastException))]

@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
+using PowerJson.ExtraConverters;
 
-namespace fastJSON.BonusPack
+namespace PowerJson
 {
 	/// <summary>
 	/// Contains extra <see cref="IJsonConverter"/>s to help serializing extra types. Those converters will not automatically get effective unless they are applied to corresponding types via the <see cref="SerializationManager.Override{T}(TypeOverride)"/> method or members via the <see cref="SerializationManager.OverrideMemberConverter(Type, string, IJsonConverter)"/> method.
@@ -27,6 +27,10 @@ namespace fastJSON.BonusPack
 		/// Gets an <see cref="IJsonConverter"/> to convert <see cref="bool"/> instances to literal "1" or "0" rather than the default "true", "false" values.
 		/// </summary>
 		public static IJsonConverter TextualZeroOneBoolean { get; private set; }
+		/// <summary>
+		/// Gets an <see cref="IJsonConverter"/> to convert <see cref="System.Type"/> instances.
+		/// </summary>
+		public static IJsonConverter Type { get; private set; }
 		/// <summary>
 		/// Gets an <see cref="IJsonConverter"/> to convert <see cref="System.Uri"/> instances.
 		/// </summary>
@@ -55,11 +59,12 @@ namespace fastJSON.BonusPack
 		static Converters () {
 			IPAddress = new IPAddressConverter ();
 			Regex = new RegexConverter ();
-			ZeroOneBoolean = new ZeroOneBooleanConverter ();
 			TextualZeroOneBoolean = new ZeroOneBooleanConverter (true);
+			Type = new ReflectedTypeConverter ();
 			Uri = new UriConverter ();
 			Version = new VersionConverter ();
 			XmlNode = new XmlNodeConverter ();
+			ZeroOneBoolean = new ZeroOneBooleanConverter ();
 		}
 	}
 }
