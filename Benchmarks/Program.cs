@@ -35,7 +35,7 @@ namespace PowerJson.Benchmarks
 			Console.WriteLine ("\tS, Toggle other serializers in benchmarks: " + includeOthers);
 			Console.WriteLine ("\tD, Toggle dataset in benchmarks: " + includeDataset);
 			Console.WriteLine ("\nOther key: Exit");
-			Console.WriteLine ("Please select an option: ");
+			Console.Write ("Please select an option: ");
 			var k = Console.ReadKey ().KeyChar;
 			Console.WriteLine();
 			switch (k) {
@@ -88,9 +88,11 @@ namespace PowerJson.Benchmarks
 		}
 
 		private static void DeserializationTest (bool exotic) {
+			Console.Write ("Deserialization ");
 			sampleData = CreateObject (exotic, includeDataset);
+			PrintHeader ();
 			if (includeOthers) {
-				bin_deserialize();
+				bin_deserialize ();
 			}
 			PowerJson_deserialize ();
 			if (includeOthers) {
@@ -100,8 +102,18 @@ namespace PowerJson.Benchmarks
 			Console.WriteLine ();
 		}
 
+		private static void PrintHeader () {
+			Console.Write ("{0,-20}", "Component");
+			for (int i = 0; i < tcount; i++) {
+				Console.Write ("\tT" + i);
+			}
+			Console.WriteLine ();
+		}
+
 		private static void SerializationTest (bool exotic) {
+			Console.Write ("Serialization ");
 			sampleData = CreateObject (exotic, includeDataset);
+			PrintHeader ();
 			if (includeOthers) {
 				bin_serialize ();
 			}
@@ -154,12 +166,13 @@ namespace PowerJson.Benchmarks
 				Multiple2 = new FreeTypeTest () { FreeType = new class2 ("a", "b", "c") },
 				Multiple3 = new FreeTypeTest () { FreeType = DateTime.Now }
 			};
-			var t = Json.ToJson (c, new JsonParameters () { UseExtensions = false });
+            Json.Manager.UseExtensions = false;
+			var t = Json.ToJson (c);
 			Console.WriteLine ("serialized Test instance: ");
 			Console.WriteLine (t);
 			Console.WriteLine ("deserialized Test instance: ");
 			var o = Json.ToObject<Test> (t);
-			Console.WriteLine (Json.ToJson (o, new JsonParameters () { UseExtensions = false }));
+			Console.WriteLine (Json.ToJson (o));
 			Console.WriteLine ();
 			Console.ReadKey (true);
 		}
@@ -249,7 +262,7 @@ namespace PowerJson.Benchmarks
 
 		private static void PowerJson_deserialize()
 		{
-			Console.Write("PowerJson deserialize");
+			Console.Write("{0,-20}", "PowerJson");
 
 			var stopwatch = new Stopwatch();
 			for (int pp = 0; pp < tcount; pp++)
@@ -257,7 +270,7 @@ namespace PowerJson.Benchmarks
 				colclass deserializedStore;
 				string jsonText = null;
 
-				jsonText = Json.ToJson(sampleData, new JsonParameters () { SerializeNullValues = false });
+				jsonText = Json.ToJson(sampleData);
 				deserializedStore = Json.ToObject<colclass>(jsonText);
 				stopwatch.Restart();
 				//Console.WriteLine(" size = " + jsonText.Length);
@@ -272,7 +285,7 @@ namespace PowerJson.Benchmarks
 		}
 
 		private static void PowerJson_serialize () {
-			Console.Write ("PowerJson serialize");
+			Console.Write ("{0,-20}", "PowerJson");
 			Json.ToJson (sampleData);
 			var stopwatch = new Stopwatch();
 			for (int pp = 0; pp < tcount; pp++)
@@ -291,7 +304,7 @@ namespace PowerJson.Benchmarks
 
 		#region [   other tests  ]
 		private static void JsonNet_deserialize () {
-			Console.Write ("Json.Net deserialize");
+			Console.Write ("{0,-20}", "Newtonsoft");
 
 			var s = new Newtonsoft.Json.JsonSerializerSettings {
 				TypeNameHandling = Newtonsoft.Json.TypeNameHandling.Auto
@@ -314,7 +327,7 @@ namespace PowerJson.Benchmarks
 		}
 
 		private static void JsonNet_serialize () {
-			Console.Write ("Json.Net serialize");
+			Console.Write ("{0,-20}", "Newtonsoft");
 			var s = new Newtonsoft.Json.JsonSerializerSettings {
 				TypeNameHandling = Newtonsoft.Json.TypeNameHandling.Auto
 			};
@@ -333,7 +346,7 @@ namespace PowerJson.Benchmarks
 		}
 
 		private static void ServiceStack_deserialize () {
-			Console.Write ("ServiceStack deserialize");
+			Console.Write ("{0,-20}", "ServiceStack");
 			if (sampleData.dataset != null) {
 				Console.WriteLine ("\tSkipped to prevent StackOverflowException when serializing dataset.");
 				return;
@@ -359,7 +372,7 @@ namespace PowerJson.Benchmarks
 		}
 
 		private static void ServiceStack_serialize () {
-			Console.Write ("ServiceStack serialize");
+			Console.Write ("{0,-20}", "ServiceStack");
 			if (sampleData.dataset != null) {
 				Console.WriteLine ("\tSkipped to prevent StackOverflowException when serializing dataset.");
 				return;
@@ -384,7 +397,7 @@ namespace PowerJson.Benchmarks
 
 		private static void bin_deserialize()
 		{
-			Console.Write("binary deserialize");
+			Console.Write("{0,-20}", ".NET Binary");
 			var stopwatch = new Stopwatch();
 			for (int pp = 0; pp < tcount; pp++)
 			{
@@ -411,7 +424,7 @@ namespace PowerJson.Benchmarks
 
 		private static void bin_serialize()
 		{
-			Console.Write("binary serialize");
+			Console.Write("{0,-20}", ".NET binary");
 			var stopwatch = new Stopwatch();
 			for (int pp = 0; pp < tcount; pp++)
 			{

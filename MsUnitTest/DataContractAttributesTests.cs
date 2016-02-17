@@ -32,6 +32,7 @@ namespace MsUnitTest
 			var d = new ContractClass ();
 			d.MyProperty = "prop1";
 			d.IgnoredMember = "abc";
+            //Json.Manager.CanSerializePrivateMembers = true;
 			var s = Json.ToJson (d);
 			Console.WriteLine (s);
 			Assert.IsTrue (s.Contains ("myprop"));

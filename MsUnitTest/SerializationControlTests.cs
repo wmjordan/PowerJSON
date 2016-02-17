@@ -109,14 +109,14 @@ namespace MsUnitTest
 		[TestInitialize]
 		public void Bootstrap () {
 			#region Bootstrap
-			Json.Parameters.NamingConvention = NamingConvention.CamelCase;
-			Json.Parameters.UseExtensions = false;
+			Json.Manager.NamingConvention = NamingConvention.CamelCase;
+			Json.Manager.UseExtensions = false;
 			#endregion
 		}
 		[TestCleanup]
 		public void CleanUp () {
-			Json.Parameters.NamingConvention = NamingConvention.Default;
-			Json.Parameters.UseExtensions = true;
+			Json.Manager.NamingConvention = NamingConvention.Default;
+			Json.Manager.UseExtensions = true;
 		}
 
 		[TestMethod]
@@ -129,8 +129,9 @@ namespace MsUnitTest
 				InternalValue = 2,
 				Identifier = new ClassA () { Name = "c" }
 			};
-			#endregion
-			#region Print Result
+            #endregion
+            #region Print Result
+            //Json.Manager.CanSerializePrivateMembers = true;
 			var s = Json.ToJson (d);
 			Console.WriteLine (s);
 			#endregion
@@ -159,8 +160,9 @@ namespace MsUnitTest
 		[TestMethod]
 		public void NoninvasiveTest () {
 
-			#region Noninvasive Control Code
-			// overrides the serialization behavior of DemoClass
+            #region Noninvasive Control Code
+            // overrides the serialization behavior of DemoClass
+            //Json.Manager.CanSerializePrivateMembers = true;
 			Json.Manager.Override<DemoClass> (new TypeOverride () {
 				// makes DemoClass always deserializable
 				Deserializable = true,
@@ -226,7 +228,7 @@ namespace MsUnitTest
 
 		[TestMethod]
 		public void AlterationTest () {
-			Json.Parameters.NamingConvention = NamingConvention.Default;
+			Json.Manager.NamingConvention = NamingConvention.Default;
 			#region Alternated SerializationManager
 			var g = new Group () {
 				ID = 1,

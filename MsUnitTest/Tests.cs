@@ -68,7 +68,7 @@ namespace MsUnitTest
 
 		[TestMethod]
 		public void MemberNameCase () {
-			var p = new JsonParameters () {
+			var p = new SerializationManager () {
 				NamingConvention = NamingConvention.CamelCase,
 				UseExtensions = false
 			};
@@ -161,7 +161,7 @@ namespace MsUnitTest
 			ne.dic.Add ("hello", new class1 ("asda", "asdas", Guid.NewGuid ()));
 			ne.objs = new baseclass[] { new class1 ("a", "1", Guid.NewGuid ()), new class2 ("b", "2", "desc") };
 
-			string str = Json.ToJson (ne, new JsonParameters { UseExtensions = false });
+			string str = Json.ToJson (ne, new SerializationManager { UseExtensions = false });
 			string strr = Json.Beautify (str);
 			Console.WriteLine (strr);
 			object dic = Json.Parse (str);
@@ -175,7 +175,7 @@ namespace MsUnitTest
 		[TestMethod]
 		public void AnonymousTypes () {
 			var q = new { Name = "asassa", Address = "asadasd", Age = 12 };
-			string sq = Json.ToJson (q, new JsonParameters { EnableAnonymousTypes = true });
+			string sq = Json.ToJson (q, new SerializationManager { EnableAnonymousTypes = true });
 			Console.WriteLine (sq);
 			Assert.AreEqual ("{\"Name\":\"asassa\",\"Address\":\"asadasd\",\"Age\":12}", sq);
 		}
@@ -192,7 +192,7 @@ namespace MsUnitTest
 
 		[TestMethod]
 		public void DisableExtensions () {
-			var p = new JsonParameters { UseExtensions = false, SerializeNullValues = false };
+			var p = new SerializationManager { UseExtensions = false, SerializeNullValues = false };
 			var s = Json.ToJson (new Retclass { date = DateTime.Now, Name = "aaaaaaa" }, p);
 			Console.WriteLine (Json.Beautify (s));
 			var o = Json.ToObject<Retclass> (s);
@@ -286,7 +286,7 @@ namespace MsUnitTest
 
 		[TestMethod]
 		public void CommaTests () {
-			var s = Json.ToJson (new commaclass (), new JsonParameters ());
+			var s = Json.ToJson (new commaclass ());
 			Console.WriteLine (Json.Beautify (s));
 			Assert.AreEqual (true, s.Contains ("\"$type\":\"MsUnitTest.Tests+commaclass\","));
 
@@ -299,14 +299,14 @@ namespace MsUnitTest
 				F = (object)null
 			};
 
-			var p = new JsonParameters {
+			var p = new SerializationManager {
 				EnableAnonymousTypes = false,
 				SerializeNullValues = false,
 				SerializeReadOnlyProperties = true,
 				UseExtensions = false,
 				UseFastGuid = true,
 				UseOptimizedDatasetSchema = true,
-				UseUTCDateTime = false,
+				UseUniversalTime = false,
 				UseEscapedUnicode = false
 			};
 
@@ -390,7 +390,7 @@ namespace MsUnitTest
 
 		[TestMethod]
 		public void enumtest () {
-			string s = Json.ToJson (new constch (), new JsonParameters { UseValuesOfEnums = true });
+			string s = Json.ToJson (new constch (), new SerializationManager { UseValuesOfEnums = true });
 			Console.WriteLine (s);
 			var o = Json.ToObject (s);
 		}
@@ -418,8 +418,8 @@ namespace MsUnitTest
 			Console.WriteLine (s);
 			Assert.IsFalse (s.Contains ("Age1"));
 			i = new ignore1 { Age1 = 10, Age2 = 20, Name = "bb" };
-			var j = new JsonParameters ();
-			(Json.Manager.ReflectionController as JsonReflectionController).IgnoreAttributes.Add (typeof (ignoreatt));
+			var j = new SerializationManager ();
+			(j.ReflectionController as JsonReflectionController).IgnoreAttributes.Add (typeof (ignoreatt));
 			s = Json.ToJson (i, j);
 			Console.WriteLine (s);
 			Assert.IsFalse (s.Contains ("Age1"));
@@ -437,13 +437,13 @@ namespace MsUnitTest
 			var o = new nondefaultctor (10);
 			var s = Json.ToJson (o);
 			Console.WriteLine (s);
-			var obj = Json.ToObject<nondefaultctor> (s, new JsonParameters { ParametricConstructorOverride = true });
+			var obj = Json.ToObject<nondefaultctor> (s, new SerializationManager { ParametricConstructorOverride = true });
 			Assert.AreEqual (10, obj.age);
 			Console.WriteLine ("list of objects");
 			var l = new List<nondefaultctor> { o, o, o };
 			s = Json.ToJson (l);
 			Console.WriteLine (s);
-			var obj2 = Json.ToObject<List<nondefaultctor>> (s, new JsonParameters { ParametricConstructorOverride = true });
+			var obj2 = Json.ToObject<List<nondefaultctor>> (s, new SerializationManager { ParametricConstructorOverride = true });
 			Assert.AreEqual (3, obj2.Count);
 			Assert.AreEqual (10, obj2[1].age);
 		}
@@ -473,7 +473,7 @@ namespace MsUnitTest
 			o.o2obj.parent = o;
 			o.child.child = o.o2obj;
 
-			var s = Json.ToJson (o, new JsonParameters ());
+			var s = Json.ToJson (o, new SerializationManager ());
 			Console.WriteLine (Json.Beautify (s));
 			var p = Json.ToObject<o1> (s);
 			Assert.AreEqual (p, p.o2obj.parent);
@@ -591,16 +591,13 @@ namespace MsUnitTest
 			r.GenericD = new D { Name = "d" };
 			r.GenericD.Next = r.GenericD;
 
-			var jsonParams = new JsonParameters ();
-			jsonParams.UseEscapedUnicode = false;
-
-			var s = Json.ToJson (r, jsonParams);
+			var s = Json.ToJson (r);
 			Console.WriteLine ("JSON:\n---\n{0}\n---", s);
 
 			Console.WriteLine ();
 
 			var o = Json.ToObject<Root> (s);
-			Console.WriteLine ("Nice JSON:\n---\n{0}\n---", Json.ToNiceJson (o, jsonParams));
+			Console.WriteLine ("Nice JSON:\n---\n{0}\n---", Json.ToNiceJson (o));
 
 			CollectionAssert.AreEqual (r.TheY.BinaryData, o.TheY.BinaryData);
 			Assert.AreEqual (r.ListOfAs[0].DataA, o.ListOfAs[0].DataA);
@@ -613,7 +610,7 @@ namespace MsUnitTest
 
 		[TestMethod]
 		public void TestMilliseconds () {
-			var jpar = new JsonParameters ();
+			var jpar = new SerializationManager ();
 			jpar.DateTimeMilliseconds = false;
 			DateTime dt = DateTime.Now;
 			var s = Json.ToJson (dt, jpar);
@@ -674,10 +671,10 @@ namespace MsUnitTest
 		[TestMethod]
 		public void ReadonlyTest () {
 			var d = new readonlyclass ();
-			var s = Json.ToJson (d, new JsonParameters { SerializeReadOnlyProperties = false });
+			var s = Json.ToJson (d, new SerializationManager { SerializeReadOnlyProperties = false });
 			var o = Json.ToObject (s);
 			Console.WriteLine (s);
-			var s2 = Json.ToJson (d, new JsonParameters { SerializeReadOnlyProperties = true });
+			var s2 = Json.ToJson (d, new SerializationManager { SerializeReadOnlyProperties = true });
 			var o2 = Json.ToObject (s2);
 			Console.WriteLine (s2);
 			Assert.AreNotEqual (s, s2);
@@ -701,11 +698,11 @@ namespace MsUnitTest
 			o.items.Add (i);
 			o.items.Add (i);
 
-			var s = Json.ToNiceJson (o, Json.Parameters);
+			var s = Json.ToJson (o);
 			Console.WriteLine ("*** circular replace");
 			Console.WriteLine (s);
 
-			s = Json.ToNiceJson (o, new JsonParameters { InlineCircularReferences = true });
+			s = Json.ToJson (o, new SerializationManager { InlineCircularReferences = true });
 			Console.WriteLine ("*** inline objects");
 			Console.WriteLine (s);
 		}
@@ -718,7 +715,7 @@ namespace MsUnitTest
 			r.Field1 = "dsasdF";
 			r.Field2 = 2312;
 			r.date = DateTime.Now;
-			var s = Json.ToNiceJson (r, new JsonParameters { NamingConvention = NamingConvention.LowerCase });
+			var s = Json.ToJson (r, new SerializationManager { NamingConvention = NamingConvention.LowerCase });
 			Console.WriteLine (s);
 			var o = Json.ToObject (s);
 			Assert.IsNotNull (o);

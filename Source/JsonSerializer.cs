@@ -14,50 +14,46 @@ namespace PowerJson
 
 	sealed class JsonSerializer
 	{
+		public const char StartObject = '{';
+		public const char EndObject = '}';
+		public const char Separator = ',';
+		public const char StartArray = '[';
+		public const char EndArray = ']';
+		public const string Null = "null";
+
 		delegate void WritePredefined ();
 		delegate void WriteSingleChar (char character);
-		delegate void WriteChars (char[] characters, int index, int count);
+		delegate void WriteCharArray (char[] characters, int index, int count);
 		delegate void WriteText (string text);
 
 		static readonly WriteJsonValue[] _convertMethods = RegisterMethods ();
-
+		static readonly char[] __numericChars = "0123456789".ToCharArray ();
+		static readonly TwoDigitCharPair[] __twoDigitChars = InitTwoDigitChars ();
 		readonly int _maxDepth = 20;
 		int _currentDepth;
-		readonly Dictionary<object, int> _cirobj = new Dictionary<object, int> ();
-		readonly JsonParameters _params;
+		Dictionary<object, int> _cirobj;
+		char[] _intSlot, _dateSlot;
 		readonly SerializationManager _manager;
 		readonly bool _useExtensions, _showReadOnlyProperties, _showReadOnlyFields;
 		readonly WriteSingleChar OutputChar;
-		readonly WriteChars OutputChars;
+		readonly WriteCharArray OutputCharArray;
 		readonly WriteText OutputText;
 		readonly WriteText OutputName;
 		readonly WriteText OutputString;
 
-		internal static string ToJson (object data, JsonParameters param, SerializationManager manager) {
-			var w = new JsonStringWriter (new StringBuilder ());
-			var js = new JsonSerializer (param, manager, w);
-			js.ConvertToJSON (data);
-			return w.ToString ();
-		}
-		internal static void ToJson (object data, TextWriter writer, JsonParameters param, SerializationManager manager) {
-			var js = new JsonSerializer (param, manager, writer);
-			js.ConvertToJSON (data);
-		}
-
-		JsonSerializer (JsonParameters param, SerializationManager manager) {
+		JsonSerializer (SerializationManager manager) {
 			_manager = manager;
-			_params = param;
-			_maxDepth = _params.SerializerMaxDepth;
-			if (_params.EnableAnonymousTypes) {
+			_maxDepth = manager.SerializerMaxDepth;
+			if (manager.EnableAnonymousTypes) {
 				_useExtensions = false;
 				_showReadOnlyFields = _showReadOnlyProperties = true;
 			}
 			else {
-				_useExtensions = _params.UseExtensions;
-				_showReadOnlyProperties = _params.SerializeReadOnlyProperties;
-				_showReadOnlyFields = _params.SerializeReadOnlyFields;
+				_useExtensions = manager.UseExtensions;
+				_showReadOnlyProperties = manager.SerializeReadOnlyProperties;
+				_showReadOnlyFields = manager.SerializeReadOnlyFields;
 			}
-			switch (param.NamingConvention) {
+			switch (manager.NamingConvention) {
 				case NamingConvention.Default:
 					OutputName = WriteNameUnchanged;
 					break;
@@ -75,20 +71,20 @@ namespace PowerJson
 					break;
 			}
 		}
-		JsonSerializer (JsonParameters param, SerializationManager manager, JsonStringWriter writer) : this(param, manager) {
+		internal JsonSerializer (SerializationManager manager, JsonStringWriter writer) : this(manager) {
 			OutputChar = writer.Write;
-			OutputChars = writer.Write;
+			OutputCharArray = writer.Write;
 			OutputText = writer.Write;
-			OutputString = param.UseEscapedUnicode ? writer.WriteStringEscapeUnicode : (WriteText)writer.WriteString;
+			OutputString = manager.UseEscapedUnicode ? writer.WriteStringEscapeUnicode : (WriteText)writer.WriteString;
 		}
-		JsonSerializer (JsonParameters param, SerializationManager manager, TextWriter writer) : this (param, manager) {
+		internal JsonSerializer (SerializationManager manager, TextWriter writer) : this (manager) {
 			OutputChar = writer.Write;
-			OutputChars = writer.Write;
+			OutputCharArray = writer.Write;
 			OutputText = writer.Write;
-			OutputString = param.UseEscapedUnicode ? WriteStringEscapeUnicode : (WriteText)WriteString;
+			OutputString = manager.UseEscapedUnicode ? WriteStringEscapeUnicode : (WriteText)WriteString;
 		}
 
-		void ConvertToJSON (object obj) {
+		internal void ConvertToJSON (object obj) {
 			var c = _manager.GetSerializationInfo (obj.GetType ());
 			var cv = c.Converter;
 			if (cv != null) {
@@ -110,6 +106,16 @@ namespace PowerJson
 			else {
 				WriteValue (obj);
 			}
+		}
+
+		static TwoDigitCharPair[] InitTwoDigitChars () {
+			var d = new TwoDigitCharPair[100];
+			for (int i = 0; i < 10; i++) {
+				for (int j = 0; j < 10; j++) {
+					d[i*10 + j] = new TwoDigitCharPair { First = __numericChars[i], Second = __numericChars[j] };
+				}
+			}
+			return d;
 		}
 
 		static WriteJsonValue[] RegisterMethods () {
@@ -140,7 +146,7 @@ namespace PowerJson
 			return r;
 		}
 		void WriteValue (object obj) {
-			if (obj == null || obj is DBNull)
+			if (obj == null)
 				OutputText ("null");
 
 			else if (obj is string || obj is char) {
@@ -149,7 +155,7 @@ namespace PowerJson
 			else if (obj is bool)
 				OutputText (((bool)obj) ? "true" : "false"); // conform to standard
 			else if (obj is int) {
-				OutputText (ValueConverter.Int32ToString ((int)obj));
+				WriteInt32 ((int)obj);
 			}
 			else if (obj is long) {
 				OutputText (ValueConverter.Int64ToString ((long)obj));
@@ -186,7 +192,7 @@ namespace PowerJson
 			var pendingSeparator = false;
 
 			foreach (DictionaryEntry entry in stringDictionary) {
-				if (_params.SerializeNullValues == false && entry.Value == null) {
+				if (_manager.SerializeNullValues == false && entry.Value == null) {
 				}
 				else {
 					if (pendingSeparator) OutputChar (',');
@@ -256,7 +262,7 @@ namespace PowerJson
 		void WriteDataset (DataSet ds) {
 			OutputChar ('{');
 			if (_useExtensions) {
-				WriteField (JsonDict.ExtSchema, _params.UseOptimizedDatasetSchema ? (object)GetSchema (ds) : ds.GetXmlSchema ());
+				WriteField (JsonDict.ExtSchema, _manager.UseOptimizedDatasetSchema ? (object)GetSchema (ds) : ds.GetXmlSchema ());
 				OutputChar (',');
 			}
 			var tablesep = false;
@@ -310,7 +316,7 @@ namespace PowerJson
 		void WriteDataTable (DataTable dt) {
 			OutputChar ('{');
 			if (_useExtensions) {
-				WriteField (JsonDict.ExtSchema, _params.UseOptimizedDatasetSchema ? (object)GetSchema (dt) : GetXmlSchema (dt));
+				WriteField (JsonDict.ExtSchema, _manager.UseOptimizedDatasetSchema ? (object)GetSchema (dt) : GetXmlSchema (dt));
 				OutputChar (',');
 			}
 
@@ -322,21 +328,26 @@ namespace PowerJson
 
 		// HACK: This is a very long function, individual parts in regions are made inline for better performance
 		internal void WriteObject (object obj, SerializationInfo info) {
+			var def = info ?? _manager.GetSerializationInfo (obj.GetType ());
 			#region Detect Circular Reference
-			var ci = 0;
-			if (_cirobj.TryGetValue (obj, out ci) == false)
-				_cirobj.Add (obj, _cirobj.Count + 1);
-			else {
-				if (_currentDepth > 0 && _useExtensions && _params.InlineCircularReferences == false) {
-					//_circular = true;
-					OutputText ("{\"" + JsonDict.ExtRefIndex + "\":");
-					OutputText (ValueConverter.Int32ToString (ci));
-					OutputChar ('}');
-					return;
+			if (def.Reflection.CircularReferencable) {
+				var ci = 0;
+				if (_cirobj == null) {
+					_cirobj = new Dictionary<object, int> ();
+				}
+				if (_cirobj.TryGetValue (obj, out ci) == false)
+					_cirobj.Add (obj, _cirobj.Count + 1);
+				else {
+					if (_currentDepth > 0 && _useExtensions && _manager.InlineCircularReferences == false) {
+						//_circular = true;
+						OutputText ("{\"" + JsonDict.ExtRefIndex + "\":");
+						OutputText (ValueConverter.Int32ToString (ci));
+						OutputChar ('}');
+						return;
+					}
 				}
 			}
 			#endregion
-			var def = info ?? _manager.GetSerializationInfo (obj.GetType ());
 			var si = def.Interceptor;
 			if (si != null && si.OnSerializing (obj) == false) {
 				return;
@@ -344,51 +355,22 @@ namespace PowerJson
 
 			OutputChar ('{');
 
-			//#region Locate Extension Insertion Position
-			//if (_useGlobalTypes == false)
-			//	OutputChar ('{');
-			//else {
-			//	if (_before == 0) {
-			//		OutputChar ('{');
-			//		_before = _output.Length;
-			//	}
-			//	else
-			//		OutputChar ('{');
-			//}
-			//#endregion
-
 			_currentDepth++;
 			if (_currentDepth > _maxDepth) {
 				throw new JsonSerializationException ("Serializer encountered maximum depth of " + _maxDepth + ". Last object name on stack: " + def.Reflection.AssemblyName);
 			}
 
-			//var map = new Dictionary<string, string> ();
 			var append = false;
 			#region Write Type Reference
 			if (def.Reflection.IsAbstract || def.Alias != null) {
-				WritePairFast (JsonDict.ExtType, def.Alias ?? def.Reflection.AssemblyName);
+				WritePairFast (JsonDict.ExtType, def.Alias ?? def.Reflection.TypeName);
 				append = true;
 			}
 			else if (_useExtensions && info == null && def.Reflection.IsAnonymous == false
 				|| def.Reflection.Type.Equals (obj.GetType()) == false) {
-				WritePairFast (JsonDict.ExtType, def.Reflection.Type.FullName);
+				WritePairFast (JsonDict.ExtType, def.Reflection.TypeName);
 				append = true;
 			}
-			//if (_useExtensions) {
-			//	var an = def.Reflection.AssemblyName;
-			//	if (_useGlobalTypes == false)
-			//		WritePairFast (JsonDict.ExtType, _useTypeAlias? _manager.ForwardLookupAlias(an) : an);
-			//	else {
-			//		var dt = 0;
-			//		var ct = _useTypeAlias ? _manager.ForwardLookupAlias(an) : an;
-			//		if (_globalTypes.TryGetValue (ct, out dt) == false) {
-			//			dt = _globalTypes.Count + 1;
-			//			_globalTypes.Add (ct, dt);
-			//		}
-			//		WritePairFast (JsonDict.ExtType, ValueConverter.Int32ToString (dt));
-			//	}
-			//	append = true;
-			//}
 			#endregion
 
 			var g = def.Getters;
@@ -401,7 +383,7 @@ namespace PowerJson
 					continue;
 				}
 				if (p.Serializable == TriState.Default) {
-					if (m.IsStatic && _params.SerializeStaticMembers == false
+					if (m.IsStatic && _manager.SerializeStaticMembers == false
 						|| m.IsReadOnly && p.TypeInfo.Reflection.AppendItem == null
 							&& (m.IsProperty && _showReadOnlyProperties == false || m.IsProperty == false && _showReadOnlyFields == false)) {
 						continue;
@@ -444,14 +426,14 @@ namespace PowerJson
 				}
 				#endregion
 				#region Skip Null, Default Value or Empty Collection
-				if (_params.SerializeNullValues == false && (ji._Value == null || ji._Value is DBNull)) {
+				if (_manager.SerializeNullValues == false && (ji._Value == null || ji._Value is DBNull)) {
 					continue;
 				}
 				if (p.HasNonSerializedValue && Array.IndexOf (p.NonSerializedValues, ji._Value) != -1) {
 					// ignore fields with default value
 					continue;
 				}
-				if (m.IsCollection && _params.SerializeEmptyCollections == false) {
+				if (m.IsCollection && _manager.SerializeEmptyCollections == false) {
 					var vc = ji._Value as ICollection;
 					if (vc != null && vc.Count == 0) {
 						continue;
@@ -667,7 +649,7 @@ namespace PowerJson
 			OutputChar ('{');
 			var pendingSeparator = false;
 			foreach (DictionaryEntry entry in dic) {
-				if (_params.SerializeNullValues == false && entry.Value == null) {
+				if (_manager.SerializeNullValues == false && entry.Value == null) {
 					continue;
 				}
 				if (pendingSeparator) OutputChar (',');
@@ -684,7 +666,7 @@ namespace PowerJson
 			var length = collection.Count;
 			for (int i = 0; i < length; i++) {
 				var v = collection.GetValues (i);
-				if (v == null && _params.SerializeNullValues == false) {
+				if (v == null && _manager.SerializeNullValues == false) {
 					continue;
 				}
 				if (pendingSeparator) OutputChar (',');
@@ -719,7 +701,7 @@ namespace PowerJson
 			OutputChar ('{');
 			var pendingSeparator = false;
 			foreach (KeyValuePair<string, object> entry in dic) {
-				if (_params.SerializeNullValues == false && entry.Value == null) {
+				if (_manager.SerializeNullValues == false && entry.Value == null) {
 					continue;
 				}
 				if (pendingSeparator) OutputChar (',');
@@ -754,6 +736,15 @@ namespace PowerJson
 			OutputChar ('"');
 		}
 
+		public void WriteStartArray () {
+			OutputChar ('[');
+		}
+		public void WriteEndArray () {
+			OutputChar (']');
+		}
+		public void WriteSeparator () {
+			OutputChar (',');
+		}
 		public void WriteStartObject () {
 			OutputChar ('{');
 		}
@@ -776,7 +767,7 @@ namespace PowerJson
 				}
 
 				if (runIndex != -1) {
-					OutputChars (a, runIndex, index - runIndex);
+					OutputCharArray (a, runIndex, index - runIndex);
 					runIndex = -1;
 				}
 
@@ -801,13 +792,13 @@ namespace PowerJson
 						u[4] = ((char)(n > 9 ? n + ('A' - 10) : n + '0'));
 						n = c & 0x0F;
 						u[5] = ((char)(n > 9 ? n + ('A' - 10) : n + '0'));
-						OutputChars (u, 0, 6);
+						OutputCharArray (u, 0, 6);
 						continue;
 					}
 				}
 
 			if (runIndex != -1) {
-				OutputChars (a, runIndex, a.Length - runIndex);
+				OutputCharArray (a, runIndex, a.Length - runIndex);
 			}
 
 			OutputChar ('\"');
@@ -829,7 +820,7 @@ namespace PowerJson
 				}
 
 				if (runIndex != -1) {
-					OutputChars (a, runIndex, index - runIndex);
+					OutputCharArray (a, runIndex, index - runIndex);
 					runIndex = -1;
 				}
 
@@ -847,7 +838,7 @@ namespace PowerJson
 			}
 
 			if (runIndex != -1) {
-				OutputChars (a, runIndex, a.Length - runIndex);
+				OutputCharArray (a, runIndex, a.Length - runIndex);
 			}
 
 			OutputChar ('\"');
@@ -877,7 +868,7 @@ namespace PowerJson
 				if (c > 'A' - 1 && c < 'Z' + 1) {
 					var b = name.ToCharArray ();
 					b[0] = ((char)(c - ('A' - 'a')));
-					OutputChars (b, 0, b.Length);
+					OutputCharArray (b, 0, b.Length);
 				}
 				else {
 					OutputText (name);
@@ -887,6 +878,48 @@ namespace PowerJson
 		}
 		#endregion
 		#region WriteJsonValue delegate methods
+		void WriteInt32 (int value) {
+			if (value == 0) {
+				OutputChar ('0');
+				return;
+			}
+			if (_intSlot == null) {
+				_intSlot = new char[11];
+				_intSlot[0] = '-';
+			}
+			var n = false;
+			if (value < 0) {
+				if (value == Int32.MinValue) {
+					OutputText ("-2147483648");
+					return;
+				}
+				n = true;
+				value = -value;
+			}
+
+			int i, d;
+			if (value < 10000) {
+				if (value < 10) {
+					OutputChar (__numericChars[value % 10]);
+					return;
+				}
+				d = i = value < 100 ? 3 : value < 1000 ? 4 : 5;
+			}
+			else {
+				d = i = value < 100000 ? 6 : value < 1000000 ? 7 : value < 10000000 ? 8 : value < 100000000 ? 9 : value < 1000000000 ? 10 : 11;
+			}
+			while (--i > 0) {
+				_intSlot[i] = __numericChars[value % 10];
+				value /= 10;
+			}
+			if (n) {
+				OutputCharArray (_intSlot, 0, d);
+			}
+			else {
+				OutputCharArray (_intSlot, 1, --d);
+			}
+		}
+
 		internal static WriteJsonValue GetWriteJsonMethod (Type type) {
 			var t = Reflection.GetJsonDataType (type);
 			if (t == JsonDataType.Primitive) {
@@ -925,7 +958,7 @@ namespace PowerJson
 			serializer.OutputText (ValueConverter.Int32ToString ((ushort)value));
 		}
 		static void WriteInt32 (JsonSerializer serializer, object value) {
-			serializer.OutputText (ValueConverter.Int32ToString ((int)value));
+			serializer.WriteInt32 ((int)value);
 		}
 		static void WriteUInt32 (JsonSerializer serializer, object value) {
 			serializer.OutputText (ValueConverter.Int64ToString ((uint)value));
@@ -953,32 +986,68 @@ namespace PowerJson
 		}
 
 		static void WriteDateTime (JsonSerializer serializer, object value) {
-			// datetime format standard : yyyy-MM-dd HH:mm:ss
+			var d = serializer._dateSlot;
+			if (d == null) {
+			// datetime format standard : yyyy-MM-ddTHH:mm:ss[.sss][Z]
+				d = new char[26];
+				d[0] = d[25] = '"';
+				d[5] = d[8] = '-';
+				d[11] = 'T';
+				d[14] = d[17] = ':';
+				serializer._dateSlot = d;
+			}
 			var dt = (DateTime)value;
-			var parameter = serializer._params;
-			if (parameter.UseUTCDateTime)
+			var parameter = serializer._manager;
+			if (parameter.UseUniversalTime)
 				dt = dt.ToUniversalTime ();
 
-			serializer.OutputChar ('"');
-			serializer.OutputText (ValueConverter.ToFixedWidthString (dt.Year, 4));
-			serializer.OutputChar ('-');
-			serializer.OutputText (ValueConverter.ToFixedWidthString (dt.Month, 2));
-			serializer.OutputChar ('-');
-			serializer.OutputText (ValueConverter.ToFixedWidthString (dt.Day, 2));
-			serializer.OutputChar ('T'); // strict ISO date compliance
-			serializer.OutputText (ValueConverter.ToFixedWidthString (dt.Hour, 2));
-			serializer.OutputChar (':');
-			serializer.OutputText (ValueConverter.ToFixedWidthString (dt.Minute, 2));
-			serializer.OutputChar (':');
-			serializer.OutputText (ValueConverter.ToFixedWidthString (dt.Second, 2));
-			if (parameter.DateTimeMilliseconds) {
-				serializer.OutputChar ('.');
-				serializer.OutputText (ValueConverter.ToFixedWidthString (dt.Millisecond, 3));
+			int n = dt.Year;
+			TwoDigitCharPair p;
+			if (n > 1999 && n < 2100) {
+				d[1] = '2'; d[2] = '0';
+				n -= 2000;
+				p = __twoDigitChars[n];
+				d[3] = p.First; d[4] = p.Second;
 			}
-			if (parameter.UseUTCDateTime)
-				serializer.OutputChar ('Z');
+			else if (n > 1899 && n < 2000) {
+				d[1] = '1'; d[2] = '9';
+				n -= 1900;
+				p = __twoDigitChars[n];
+				d[3] = p.First; d[4] = p.Second;
+			}
+			else {
+				p = __twoDigitChars[n / 100];
+				d[1] = p.First; d[2] = p.Second;
+				p = __twoDigitChars[n % 100];
+				d[3] = p.First; d[4] = p.Second;
+			}
+			p = __twoDigitChars[dt.Month];
+			d[6] = p.First; d[7] = p.Second;
+			p = __twoDigitChars[dt.Day];
+			d[9] = p.First; d[10] = p.Second;
+			p = __twoDigitChars[dt.Hour];
+			d[12] = p.First; d[13] = p.Second;
+			p = __twoDigitChars[dt.Minute];
+			d[15] = p.First; d[16] = p.Second;
+			p = __twoDigitChars[dt.Second];
+			d[18] = p.First; d[19] = p.Second;
 
-			serializer.OutputChar ('"');
+			if (parameter.DateTimeMilliseconds) {
+				d[20] = '.';
+				n = dt.Millisecond;
+				d[21] = (char)('0' + (n / 100));
+				p = __twoDigitChars[n % 100];
+				d[22] = p.First; d[23] = p.Second;
+				n = 23;
+			}
+			else {
+				n = 19;
+			}
+			if (parameter.UseUniversalTime) {
+				d[++n] = 'Z';
+			}
+			d[++n] = '"';
+			serializer.OutputCharArray (d, 0, ++n);
 		}
 
 		static void WriteTimeSpan (JsonSerializer serializer, object timeSpan) {
@@ -999,7 +1068,7 @@ namespace PowerJson
 		}
 
 		static void WriteGuid (JsonSerializer serializer, object guid) {
-			if (serializer._params.UseFastGuid == false)
+			if (serializer._manager.UseFastGuid == false)
 				serializer.WriteStringFast (((Guid)guid).ToString ());
 			else
 				serializer.WriteBytes (((Guid)guid).ToByteArray ());
@@ -1008,7 +1077,7 @@ namespace PowerJson
 		static void WriteEnum (JsonSerializer serializer, object value) {
 			Enum e = (Enum)value;
 			// TODO : optimize enum write
-			if (serializer._params.UseValuesOfEnums) {
+			if (serializer._manager.UseValuesOfEnums) {
 				serializer.OutputText (Convert.ToInt64 (e).ToString (NumberFormatInfo.InvariantInfo));
 				return;
 			}
@@ -1030,7 +1099,7 @@ namespace PowerJson
 			serializer.WriteDataTable ((DataTable)value);
 		}
 		static void WriteDictionary (JsonSerializer serializer, object value) {
-			if (serializer._params.KVStyleStringDictionary == false) {
+			if (serializer._manager.KVStyleStringDictionary == false) {
 				if (value is IDictionary<string, object>) {
 					serializer.WriteStringDictionary ((IDictionary<string, object>)value);
 					return;
@@ -1062,7 +1131,7 @@ namespace PowerJson
 			serializer.OutputChar ('{');
 			serializer.WriteStringFast (p.Key);
 			serializer.OutputChar (':');
-			WriteObject (serializer, p.Value);
+			serializer.WriteObject (p.Value, null);
 			serializer.OutputChar ('}');
 		}
 		static void WriteKeyValuePair (JsonSerializer serializer, object value) {
@@ -1079,6 +1148,11 @@ namespace PowerJson
 		static void WriteUnknown (JsonSerializer serializer, object value) {
 			serializer.WriteValue (value);
 		}
+		struct TwoDigitCharPair
+		{
+			public char First, Second;
+		}
+
 		struct TypedSerializer
 		{
 			readonly Type Type;

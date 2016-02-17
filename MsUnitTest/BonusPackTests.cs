@@ -14,11 +14,11 @@ namespace MsUnitTest
 	{
 		[TestInitialize]
 		public void Bootstrap () {
-			Json.Parameters.UseExtensions = false;
+			Json.Manager.UseExtensions = false;
 		}
 		[TestCleanup]
 		public void CleanUp () {
-			Json.Parameters.UseExtensions = true;
+			Json.Manager.UseExtensions = true;
 		}
 
 		#region EnumerableDataReader
@@ -61,6 +61,21 @@ namespace MsUnitTest
 				Assert.AreEqual (3, r.GetInt32 (xi));
 				Assert.AreEqual (new DateTime (2046, 10, 1), r.GetDateTime (yi));
 				Assert.IsNull (r.GetValue (zi));
+			}
+		}
+
+		[TestMethod]
+		public void DataReaderWriteAsArray () {
+			var d = new TestStruct[] { new TestStruct (1, new DateTime (1997, 7, 1), 7.1f), new TestStruct (3, new DateTime (2046, 10, 1), null) };
+			using (var r = new EnumerableDataReader<TestStruct> (d))
+			using (var w = new System.IO.StreamWriter (new System.IO.MemoryStream ()))
+				{
+				r.WriteAsDataArray (w, Json.Manager);
+				w.Flush ();
+				w.BaseStream.Seek (0, System.IO.SeekOrigin.Begin);
+				using (var tr = new System.IO.StreamReader (w.BaseStream)) {
+					Assert.AreEqual ("[[1,\"1997-07-01T00:00:00\",7.1],[3,\"2046-10-01T00:00:00\",null]]", tr.ReadToEnd ());
+				}
 			}
 		}
 

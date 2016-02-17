@@ -48,16 +48,15 @@ namespace MsUnitTest
 		void GenerateJsonForAandB (out string jsonA, out string jsonB) {
 			Console.WriteLine ("Begin constructing the original objects. Please ignore trace information until I'm done.");
 
-			// set all parameters to false to produce pure JSON
-			Json.Parameters = new JsonParameters { EnableAnonymousTypes = false, SerializeNullValues = false, SerializeReadOnlyProperties = false, UseExtensions = false, UseFastGuid = false, UseOptimizedDatasetSchema = false, UseUTCDateTime = false };
 
 			var a = new ConcurrentClassA { PayloadA = new PayloadA () };
 			var b = new ConcurrentClassB { PayloadB = new PayloadB () };
 
 			// A is serialized with extensions and global types
-			jsonA = Json.ToJson (a, new JsonParameters { EnableAnonymousTypes = false, SerializeNullValues = false, SerializeReadOnlyProperties = false, UseExtensions = true, UseFastGuid = false, UseOptimizedDatasetSchema = false, UseUTCDateTime = false });
-			// B is serialized using the above defaults
-			jsonB = Json.ToJson (b);
+			jsonA = Json.ToJson (a, new SerializationManager { EnableAnonymousTypes = false, SerializeNullValues = false, SerializeReadOnlyProperties = false, UseExtensions = true, UseFastGuid = false, UseOptimizedDatasetSchema = false, UseUniversalTime = false });
+			// B is serialized using below settings
+			// set all parameters to false to produce pure JSON
+			jsonB = Json.ToJson (b, new SerializationManager { EnableAnonymousTypes = false, SerializeNullValues = false, SerializeReadOnlyProperties = false, UseExtensions = false, UseFastGuid = false, UseOptimizedDatasetSchema = false, UseUniversalTime = false });
 
 			Console.WriteLine ("Ok, I'm done constructing the objects. Below is the generated json. Trace messages that follow below are the result of deserialization and critical for understanding the timing.");
 			Console.WriteLine (jsonA);
@@ -66,7 +65,6 @@ namespace MsUnitTest
 
 		[TestMethod]
 		public void UsingGlobalsBug_singlethread () {
-			var p = Json.Parameters;
 			string jsonA;
 			string jsonB;
 			GenerateJsonForAandB (out jsonA, out jsonB);
@@ -78,12 +76,10 @@ namespace MsUnitTest
 			Assert.IsInstanceOfType (ax, typeof (ConcurrentClassA));
 			Assert.IsNotNull (bx);
 			Assert.IsInstanceOfType (bx, typeof (ConcurrentClassB));
-			Json.Parameters = p;
 		}
 
 		[TestMethod]
 		public void UsingGlobalsBug_multithread () {
-			var p = Json.Parameters;
 			string jsonA;
 			string jsonB;
 			GenerateJsonForAandB (out jsonA, out jsonB);
@@ -131,13 +127,12 @@ namespace MsUnitTest
 			Assert.IsInstanceOfType (ax, typeof (ConcurrentClassA));
 			Assert.IsNotNull (bx);
 			Assert.IsInstanceOfType (bx, typeof (ConcurrentClassB));
-			Json.Parameters = p;
 		}
 
 		[TestMethod]
 		public void NullOutput () {
 			var c = new ConcurrentClassA ();
-			var s = Json.ToJson (c, new JsonParameters { UseExtensions = false, SerializeNullValues = false });
+			var s = Json.ToJson (c, new SerializationManager { UseExtensions = false, SerializeNullValues = false });
 			Console.WriteLine (Json.Beautify (s));
 			Assert.AreEqual (false, s.Contains (",")); // should not have a comma
 		}

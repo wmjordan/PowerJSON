@@ -12,7 +12,6 @@ namespace PowerJson
 	{
 		static readonly RevertJsonValue[] _revertMethods = RegisterMethods ();
 
-		readonly JsonParameters _params;
 		readonly SerializationManager _manager;
 		readonly Dictionary<object, int> _circobj = new Dictionary<object, int> ();
 		readonly Dictionary<int, object> _cirrev = new Dictionary<int, object> ();
@@ -45,8 +44,7 @@ namespace PowerJson
 			return r;
 		}
 
-		public JsonDeserializer (JsonParameters param, SerializationManager manager) {
-			_params = param;
+		public JsonDeserializer (SerializationManager manager) {
 			_manager = manager;
 		}
 
@@ -238,7 +236,7 @@ namespace PowerJson
 
 			object o = input;
 			if (o == null) {
-				o = _params.ParametricConstructorOverride
+				o = _manager.ParametricConstructorOverride
 					? System.Runtime.Serialization.FormatterServices.GetUninitializedObject (type.Reflection.Type)
 					: type.Instantiate ();
 			}
@@ -682,7 +680,7 @@ namespace PowerJson
 			foreach (DataColumn c in dataTable.Columns) {
 				if (typeof (Guid).Equals (c.DataType) || typeof (Guid?).Equals (c.DataType))
 					guidcols.Add (c.Ordinal);
-				if (_params.UseUTCDateTime && (typeof (DateTime).Equals (c.DataType) || typeof (DateTime?).Equals (c.DataType)))
+				if (_manager.UseUniversalTime && (typeof (DateTime).Equals (c.DataType) || typeof (DateTime?).Equals (c.DataType)))
 					datecol.Add (c.Ordinal);
 			}
 			var gc = guidcols.Count > 0;
@@ -821,7 +819,7 @@ namespace PowerJson
 			int ms = (t.Length > 21 && t[19] == '.') ? ValueConverter.ToInt32 (t, 20, 3) : 0;
 			bool utc = (t[t.Length - 1] == 'Z');
 
-			if (deserializer._params.UseUTCDateTime == false || utc == false)
+			if (deserializer._manager.UseUniversalTime == false || utc == false)
 				return new DateTime (year, month, day, hour, min, sec, ms);
 			else
 				return new DateTime (year, month, day, hour, min, sec, ms, DateTimeKind.Utc).ToLocalTime ();

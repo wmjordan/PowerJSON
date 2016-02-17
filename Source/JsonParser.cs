@@ -357,7 +357,6 @@ namespace PowerJson
 	sealed class JsonDict : List<KeyValuePair<string, object>>, IDictionary<string, object>
 	{
 		internal const string ExtRefIndex = "$i";
-		internal const string ExtTypes = "$types";
 		internal const string ExtType = "$type";
 		internal const string ExtSchema = "$schema";
 

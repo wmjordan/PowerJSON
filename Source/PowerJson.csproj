@@ -95,6 +95,7 @@
     <Compile Include="Converters.cs" />
     <Compile Include="DynamicJson.cs" />
     <Compile Include="Constants.cs" />
+    <Compile Include="Extensions\DataReaderSerializer.cs" />
     <Compile Include="Extensions\EnumerableDataReader.cs" />
     <Compile Include="ExtraConverters\IPAddressConverter.cs" />
     <Compile Include="ExtraConverters\ReflectedTypeConverter.cs" />

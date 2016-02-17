@@ -34,6 +34,8 @@ namespace PowerJson
 		internal readonly string AssemblyName;
 		internal readonly Type Type;
 		internal readonly JsonDataType JsonDataType;
+		internal readonly bool CircularReferencable;
+
 		/// <summary>
 		/// Whether the type is an abstract type, an interface, or object type.
 		/// </summary>
@@ -65,6 +67,7 @@ namespace PowerJson
 			Type = type;
 			TypeName = type.FullName;
 			AssemblyName = type.AssemblyQualifiedName;
+			CircularReferencable = type.IsValueType == false || type != typeof(string);
 			IsAbstract = type.IsAbstract || type.IsInterface || type.Equals(typeof(object));
 			IsAnonymous = type.IsGenericType
 				&& (type.Name.StartsWith ("<>", StringComparison.Ordinal) || type.Name.StartsWith ("VB$", StringComparison.Ordinal))

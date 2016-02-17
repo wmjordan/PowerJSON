@@ -25,10 +25,100 @@ namespace PowerJson
 		readonly Dictionary<Type, string> _typeAliases = new Dictionary<Type, string>();
 		readonly Dictionary<string, Type> _reverseTypeAliases = new Dictionary<string, Type>();
 
+		#region Properties
 		/// <summary>
 		/// Returns the <see cref="IReflectionController"/> currently used by the <see cref="SerializationManager"/>.
 		/// </summary>
 		public IReflectionController ReflectionController { get { return _controller; } }
+
+		public bool CanSerializePrivateMembers;
+
+		/// <summary>
+		/// Uses the optimized fast Dataset Schema format (default = True)
+		/// </summary>
+		public bool UseOptimizedDatasetSchema = true;
+		/// <summary>
+		/// Uses the fast GUID format (default = false)
+		/// </summary>
+		public bool UseFastGuid;
+		/// <summary>
+		/// Serializes null values to the output (default = True)
+		/// </summary>
+		public bool SerializeNullValues = true;
+		/// <summary>
+		/// Serializes static fields or properties into the output (default = false).
+		/// </summary>
+		public bool SerializeStaticMembers;
+		/// <summary>
+		/// Serializes arrays, collections, lists or dictionaries with no element (default = true).
+		/// </summary>
+		/// <remarks>If the collection is the root object, it is not affected by this setting. Byte arrays are not affected by this setting either.</remarks>
+		public bool SerializeEmptyCollections = true;
+		/// <summary>
+		/// Use the UTC date format (default = false)
+		/// </summary>
+		public bool UseUniversalTime;
+		/// <summary>
+		/// Shows the read-only properties of types in the output (default = False). <see cref="JsonIncludeAttribute"/> has higher precedence than this setting.
+		/// </summary>
+		public bool SerializeReadOnlyProperties;
+		/// <summary>
+		/// Shows the read-only fields of types in the output (default = False). <see cref="JsonIncludeAttribute"/> has higher precedence than this setting.
+		/// </summary>
+		public bool SerializeReadOnlyFields;
+		/// <summary>
+		/// Anonymous types have read only properties 
+		/// </summary>
+		public bool EnableAnonymousTypes;
+		/// <summary>
+		/// Enables JSON extensions $type, $i (default = True).
+		/// This setting must be set to true if circular reference detection is required.
+		/// </summary>
+		public bool UseExtensions = true;
+		/// <summary>
+		/// Use escaped Unicode i.e. \uXXXX format for non ASCII characters (default = false)
+		/// </summary>
+		public bool UseEscapedUnicode;
+		/// <summary>
+		/// Outputs string key dictionaries as "k"/"v" format (default = False) 
+		/// </summary>
+		public bool KVStyleStringDictionary;
+		/// <summary>
+		/// Outputs Enum values instead of names (default = False).
+		/// </summary>
+		public bool UseValuesOfEnums;
+
+		/// <summary>
+		/// If you have parametric and no default constructor for you classes (default = False)
+		/// 
+		/// IMPORTANT NOTE : If True then all initial values within the class will be ignored and will be not set.
+		/// In this case, you can use <see cref="JsonInterceptorAttribute"/> to assign an <see cref="IJsonInterceptor"/> to initialize the object.
+		/// </summary>
+		public bool ParametricConstructorOverride;
+		/// <summary>
+		/// Serializes DateTime milliseconds i.e. yyyy-MM-dd HH:mm:ss.nnn (default = false)
+		/// </summary>
+		public bool DateTimeMilliseconds;
+		/// <summary>
+		/// Maximum depth for circular references in inline mode (default = 20)
+		/// </summary>
+		public byte SerializerMaxDepth = 20;
+		/// <summary>
+		/// Inlines circular or already seen objects instead of replacement with $i (default = False) 
+		/// </summary>
+		public bool InlineCircularReferences;
+
+		/// <summary>
+		/// Controls the case of serialized field names.
+		/// </summary>
+		public NamingConvention NamingConvention {
+			get { return _strategy.Convention; }
+			set { _strategy = NamingStrategy.GetStrategy (value); }
+		}
+
+		NamingStrategy _strategy = NamingStrategy.Default;
+		internal NamingStrategy NamingStrategy { get { return _strategy; } }
+		#endregion
 
 		/// <summary>
 		/// Gets the singleton instance.
@@ -342,12 +432,14 @@ namespace PowerJson
 		}
 
 		JsonMemberGetter[] GetGetters (SerializationInfo typeInfo, MemberCache[] members, IReflectionController controller) {
-			var r = new JsonMemberGetter[members.Length];
-			for (int i = r.Length - 1; i >= 0; i--) {
-				var m = members[i];
-				var g = r[i] = new JsonMemberGetter (typeInfo, m, this);
+			var r = new List<JsonMemberGetter> (members.Length);
+			foreach (var m in members) {
+				var g = new JsonMemberGetter (typeInfo, m, this);
 				var mi = m.MemberInfo;
 				g.Serializable = Constants.ToTriState (controller.IsMemberSerializable (mi, m));
+				//if (g.Member.HasPublicGetter == false && CanSerializePrivateMembers == false) {
+				//	continue;
+				//}
 				g.Converter = controller.GetMemberConverter (mi);
 				g.ItemConverter = controller.GetMemberItemConverter (mi);
 				var dv = controller.GetNonSerializedValues (mi);
@@ -370,14 +462,19 @@ namespace PowerJson
 						g.SpecificName = true;
 					}
 				}
+				r.Add (g);
 			}
-			return r;
+			return r.ToArray ();
 		}
 
 		Dictionary<string, JsonMemberSetter> GetSetters (SerializationInfo typeInfo, MemberCache[] members, IReflectionController controller) {
 			var sd = new Dictionary<string, JsonMemberSetter> (StringComparer.OrdinalIgnoreCase);
 			foreach (var p in members) {
 				var s = new JsonMemberSetter (typeInfo, p, this);
+				//if (s.Member.HasPublicSetter == false && s.OwnerTypeInfo.Reflection.AppendItem != null
+				//	&& CanSerializePrivateMembers == false) {
+				//	continue;
+				//}
 				var dp = GetDeserializingProperties (s, controller);
 				if (dp == null) {
 					continue;

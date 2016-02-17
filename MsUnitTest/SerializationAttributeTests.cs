@@ -10,12 +10,6 @@ namespace UnitTests
 	[TestClass]
 	public class SerializationAttributeTests
 	{
-		JsonParameters _JP = new JsonParameters () {
-			UseExtensions = false,
-			UseUTCDateTime = false,
-			SerializeStaticMembers = true
-		};
-
 		#region Non-public types
 		[JsonSerializable]
 		class PrivateClass
@@ -46,6 +40,12 @@ namespace UnitTests
 				public int Data;
 			}
 		}
+        [TestInitialize]
+        public void Initialize () {
+			Json.Manager.CanSerializePrivateMembers = true;
+			Json.Manager.UseExtensions = Json.Manager.UseUniversalTime = Json.Manager.SerializeStaticMembers = false;
+        }
+
 		[TestMethod]
 		public void CreateNonPublicInstance () {
 			var so = new PrivateStruct () {
@@ -54,7 +54,7 @@ namespace UnitTests
 					Field = 3
 				}
 			};
-			var ss = Json.ToJson (so, _JP);
+			var ss = Json.ToJson (so);
 			var ps = Json.ToObject<PrivateStruct> (ss);
 			Console.WriteLine (ss);
 			Assert.AreEqual (so.Field, ps.Field);
@@ -63,7 +63,7 @@ namespace UnitTests
 
 			var o = new PrivateClass ();
 			o.StructData = new PrivateStruct () { Field = 4 };
-			var s = Json.ToJson (o, _JP);
+			var s = Json.ToJson (o);
 			Console.WriteLine (s);
 			Assert.IsTrue (s.Contains (@"""PrivateField"":1"));
 			s = s.Replace (@"""PrivateField"":1", @"""PrivateField"":2");
@@ -73,13 +73,13 @@ namespace UnitTests
 			Assert.AreEqual (2, p.GetPrivateField ());
 
 			var l = new List<PrivateClass> () { new PrivateClass () { Field = 1 } };
-			var sl = Json.ToJson (l, _JP);
+			var sl = Json.ToJson (l);
 			Console.WriteLine (sl);
 			var pl = Json.ToObject<List<PrivateClass>> (sl);
 			Assert.AreEqual (l[0].Field, pl[0].Field);
 
 			var a = new PrivateClass[] { new PrivateClass () { Field = 1 } };
-			var sa = Json.ToJson (a, _JP);
+			var sa = Json.ToJson (a);
 			var pa = Json.ToObject<PrivateClass[]> (sa);
 			Console.WriteLine (sa);
 			Assert.AreEqual (a[0].Field, pa[0].Field);
@@ -87,7 +87,7 @@ namespace UnitTests
 			var d = new Dictionary<string, List<PrivateClass>> () { 
 				{ "test", l }
 			};
-			var sd = Json.ToJson (d, _JP);
+			var sd = Json.ToJson (d);
 			Console.WriteLine (sd);
 			var pd = Json.ToObject<Dictionary<string, List<PrivateClass>>> (sd);
 			Assert.AreEqual (l[0].Field, d["test"][0].Field);
@@ -97,7 +97,7 @@ namespace UnitTests
 		[ExpectedException (typeof (JsonSerializationException))]
 		public void FailOnNonPublicClass () {
 			var ns = new NonSerializableClass () { Field = 1 };
-			var s = Json.ToJson (ns, _JP);
+			var s = Json.ToJson (ns);
 			Console.WriteLine (s);
 			var np = Json.ToObject<NonSerializableClass> (s);
 			np.Field = 2;
@@ -107,7 +107,7 @@ namespace UnitTests
 		[ExpectedException (typeof (JsonSerializationException))]
 		public void FailOnNonPublicNestedClass () {
 			var ns = new NonSerializableClass.NonSerializablePublicClass () { Data = 1 };
-			var s = Json.ToJson (ns, _JP);
+			var s = Json.ToJson (ns);
 			Console.WriteLine (s);
 			var np = Json.ToObject<NonSerializableClass.NonSerializablePublicClass> (s);
 			np.Data = 2;
@@ -136,7 +136,7 @@ namespace UnitTests
 			o.ShowMe = 1;
 			o.IgnoreThisField = 2;
 			o.IgnoreThisProperty = 3;
-			var s = Json.ToJson (o, _JP);
+			var s = Json.ToJson (o);
 			Console.WriteLine (s);
 			Assert.IsFalse (s.Contains (@"""ReadonlyProperty"":"));
 			var p = Json.ToObject<IncludeAttributeTest> (s);
@@ -197,7 +197,7 @@ namespace UnitTests
 		[TestMethod]
 		public void JsonEnumValueTest () {
 			var so = new EnumTestSample ();
-			var ss = Json.ToJson (so, _JP);
+			var ss = Json.ToJson (so);
 			Console.WriteLine (ss);
 			StringAssert.Contains (ss, @"""NumericFruit"":13");
 			var ps = Json.ToObject<EnumTestSample> (ss);
@@ -252,7 +252,7 @@ namespace UnitTests
 				Variant = "test",
 				InterfaceProperty = new NamedClassA () { Name = "a", Value = true }
 			};
-			var s = Json.ToJson (o, _JP);
+			var s = Json.ToJson (o);
 			Console.WriteLine (s);
 			StringAssert.Contains (s, "my_property");
 			var p = Json.ToObject<JsonFieldTestSample> (s);
@@ -264,7 +264,7 @@ namespace UnitTests
 			var n = DateTime.Now;
 			o.Variant = n;
 			o.InterfaceProperty = new NamedClassB () { Name = "b", Value = 1 };
-			s = Json.ToJson (o, _JP);
+			s = Json.ToJson (o);
 			Console.WriteLine (s);
 			p = Json.ToObject<JsonFieldTestSample> (s);
 			Assert.AreEqual (n.ToLongDateString (), ((DateTime)p.Variant).ToLongDateString ());
@@ -274,13 +274,13 @@ namespace UnitTests
 
 			// since the type of 1.3f, float, is not defined in JsonFieldAttribute of the Variant property, the serializer will use default type handling methods to serialize and deserialize the value.
 			var d = o.Variant = 1.3f;
-			s = Json.ToJson (o, _JP);
+			s = Json.ToJson (o);
 			Console.WriteLine (s);
 			p = Json.ToObject<JsonFieldTestSample> (s);
 			Assert.AreEqual ((float)d, (float)(double)p.Variant);
 
 			var a = o.Variant = new int[] { 1, 2, 3 };
-			s = Json.ToJson (o, _JP);
+			s = Json.ToJson (o);
 			Console.WriteLine (s);
 			p = Json.ToObject<JsonFieldTestSample> (s);
 			// without data type information the deserialized collection would not match the type of the original, thus the following assertion will fail
@@ -288,7 +288,7 @@ namespace UnitTests
 			Console.WriteLine (p.Variant.GetType ().FullName);
 
 			var b = o.Variant = new NamedClassA () { Name = "a", Value = true };
-			s = Json.ToJson (o, _JP);
+			s = Json.ToJson (o);
 			Console.WriteLine (s);
 			p = Json.ToObject<JsonFieldTestSample> (s);
 			//Assert.AreEqual (((NamedClassA)b).Name, ((NamedClassA)p.Variant).Name);
@@ -305,10 +305,10 @@ namespace UnitTests
 		[TestMethod]
 		public void IgnoreDefaultValue () {
 			var o = new DefaultValueTest () { MyProperty = 0 };
-			var s = Json.ToJson (o, _JP);
+			var s = Json.ToJson (o);
 			Assert.AreEqual ("{}", s);
 			o.MyProperty = 1;
-			s = Json.ToJson (o, _JP);
+			s = Json.ToJson (o);
 			var p = Json.ToObject<DefaultValueTest> (s);
 			Assert.AreEqual (1, p.MyProperty);
 		} 
@@ -366,7 +366,7 @@ namespace UnitTests
 		[TestMethod]
 		public void IntercepterTest () {
 			var d = new InterceptorTestSample ();
-			var s = Json.ToJson (d, _JP);
+			var s = Json.ToJson (d);
 			Console.WriteLine (s);
 			Assert.AreEqual (2, d.Value);
 			StringAssert.Contains (s,"HideWhenToggleTrue");
@@ -377,7 +377,7 @@ namespace UnitTests
 			Assert.AreEqual ("1", o.Text);
 
 			d.Toggle = true;
-			s = Json.ToJson (d, _JP);
+			s = Json.ToJson (d);
 			Console.WriteLine (s);
 			Assert.IsFalse (s.Contains ("HideWhenToggleTrue"));
 		} 
@@ -414,7 +414,7 @@ namespace UnitTests
 		public void SimpleConvertData () {
 			var s = "connection string";
 			var d = new JsonConverterTestSample () { MyProperty = s };
-			var ss = Json.ToJson (d, _JP);
+			var ss = Json.ToJson (d);
 			Console.WriteLine (ss);
 			StringAssert.Contains (ss, "Encrypted: ");
 
@@ -567,13 +567,13 @@ namespace UnitTests
 				Date = new DateTime (1999, 12, 31, 23, 0, 0),
 				NamedObject = new PersonInfo () { Name = "person", Vip = false }
 			};
-			var t = Json.ToJson (c, _JP);
+			var t = Json.ToJson (c);
 			Console.WriteLine (t);
 			StringAssert.Contains (t, "\"Vip\":true");
 			StringAssert.Contains (t, "\"Id\":123");
 			StringAssert.Contains (t, "\"Date\":\"2000-01-01T00:00:00\"");
-			var o = Json.ToObject<CustomConverterType> (t, _JP);
-			Console.WriteLine (Json.ToJson (o, _JP));
+			var o = Json.ToObject<CustomConverterType> (t);
+			Console.WriteLine (Json.ToJson (o));
 			CollectionAssert.AreEqual (c.Array, o.Array);
 			CollectionAssert.AreEqual (c.NormalArray, o.NormalArray);
 			CollectionAssert.AreEqual ((ICollection)c.Variable1, (ICollection)o.Variable1);
@@ -587,16 +587,16 @@ namespace UnitTests
 			Assert.IsTrue (c.NamedObject is PersonInfo);
 
 			c.NamedObject = new NamedClassA () { Name = "classA", Value = true };
-			t = Json.ToJson (c, _JP);
+			t = Json.ToJson (c);
 			Console.WriteLine (t);
-			o = Json.ToObject<CustomConverterType> (t, _JP);
+			o = Json.ToObject<CustomConverterType> (t);
 			Assert.AreEqual (c.NamedObject.Name, o.NamedObject.Name);
 			Assert.IsTrue (c.NamedObject is NamedClassA);
 
 			c.NamedObject = new NamedClassB() { Name = "classB", Value = 1 };
-			t = Json.ToJson (c, _JP);
+			t = Json.ToJson (c);
 			Console.WriteLine (t);
-			o = Json.ToObject<CustomConverterType> (t, _JP);
+			o = Json.ToObject<CustomConverterType> (t);
 			Assert.AreEqual (c.NamedObject.Name, o.NamedObject.Name);
 			Assert.IsTrue (c.NamedObject is NamedClassB);
 
@@ -648,7 +648,7 @@ namespace UnitTests
 					new DateTime (1999,12,31)
 				}
 			};
-			var s = Json.ToJson (d, _JP);
+			var s = Json.ToJson (d);
 			StringAssert.Contains (s, "a:1");
 			StringAssert.Contains (s, "b:2");
 			Console.WriteLine (s);
@@ -674,17 +674,17 @@ namespace UnitTests
 				NormalProperty = 2,
 				ReadWriteProperty = 3
 			};
-			var s = Json.ToJson (d, _JP);
+			var s = Json.ToJson (d);
 			Console.WriteLine (s);
 			d.ReadOnlyProperty = 4;
 			d.NormalProperty = 5;
 			d.ReadWriteProperty = 6;
-			Console.WriteLine (Json.ToJson (d, _JP));
+			Console.WriteLine (Json.ToJson (d));
 			Json.FillObject (d, s); // fills the serialized value into the class
 			Assert.AreEqual (4, d.ReadOnlyProperty);
 			Assert.AreEqual (2, d.NormalProperty); // value got reset
 			Assert.AreEqual (3, d.ReadWriteProperty); // value got reset
-			s = Json.ToJson (d, _JP);
+			s = Json.ToJson (d);
 			Console.WriteLine (s);
 		} 
 		#endregion
@@ -704,7 +704,8 @@ namespace UnitTests
 		public void SerializeStaticFields () {
 			var d = new StaticFieldTestSample ();
 			StaticFieldTestSample.StaticProperty = 1;
-			var s = Json.ToJson (d, _JP);
+            Json.Manager.SerializeStaticMembers = true;
+			var s = Json.ToJson (d);
 			Console.WriteLine (s);
 			Assert.IsFalse (s.Contains (@"""MaxValue"":"));
 			StringAssert.Contains (s, @"""StaticProperty"":");
@@ -713,17 +714,17 @@ namespace UnitTests
 			var o = Json.ToObject<StaticFieldTestSample> (s);
 			Assert.AreEqual (1, StaticFieldTestSample.StaticProperty);
 			Assert.AreEqual (3, StaticFieldTestSample.StaticReadOnlyProperty);
-			s = Json.ToJson (d, new JsonParameters () {
+			s = Json.ToJson (d, new SerializationManager () {
 				UseExtensions = false,
 				SerializeStaticMembers = false
 			});
 			Assert.AreEqual ("{}", s);
 			Console.WriteLine (s);
-			Console.WriteLine (Json.ToJson (d, _JP));
+			Console.WriteLine (Json.ToJson (d));
 			o = Json.ToObject<StaticFieldTestSample> (@"{""MaxValue"":35}");
 			Assert.AreEqual (30, StaticFieldTestSample.MaxValue);
-			Console.WriteLine (Json.ToJson (o, _JP));
-			s = Json.ToJson (d, new JsonParameters () {
+			Console.WriteLine (Json.ToJson (o));
+			s = Json.ToJson (d, new SerializationManager () {
 				UseExtensions = false,
 				SerializeStaticMembers = true,
 				SerializeReadOnlyProperties = true,
@@ -761,13 +762,10 @@ namespace UnitTests
 		}
 		[TestMethod]
 		public void SerializationManagerTest () {
-			var p = new JsonParameters () {
-				UseExtensions = false,
-				UseEscapedUnicode = false,
-				SerializeReadOnlyProperties = true,
-				NamingConvention = NamingConvention.CamelCase
-			};
-			SerializationManager manager = SerializationManager.Instance;
+			var manager = SerializationManager.Instance;
+            manager.UseExtensions = manager.UseEscapedUnicode = false;
+            manager.SerializeReadOnlyProperties = true;
+            manager.NamingConvention = NamingConvention.CamelCase;
 			// apply the interceptor to WebException
 			manager.OverrideInterceptor<System.Net.WebException> (new WebExceptionJsonInterceptor ());
 			// override the serialized name of the Status property
@@ -779,7 +777,7 @@ namespace UnitTests
 				}
 			}
 			catch (System.Net.WebException ex) {
-				string s = Json.ToJson (ex, p);
+				string s = Json.ToJson (ex, manager);
 				Console.WriteLine (s);
 				StringAssert.Contains (s, @"""http_status"":");
 				StringAssert.Contains (s, @"""exceptionTime"":");
@@ -788,14 +786,14 @@ namespace UnitTests
 				manager.Override<System.Net.WebException> (new TypeOverride () {
 					MemberOverrides = { new MemberOverride ("Status", "code") }
 				});
-				s = Json.ToJson (ex, p);
+				s = Json.ToJson (ex, manager);
 				Console.WriteLine (s);
 				StringAssert.Contains (s, @"""code"":");
 
 				manager.Override<System.Net.WebException> (new TypeOverride () {
 					MemberOverrides = { new MemberOverride ("TargetSite") { Serializable = false } }
 				}, true);
-				s = Json.ToJson (ex, p);
+				s = Json.ToJson (ex, manager);
 				Console.WriteLine (s);
 				StringAssert.Contains (s, @"""status"":");
 			}
@@ -851,9 +849,9 @@ namespace UnitTests
 					OverrideEnumSample.All
 				}
 			};
-			var s = Json.ToJson (d, _JP);
+			var s = Json.ToJson (d);
 			Console.WriteLine (s);
-			var o = Json.ToObject<PolymorphicSample> (s, _JP);
+			var o = Json.ToObject<PolymorphicSample> (s);
 			Assert.AreEqual (d.A.Name, o.A.Name);
 			Assert.AreEqual (true, ((NamedClassA)o.A).Value);
 			Assert.AreEqual (d.ID, o.ID);
@@ -863,8 +861,8 @@ namespace UnitTests
 			{
 				ID = null,
 				A = new NamedClassB () { Name = "b", Value = 1 }
-			}, _JP);
-			o = Json.ToObject<PolymorphicSample> (s, _JP);
+			});
+			o = Json.ToObject<PolymorphicSample> (s);
 			Assert.AreEqual ("b", o.A.Name);
 			Assert.AreEqual (1, ((NamedClassB)o.A).Value);
 			Assert.AreEqual (null, o.ID);

@@ -164,7 +164,7 @@ namespace MsUnitTest
 			var a = o as object[];
 			Assert.AreEqual (0, a.Length);
 
-			var p = new JsonParameters () {
+			var p = new SerializationManager () {
 				SerializeEmptyCollections = false
 			};
 			s = Json.ToJson (new object[] { }, p);
@@ -245,27 +245,14 @@ namespace MsUnitTest
 		[TestMethod]
 		public void IntListTest () {
 			List<int> ls = new List<int> ();
-			ls.AddRange (new int[] { 1, 2, 3, 4, 5, 10 });
-
-			var s = Json.ToJson (ls);
-			Console.WriteLine (s);
-			var p = Json.Parse (s);
-			var o = Json.ToObject (s); // long[] {1,2,3,4,5,10}
-
-			Assert.IsNotNull (o);
-		}
-
-		[TestMethod]
-		public void List_int () {
-			List<int> ls = new List<int> ();
-			ls.AddRange (new int[] { 1, 2, 3, 4, 5, 10 });
+			ls.AddRange (new int[] { 0, 1, 2, 3, 4, 5, 67, 890, -1234, -34567, Int32.MinValue, Int32.MaxValue });
 
 			var s = Json.ToJson (ls);
 			Console.WriteLine (s);
 			var p = Json.Parse (s);
 			var o = Json.ToObject<List<int>> (s);
 
-			Assert.IsNotNull (o);
+			CollectionAssert.AreEqual (ls, o);
 		}
 
 		[TestMethod]
@@ -284,7 +271,7 @@ namespace MsUnitTest
 			List<Retclass> r = new List<Retclass> ();
 			r.Add (new Retclass { Field1 = "111", Field2 = 2, date = DateTime.Now });
 			r.Add (new Retclass { Field1 = "222", Field2 = 3, date = DateTime.Now });
-			var s = Json.ToJson (r, new JsonParameters { UseExtensions = false });
+			var s = Json.ToJson (r, new SerializationManager { UseExtensions = false });
 			Console.WriteLine (Json.Beautify (s));
 			var o = Json.ToObject<List<Retclass>> (s);
 			Assert.AreEqual (2, o.Count);
@@ -331,7 +318,7 @@ namespace MsUnitTest
 				new baseclass { Name="d" },
 				null,
 			}, null };
-			s = Json.ToJson (o3, new JsonParameters () { UseExtensions = false });
+			s = Json.ToJson (o3, new SerializationManager () { UseExtensions = false });
 			var iv = Json.ToObject<List<baseclass[]>> (s);
 			Console.WriteLine (Json.ToJson (iv));
 		}
@@ -347,7 +334,7 @@ namespace MsUnitTest
 			var l = new LazyList ();
 			l.LazyGeneric.Add (1);
 			l.LazyGeneric.Add (2);
-			var s = Json.ToJson (l, new JsonParameters () { UseExtensions = false });
+			var s = Json.ToJson (l, new SerializationManager () { UseExtensions = false });
 			Console.WriteLine (s);
 
 			var o = Json.ToObject<LazyList> (s);
@@ -403,7 +390,7 @@ namespace MsUnitTest
 			Dictionary<string, Retclass> r = new Dictionary<string, Retclass> ();
 			r.Add ("11", new Retclass { Field1 = "111", Field2 = 2, date = DateTime.Now });
 			r.Add ("12", new Retclass { Field1 = "111", Field2 = 2, date = DateTime.Now });
-			var s = Json.ToJson (r, new JsonParameters { UseExtensions = false });
+			var s = Json.ToJson (r, new SerializationManager { UseExtensions = false });
 			Console.WriteLine (Json.Beautify (s));
 			var o = Json.ToObject<Dictionary<string, Retclass>> (s);
 			Assert.AreEqual (2, o.Count);
@@ -425,7 +412,7 @@ namespace MsUnitTest
 			Dictionary<int, Retclass> r = new Dictionary<int, Retclass> ();
 			r.Add (11, new Retclass { Field1 = "111", Field2 = 2, date = DateTime.Now });
 			r.Add (12, new Retclass { Field1 = "111", Field2 = 2, date = DateTime.Now });
-			var s = Json.ToJson (r, new JsonParameters { UseExtensions = false });
+			var s = Json.ToJson (r, new SerializationManager { UseExtensions = false });
 			Console.WriteLine (Json.Beautify (s));
 			var o = Json.ToObject<Dictionary<int, Retclass>> (s);
 			Assert.AreEqual (2, o.Count);
@@ -447,7 +434,7 @@ namespace MsUnitTest
 			Dictionary<Retstruct, Retclass> r = new Dictionary<Retstruct, Retclass> ();
 			r.Add (new Retstruct { Field1 = "111", Field2 = 1, date = DateTime.Now }, new Retclass { Field1 = "111", Field2 = 2, date = DateTime.Now });
 			r.Add (new Retstruct { Field1 = "222", Field2 = 2, date = DateTime.Now }, new Retclass { Field1 = "111", Field2 = 2, date = DateTime.Now });
-			var s = Json.ToJson (r, new JsonParameters { UseExtensions = false });
+			var s = Json.ToJson (r, new SerializationManager { UseExtensions = false });
 			Console.WriteLine (Json.Beautify (s));
 			var o = Json.ToObject<Dictionary<Retstruct, Retclass>> (s);
 			Assert.AreEqual (2, o.Count);
@@ -459,11 +446,11 @@ namespace MsUnitTest
 			dd.d = new Dictionary<string, List<string>> ();
 			dd.d.Add ("a", new List<string> { "1", "2", "3" });
 			dd.d.Add ("b", new List<string> { "4", "5", "7" });
-			string s = Json.ToJson (dd, new JsonParameters { UseExtensions = false });
+			string s = Json.ToJson (dd, new SerializationManager { UseExtensions = false });
 			var o = Json.ToObject<diclist> (s);
 			Assert.AreEqual (3, o.d["a"].Count);
 
-			s = Json.ToJson (dd.d, new JsonParameters { UseExtensions = false });
+			s = Json.ToJson (dd.d, new SerializationManager { UseExtensions = false });
 			var oo = Json.ToObject<Dictionary<string, List<string>>> (s);
 			Assert.AreEqual (3, oo["a"].Count);
 			var ooo = Json.ToObject<Dictionary<string, string[]>> (s);
@@ -495,11 +482,11 @@ namespace MsUnitTest
 
 			string s = Json.ToJson (d);
 			Console.WriteLine (s);
-			s = Json.ToJson (d, new JsonParameters () { SerializeNullValues = false });
+			s = Json.ToJson (d, new SerializationManager () { SerializeNullValues = false });
 			Console.WriteLine (s);
 			Assert.AreEqual ("{\"b\":12}", s);
 
-			s = Json.ToJson (new nulltest (), new JsonParameters { SerializeNullValues = false, UseExtensions = false });
+			s = Json.ToJson (new nulltest (), new SerializationManager { SerializeNullValues = false, UseExtensions = false });
 			Console.WriteLine (s);
 			Assert.AreEqual ("{\"b\":0}", s);
 		}
@@ -549,7 +536,7 @@ namespace MsUnitTest
 			h.Add (1, "dsjfhksa");
 			h.Add ("dsds", new class1 ());
 
-			string s = Json.ToNiceJson (h, new JsonParameters ());
+			string s = Json.ToNiceJson (h);
 			Console.WriteLine (s);
 			var o = Json.ToObject<Hashtable> (s);
 			Assert.AreEqual (typeof (Hashtable), o.GetType ());
@@ -565,7 +552,7 @@ namespace MsUnitTest
 					new class1 () { Name = "b", guid = Guid.NewGuid () }
 				}
 			};
-			var s = Json.ToJson (d, new JsonParameters () { SerializeReadOnlyProperties = true });
+			var s = Json.ToJson (d, new SerializationManager () { SerializeReadOnlyProperties = true });
 			Console.WriteLine (s);
 			var o = Json.ToObject<HashSetClass> (s);
 			CollectionAssert.AreEqual (new List<string> (d.Strings), new List<string>(o.Strings));

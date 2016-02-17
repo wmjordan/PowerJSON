@@ -43,11 +43,11 @@ namespace PowerJson
 	[AttributeUsage (AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = true)]
 	public sealed class JsonFieldAttribute : Attribute
 	{
-		/// <summary>
-		/// Gets the name of the serialized field or property.
-		/// The case of the serialized name defined in this attribute will not be changed by <see cref="JsonParameters.NamingConvention"/> setting in <see cref="JsonParameters"/>.
-		/// </summary>
-		public string Name { get; private set; }
+        /// <summary>
+        /// Gets the name of the serialized field or property.
+        /// The case of the serialized name defined in this attribute will not be changed by <see cref="SerializationManager.NamingConvention"/> setting in <see cref="SerializationManager"/>.
+        /// </summary>
+        public string Name { get; private set; }
 
 		/// <summary>
 		/// Gets the type of the field or property.
@@ -79,11 +79,11 @@ namespace PowerJson
 	[AttributeUsage (AttributeTargets.Class | AttributeTargets.Struct)]
 	public sealed class JsonTypeAliasAttribute : Attribute
 	{
-		/// <summary>
-		/// Gets the name of the serialized class.
-		/// The case of the serialized name defined in this attribute will not be changed by <see cref="JsonParameters.NamingConvention"/> setting in <see cref="JsonParameters"/>.
-		/// </summary>
-		public string Name { get; private set; }
+        /// <summary>
+        /// Gets the name of the serialized class.
+        /// The case of the serialized name defined in this attribute will not be changed by <see cref="SerializationManager.NamingConvention"/> setting in <see cref="SerializationManager"/>.
+        /// </summary>
+        public string Name { get; private set; }
 
 		/// <summary>
 		/// Specifies the name of the serialized type.
