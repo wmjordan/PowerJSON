@@ -102,6 +102,9 @@ To gain full control over the serialization, please read the documentation on th
     <ContentLayout Include="ContentLayout.content" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\README.md">
+      <Link>README.md</Link>
+    </None>
     <Content Include="icons\Help.png" />
   </ItemGroup>
   <ItemGroup>

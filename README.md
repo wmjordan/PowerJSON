@@ -21,10 +21,11 @@ The following features and changes are added to version 3:
 
 1. Change the assembly reference from *fastJSON.dll* to **PowerJson.dll**.
 1. Replace all `fastJSON` namespace to `PowerJson`.
-1. Change *JSON* to *Json* in all API types and methods. Typically the `JSON` class and its `ToJSON` method overloads, and the `JSONParameters` class. 
-1. Default values in the `JsonParameters` class has changed. `SerializeStaticMembers`, `UseFastGuid` and `UseEscapedUnicode` will have the default value of false instead of true in previous versions. 
-1. Some settings in `JsonParameters` class has been renamed. `ShowReadOnlyProperties`, `ShowReadOnlyFields` shall be changed to `SerializeReadOnlyProperties` and `SerializeReadOnlyFields` respectively. 
-1. `UsingGlobalTypes` in `JsonParameters` are no longer used. No global types will be written to the serialized JSON string. 
+1. Change *JSON* to *Json* in all API types and methods. Typically the `JSON` class and its `ToJSON` method overloads.
+1. The `JSONParameters` class has been merged into `SerializationManager` class.
+1. Default values in the previous `JSONParameters` class has changed. `SerializeStaticMembers`, `UseFastGuid` and `UseEscapedUnicode` will have the default value of false instead of true in previous versions. 
+1. Some settings in the previous `JSONParameters` class has been renamed. `ShowReadOnlyProperties`, `ShowReadOnlyFields` shall be changed to `SerializeReadOnlyProperties` and `SerializeReadOnlyFields` respectively. 
+1. `UsingGlobalTypes` in the previous `JSONParameters` are no longer used. No global types will be written to the serialized JSON string. 
 1. The *$type* extension will show the alias (settable by calling the `OverrideTypeAlias< T> (String)` method, or applying to the type with the `JsonTypeAliasAttribute`) or FullName instead of the `AssemblyQualifiedName` of the type. 
 1. All obsolete features in previous versions shall be removed or changed to corresponding API.
 
