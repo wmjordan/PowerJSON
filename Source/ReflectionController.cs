@@ -169,16 +169,16 @@ namespace PowerJson
 			return null;
 		}
 
-        /// <summary>
-        /// Returns whether the specific member is serializable. This value can be set via <see cref="JsonIncludeAttribute"/> and <see cref="IgnoreAttributes"/>.
-        /// If true is returned, the member will always get serialized.
-        /// If false is returned, the member will be excluded from serialization.
-        /// If null is returned, the serialization of the member will be determined by the settings in <see cref="SerializationManager"/>.
-        /// </summary>
-        /// <param name="member">The member to be serialized.</param>
-        /// <param name="info">Reflection information for the member.</param>
-        /// <returns>True is returned if the member is serializable, otherwise, false.</returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage ("Microsoft.Design", "CA1062", MessageId = "0")]
+		/// <summary>
+		/// Returns whether the specific member is serializable. This value can be set via <see cref="JsonIncludeAttribute"/> and <see cref="IgnoreAttributes"/>.
+		/// If true is returned, the member will always get serialized.
+		/// If false is returned, the member will be excluded from serialization.
+		/// If null is returned, the serialization of the member will be determined by the settings in <see cref="SerializationManager"/>.
+		/// </summary>
+		/// <param name="member">The member to be serialized.</param>
+		/// <param name="info">Reflection information for the member.</param>
+		/// <returns>True is returned if the member is serializable, otherwise, false.</returns>
+		[System.Diagnostics.CodeAnalysis.SuppressMessage ("Microsoft.Design", "CA1062", MessageId = "0")]
 		public override bool? IsMemberSerializable (MemberInfo member, IMemberInfo info) {
 			var ic = AttributeHelper.GetAttribute<JsonIncludeAttribute> (member, true);
 			if (ic != null) {
@@ -276,12 +276,21 @@ namespace PowerJson
 				var ar = AttributeHelper.GetAttribute<XmlArrayAttribute> (member, true);
 				if (ar != null) {
 					tn.DefaultName = ar.ElementName;
+					return tn;
+				}
+				var an = AttributeHelper.GetAttribute<XmlAttributeAttribute> (member, true);
+				if (an != null) {
+					tn.DefaultName = an.AttributeName;
+					return tn;
+				}
+				if (typeof(IEnumerable).IsAssignableFrom (t)) {
+					return tn;
 				}
 				foreach (var item in AttributeHelper.GetAttributes<XmlElementAttribute> (member, true)) {
 					if (String.IsNullOrEmpty (item.ElementName)) {
 						continue;
 					}
-					if (item.DataType == null) {
+					if (item.Type == null) {
 						tn.DefaultName = item.ElementName;
 					}
 					else {
@@ -290,10 +299,6 @@ namespace PowerJson
 						}
 						tn.Add (item.Type, item.ElementName);
 					}
-				}
-				var an = AttributeHelper.GetAttribute<XmlAttributeAttribute> (member, true);
-				if (an != null) {
-					tn.DefaultName = an.AttributeName;
 				}
 			}
 			return tn;
@@ -410,16 +415,16 @@ namespace PowerJson
 		/// To serialize those members, return a non-empty name and the members will be serialized into a field named returned by this method.</remarks>
 		public virtual string GetCollectionContainerName (Type type) { return null; }
 
-        /// <summary>
-        /// This method is called to determine whether a field or a property is serializable.
-        /// If false is returned, the member will be excluded from serialization.
-        /// If true is returned, the member will always get serialized.
-        /// If null is returned, the serialization of the member will be determined by the settings in <see cref="SerializationManager"/>.
-        /// </summary>
-        /// <param name="member">The member to be serialized.</param>
-        /// <param name="info">Reflection information for the member.</param>
-        /// <returns>False is returned if the member is private, otherwise, null is returned.</returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage ("Microsoft.Design", "CA1062", MessageId = "0")]
+		/// <summary>
+		/// This method is called to determine whether a field or a property is serializable.
+		/// If false is returned, the member will be excluded from serialization.
+		/// If true is returned, the member will always get serialized.
+		/// If null is returned, the serialization of the member will be determined by the settings in <see cref="SerializationManager"/>.
+		/// </summary>
+		/// <param name="member">The member to be serialized.</param>
+		/// <param name="info">Reflection information for the member.</param>
+		/// <returns>False is returned if the member is private, otherwise, null is returned.</returns>
+		[System.Diagnostics.CodeAnalysis.SuppressMessage ("Microsoft.Design", "CA1062", MessageId = "0")]
 		public virtual bool? IsMemberSerializable (MemberInfo member, IMemberInfo info) {
 			var p = member as PropertyInfo;
 			if (p != null) {
@@ -542,16 +547,16 @@ namespace PowerJson
 		/// To serialize those members, return a non-empty name for those types and the members will be serialized into a field with the returned name.</remarks>
 		string GetCollectionContainerName (Type type);
 
-        /// <summary>
-        /// This method is called to determine whether a field or a property is serializable.
-        /// If false is returned, the member will be excluded from serialization.
-        /// If true is returned, the member will always get serialized.
-        /// If null is returned, the serialization of the member will be determined by the settings in <see cref="SerializationManager"/>.
-        /// </summary>
-        /// <param name="member">The member to be serialized.</param>
-        /// <param name="info">Reflection information for the member.</param>
-        /// <returns>True is returned if the member is serializable, otherwise, false.</returns>
-        bool? IsMemberSerializable (MemberInfo member, IMemberInfo info);
+		/// <summary>
+		/// This method is called to determine whether a field or a property is serializable.
+		/// If false is returned, the member will be excluded from serialization.
+		/// If true is returned, the member will always get serialized.
+		/// If null is returned, the serialization of the member will be determined by the settings in <see cref="SerializationManager"/>.
+		/// </summary>
+		/// <param name="member">The member to be serialized.</param>
+		/// <param name="info">Reflection information for the member.</param>
+		/// <returns>True is returned if the member is serializable, otherwise, false.</returns>
+		bool? IsMemberSerializable (MemberInfo member, IMemberInfo info);
 
 		/// <summary>
 		/// This method is called to determine whether a field or a property is deserializable. If false is returned, the member will be excluded from deserialization. By default, writable fields or properties are deserializable.

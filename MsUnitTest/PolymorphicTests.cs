@@ -24,8 +24,8 @@ namespace MsUnitTest
 		public abstract class abstractClass<T> : abstractClass
 		{
 			public T Value { get; set; }
-			public abstractClass () { }
-			public abstractClass (T value, string type) : base (type) { this.Value = value; }
+			protected abstractClass () { }
+			protected abstractClass (T value, string type) : base (type) { this.Value = value; }
 		}
 		public class OneConcreteClass : abstractClass<int>
 		{
@@ -36,7 +36,17 @@ namespace MsUnitTest
 		{
 			public OneOtherConcreteClass () { }
 			public OneOtherConcreteClass (string value) : base (value, "STRING") { }
-		} 
+		}
+
+		public class OriginalClass
+		{
+			public string Code { get; set; }
+		}
+
+		public class NewOverrideClass : OriginalClass
+		{
+			public new int Code { get; set; }
+		}
 		#endregion
 
 		[TestMethod]
@@ -49,5 +59,14 @@ namespace MsUnitTest
 			var objects = Json.ToObject<List<abstractClass>> (json);
 		}
 
+		[TestMethod]
+		public void NewOverrideTest () {
+			var o = new OriginalClass () { Code = "old" };
+			var json = Json.ToJson (o);
+			Assert.AreEqual (o.Code, Json.ToObject<OriginalClass> (json).Code);
+			var n = new NewOverrideClass () { Code = 123 };
+			json = Json.ToJson (n);
+			Assert.AreEqual (n.Code, Json.ToObject<NewOverrideClass> (json).Code);
+		}
 	}
 }

@@ -30,6 +30,7 @@ namespace UnitTests
 		{
 			public int Field;
 			public PrivateClass ClassData;
+			internal NonSerializableStruct StructData;
 		}
 		private class NonSerializableClass
 		{
@@ -40,11 +41,15 @@ namespace UnitTests
 				public int Data;
 			}
 		}
-        [TestInitialize]
-        public void Initialize () {
+		private struct NonSerializableStruct
+		{
+			internal int Field;
+		}
+		[TestInitialize]
+		public void Initialize () {
 			Json.Manager.CanSerializePrivateMembers = true;
 			Json.Manager.UseExtensions = Json.Manager.UseUniversalTime = Json.Manager.SerializeStaticMembers = false;
-        }
+		}
 
 		[TestMethod]
 		public void CreateNonPublicInstance () {
@@ -52,7 +57,8 @@ namespace UnitTests
 				Field = 2,
 				ClassData = new PrivateClass () {
 					Field = 3
-				}
+				},
+				StructData = new NonSerializableStruct { Field = 4 }
 			};
 			var ss = Json.ToJson (so);
 			var ps = Json.ToObject<PrivateStruct> (ss);
@@ -60,6 +66,7 @@ namespace UnitTests
 			Assert.AreEqual (so.Field, ps.Field);
 			Assert.AreEqual (2, ps.Field);
 			Assert.AreEqual (3, ps.ClassData.Field);
+			Assert.AreEqual (0, ps.StructData.Field); // invisible member will not be serialized
 
 			var o = new PrivateClass ();
 			o.StructData = new PrivateStruct () { Field = 4 };
@@ -704,7 +711,7 @@ namespace UnitTests
 		public void SerializeStaticFields () {
 			var d = new StaticFieldTestSample ();
 			StaticFieldTestSample.StaticProperty = 1;
-            Json.Manager.SerializeStaticMembers = true;
+			Json.Manager.SerializeStaticMembers = true;
 			var s = Json.ToJson (d);
 			Console.WriteLine (s);
 			Assert.IsFalse (s.Contains (@"""MaxValue"":"));
@@ -763,9 +770,9 @@ namespace UnitTests
 		[TestMethod]
 		public void SerializationManagerTest () {
 			var manager = SerializationManager.Instance;
-            manager.UseExtensions = manager.UseEscapedUnicode = false;
-            manager.SerializeReadOnlyProperties = true;
-            manager.NamingConvention = NamingConvention.CamelCase;
+			manager.UseExtensions = manager.UseEscapedUnicode = false;
+			manager.SerializeReadOnlyProperties = true;
+			manager.NamingConvention = NamingConvention.CamelCase;
 			// apply the interceptor to WebException
 			manager.OverrideInterceptor<System.Net.WebException> (new WebExceptionJsonInterceptor ());
 			// override the serialized name of the Status property

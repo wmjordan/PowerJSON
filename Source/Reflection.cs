@@ -161,7 +161,7 @@ namespace PowerJson
 			else {// structs
 				var dynMethod = skipVisibility
 					? new DynamicMethod (n, typeof(object), null, objtype, true)
-					: new DynamicMethod (n, typeof(object), null, objtype);
+					: new DynamicMethod (n, typeof(object), Type.EmptyTypes);
 				var ilGen = dynMethod.GetILGenerator ();
 				var lv = ilGen.DeclareLocal (objtype);
 				ilGen.Emit (OpCodes.Ldloca_S, lv);
@@ -179,17 +179,21 @@ namespace PowerJson
 			var fl = type.GetFields (__ReflectionFlags);
 			var c = new List<MemberCache> (pl.Length + fl.Length);
 			foreach (var m in pl) {
-				if (m.GetIndexParameters ().Length > 0) {// Property is an indexer
+				if (m.GetIndexParameters ().Length > 0 // Property is an indexer
+					|| m.PropertyType.IsPointer) {
 					continue;
 				}
 				c.Add (new MemberCache (m));
 			}
 			foreach (var m in fl) {
-				if (m.IsLiteral == false) {
-					c.Add (new MemberCache (m));
+				if (m.IsLiteral // Skip const field
+					|| m.FieldType.IsPointer) {
+					continue;
 				}
+				c.Add (new MemberCache (m));
 			}
-			c = c.FindAll (m => { return (m.HasPublicGetter || m.HasPublicSetter) || AttributeHelper.HasAttribute<System.Runtime.CompilerServices.CompilerGeneratedAttribute> (m.MemberInfo, true) == false; });
+			c = c.FindAll (m => {
+				return AttributeHelper.HasAttribute<System.Runtime.CompilerServices.CompilerGeneratedAttribute> (m.MemberInfo, true) == false; });
 			var r = new MemberCache[c.Count];
 			c.CopyTo (r, 0);
 			return r;

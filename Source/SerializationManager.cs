@@ -437,9 +437,9 @@ namespace PowerJson
 				var g = new JsonMemberGetter (typeInfo, m, this);
 				var mi = m.MemberInfo;
 				g.Serializable = Constants.ToTriState (controller.IsMemberSerializable (mi, m));
-				//if (g.Member.HasPublicGetter == false && CanSerializePrivateMembers == false) {
-				//	continue;
-				//}
+				if (g.Member.HasPublicGetter == false && CanSerializePrivateMembers == false) {
+					continue;
+				}
 				g.Converter = controller.GetMemberConverter (mi);
 				g.ItemConverter = controller.GetMemberItemConverter (mi);
 				var dv = controller.GetNonSerializedValues (mi);
@@ -471,10 +471,10 @@ namespace PowerJson
 			var sd = new Dictionary<string, JsonMemberSetter> (StringComparer.OrdinalIgnoreCase);
 			foreach (var p in members) {
 				var s = new JsonMemberSetter (typeInfo, p, this);
-				//if (s.Member.HasPublicSetter == false && s.OwnerTypeInfo.Reflection.AppendItem != null
-				//	&& CanSerializePrivateMembers == false) {
-				//	continue;
-				//}
+				if (s.Member.IsReadOnly && s.OwnerTypeInfo.Reflection.AppendItem != null
+					&& CanSerializePrivateMembers == false) {
+					continue;
+				}
 				var dp = GetDeserializingProperties (s, controller);
 				if (dp == null) {
 					continue;
@@ -488,11 +488,11 @@ namespace PowerJson
 
 		Dictionary<string, JsonMemberSetter> GetDeserializingProperties (JsonMemberSetter setter, IReflectionController controller) {
 			var member = setter.Member.MemberInfo;
-			if (controller == null) {
-				return new Dictionary<string, JsonMemberSetter> { { setter.MemberName, setter } };
-			}
-			if (controller.IsMemberDeserializable (member, setter.Member) == false) {
-				setter.CanWrite = false;
+			//if (controller == null) {
+			//	return new Dictionary<string, JsonMemberSetter> { { setter.MemberName, setter } };
+			//}
+			setter.CanWrite = controller.IsMemberDeserializable (member, setter.Member);
+			if (setter.CanWrite == false) {
 				if (/*d.TypeInfo.Reflection.AppendItem == null || */member is PropertyInfo == false) {
 					return null;
 				}
@@ -519,7 +519,7 @@ namespace PowerJson
 					Converter = d.Converter,
 					ItemConverter = d.ItemConverter
 				};
-				sd.Add (sn, dt);
+				AddSetter (sd, sn, dt);
 			}
 			return sd;
 		}
@@ -528,8 +528,18 @@ namespace PowerJson
 			if (String.IsNullOrEmpty (name)) {
 				throw new JsonSerializationException (item.MemberName + " should not be serialized to an empty name");
 			}
-			if (sd.ContainsKey (name)) {
-				throw new JsonSerializationException (name + " has been used by another member");
+			JsonMemberSetter s;
+			if (sd.TryGetValue (name, out s)) {
+				var mt = s.Member.MemberType;
+				var nt = item.Member.MemberType;
+				if (nt.Equals (mt) || nt.IsSubclassOf (mt)) {
+					throw new JsonSerializationException (String.Concat (name, " has been used by member ", s.Member.MemberName, " in type ", s.Member.MemberInfo.ReflectedType.FullName));
+				}
+				if (item.Member.MemberInfo.DeclaringType == item.Member.MemberInfo.ReflectedType) {
+					sd[name] = item;
+				}
+				// ignores the member overridden by "new" operator
+				return;
 			}
 			sd.Add (name, item);
 		}

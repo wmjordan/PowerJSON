@@ -84,6 +84,9 @@ namespace PowerJson
 				return;
 			}
 
+			if (type.IsPointer) {
+				throw new JsonSerializationException ("Can not serialize pointer type: " + type.AssemblyQualifiedName);
+			}
 			if (type.IsArray) {
 				ArgumentTypes = new Type[] { type.GetElementType () };
 				CommonType = type.GetArrayRank () == 1 ? ComplexType.Array : ComplexType.MultiDimensionalArray;
@@ -140,7 +143,12 @@ namespace PowerJson
 					}
 				}
 				if (type.IsClass || type.IsValueType) {
-					Constructor = Reflection.CreateConstructorMethod (type, type.IsVisible == false || typeof (DatasetSchema).Equals (type));
+					try {
+						Constructor = Reflection.CreateConstructorMethod (type, type.IsVisible == false || typeof (DatasetSchema).Equals (type));
+					}
+					catch (Exception ex) {
+						throw new JsonSerializationException ("Error occured when creating constructor method for type " + type.AssemblyQualifiedName, ex);
+					}
 					if (Constructor != null && Constructor.Method.IsPublic == false) {
 						ConstructorInfo |= ConstructorTypes.NonPublic;
 					}
