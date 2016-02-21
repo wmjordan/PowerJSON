@@ -245,7 +245,7 @@ namespace MsUnitTest
 		[TestMethod]
 		public void IntListTest () {
 			List<int> ls = new List<int> ();
-			ls.AddRange (new int[] { 0, 1, 2, 3, 4, 5, 67, 890, -1234, -34567, Int32.MinValue, Int32.MaxValue });
+			ls.AddRange (new int[] { 0, 1, 2, 3, 4, 5, 67, 890, -1, -1234, -34567, Int32.MinValue, Int32.MaxValue });
 
 			var s = Json.ToJson (ls);
 			Console.WriteLine (s);

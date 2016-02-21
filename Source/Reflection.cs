@@ -8,23 +8,13 @@ using System.Reflection.Emit;
 
 namespace PowerJson
 {
-	sealed class Reflection
+	static class Reflection
 	{
 		const BindingFlags __ReflectionFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
-		// Singleton pattern 4 from : http://csharpindepth.com/articles/general/singleton.aspx
-		static readonly Reflection instance = new Reflection();
+		internal static readonly Type ObjectType = typeof (object);
 		static readonly SafeDictionary<Type, JsonDataType> _jsonTypeCache = InitBuiltInTypes ();
-		//static readonly SafeDictionary<Type, byte> _pocoCache = InitPocoCache ();
-		// TODO: Commented for invisible benefit
-		// Explicit static constructor to tell C# compiler
-		// not to mark type as beforefieldinit
-		//static Reflection () {
-		//}
-		Reflection () {
-		}
-		public static Reflection Instance { get { return instance; } }
+		static readonly SafeDictionary<string, Type> _typecache = new SafeDictionary<string, Type>();
 
-		readonly SafeDictionary<string, Type> _typecache = new SafeDictionary<string, Type>();
 		#region Built-in Deserializable Types
 		static SafeDictionary<Type, JsonDataType> InitBuiltInTypes () {
 			var d = new Dictionary<Type, JsonDataType> {
@@ -58,24 +48,6 @@ namespace PowerJson
 			};
 			return new SafeDictionary<Type, JsonDataType> (d);
 		}
-		//static SafeDictionary<Type, byte> InitPocoCache () {
-		//	var d = new Dictionary<Type, byte> {
-		//		{ typeof(int), 0 },
-		//		{ typeof(long), 0 },
-		//		{ typeof(float), 0 },
-		//		{ typeof(double), 0 },
-		//		{ typeof(bool), 0 },
-		//		{ typeof(byte), 0 },
-		//		{ typeof(sbyte), 0 },
-		//		{ typeof(char), 0 },
-		//		{ typeof(short), 0 },
-		//		{ typeof(ushort), 0 },
-		//		{ typeof(uint), 0 },
-		//		{ typeof(ulong), 0 },
-		//		{ typeof(decimal), 0 }
-		//	};
-		//	return new SafeDictionary<Type, byte> (d);
-		//}
 		internal static JsonDataType GetJsonDataType (Type type) {
 			JsonDataType t;
 			if (_jsonTypeCache.TryGetValue (type, out t)) {
@@ -160,8 +132,8 @@ namespace PowerJson
 			}
 			else {// structs
 				var dynMethod = skipVisibility
-					? new DynamicMethod (n, typeof(object), null, objtype, true)
-					: new DynamicMethod (n, typeof(object), Type.EmptyTypes);
+					? new DynamicMethod (n, ObjectType, null, objtype, true)
+					: new DynamicMethod (n, ObjectType, Type.EmptyTypes);
 				var ilGen = dynMethod.GetILGenerator ();
 				var lv = ilGen.DeclareLocal (objtype);
 				ilGen.Emit (OpCodes.Ldloca_S, lv);
@@ -180,14 +152,14 @@ namespace PowerJson
 			var c = new List<MemberCache> (pl.Length + fl.Length);
 			foreach (var m in pl) {
 				if (m.GetIndexParameters ().Length > 0 // Property is an indexer
-					|| m.PropertyType.IsPointer) {
+					|| m.PropertyType.IsUnsafe ()) {
 					continue;
 				}
 				c.Add (new MemberCache (m));
 			}
 			foreach (var m in fl) {
 				if (m.IsLiteral // Skip const field
-					|| m.FieldType.IsPointer) {
+					|| m.FieldType.IsUnsafe ()) {
 					continue;
 				}
 				c.Add (new MemberCache (m));
@@ -201,7 +173,7 @@ namespace PowerJson
 
 		internal static GenericGetter CreateGetField (FieldInfo fieldInfo) {
 			var type = fieldInfo.DeclaringType;
-			var dynamicGet = new DynamicMethod (fieldInfo.Name, typeof(object), new Type[] { typeof(object) }, type, true);
+			var dynamicGet = new DynamicMethod (fieldInfo.Name, ObjectType, new Type[] { ObjectType }, type, true);
 
 			var il = dynamicGet.GetILGenerator ();
 
@@ -235,7 +207,7 @@ namespace PowerJson
 
 			var type = propertyInfo.DeclaringType;
 			var pt = propertyInfo.PropertyType;
-			var getter = new DynamicMethod (getMethod.Name, typeof(object), new Type[] { typeof(object) }, type, true);
+			var getter = new DynamicMethod (getMethod.Name, ObjectType, new Type[] { ObjectType }, type, true);
 
 			var il = getter.GetILGenerator ();
 
@@ -271,9 +243,9 @@ namespace PowerJson
 		internal static GenericSetter CreateSetField (FieldInfo fieldInfo) {
 			var type = fieldInfo.DeclaringType;
 			var arguments = new Type[2];
-			arguments[0] = arguments[1] = typeof(object);
+			arguments[0] = arguments[1] = ObjectType;
 
-			var dynamicSet = new DynamicMethod (fieldInfo.Name, typeof(object), arguments, type, true);
+			var dynamicSet = new DynamicMethod (fieldInfo.Name, ObjectType, arguments, type, true);
 
 			var il = dynamicSet.GetILGenerator ();
 
@@ -314,9 +286,9 @@ namespace PowerJson
 			var type = propertyInfo.DeclaringType;
 			var pt = propertyInfo.PropertyType;
 			var arguments = new Type[2];
-			arguments[0] = arguments[1] = typeof(object);
+			arguments[0] = arguments[1] = ObjectType;
 
-			var setter = new DynamicMethod (setMethod.Name, typeof(object), arguments, true);
+			var setter = new DynamicMethod (setMethod.Name, ObjectType, arguments, true);
 			var il = setter.GetILGenerator ();
 
 			if (!type.IsClass) // structs
@@ -421,8 +393,8 @@ namespace PowerJson
 			if (mv == false && dv == false) {
 				il.DeclareLocal (mr);
 			}
-			var dro = dr.Equals (typeof (object));
-			var mro = dr.Equals (typeof (object));
+			var dro = dr.Equals (ObjectType);
+			var mro = dr.Equals (ObjectType);
 			// TODO: correctly handles the return value
 			if (dv) {
 				if (mv == false) {
@@ -463,7 +435,7 @@ namespace PowerJson
 			var pt = parameters[--index].ParameterType;
 			if (pt.IsValueType)
 				il.Emit (OpCodes.Unbox_Any, pt);
-			else if (typeof(object).Equals (pt) == false)
+			else if (ObjectType.Equals (pt) == false)
 				il.Emit (OpCodes.Castclass, pt);
 		}
 
@@ -511,7 +483,7 @@ namespace PowerJson
 
 		#endregion
 
-		internal Type GetTypeFromCache(string typename)
+		internal static Type GetTypeFromCache(string typename)
 		{
 			Type val = null;
 			if (_typecache.TryGetValue(typename, out val))
@@ -538,5 +510,36 @@ namespace PowerJson
 			}
 		}
 
+		internal static bool IsUnsafe (this Type type) {
+			return type.IsPointer || type.Equals (typeof (IntPtr));
+		}
+		internal static bool IsUndetermined(this Type type) {
+			return type.IsAbstract || type.IsInterface || type.Equals (ObjectType);
+		}
+		internal static bool IsAnonymous(this Type type) {
+			return type.IsGenericType
+				&& (type.Name.StartsWith ("<>", StringComparison.Ordinal) || type.Name.StartsWith ("VB$", StringComparison.Ordinal))
+				&& AttributeHelper.HasAttribute<System.Runtime.CompilerServices.CompilerGeneratedAttribute> (type, false)
+				&& type.Name.Contains ("AnonymousType")
+				&& (type.Attributes & TypeAttributes.NotPublic) == TypeAttributes.NotPublic;
+		}
+		internal static bool IsNullable(this Type type) {
+			return type.IsGenericType && typeof (Nullable<>).Equals (type.GetGenericTypeDefinition ());
+		}
+		internal static bool IsPubliclyAccessible (this Type type) {
+			var t = type;
+			if (type.IsNested == false && type.IsPublic == false) {
+				return false;
+			}
+			else {
+				while (t != null && t.IsNested) {
+					if (t.IsNestedPublic == false) {
+						return false;
+					}
+					t = t.DeclaringType;
+				}
+			}
+			return true;
+		}
 	}
 }

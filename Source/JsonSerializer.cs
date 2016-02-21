@@ -900,7 +900,13 @@ namespace PowerJson
 			int i, d;
 			if (value < 10000) {
 				if (value < 10) {
-					OutputChar (__numericChars[value % 10]);
+					if (n) {
+						_intSlot[1] = __numericChars[value % 10];
+						OutputCharArray (_intSlot, 0, 2);
+					}
+					else {
+						OutputChar (__numericChars[value % 10]);
+					}
 					return;
 				}
 				d = i = value < 100 ? 3 : value < 1000 ? 4 : 5;

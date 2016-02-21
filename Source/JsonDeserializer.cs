@@ -125,7 +125,7 @@ namespace PowerJson
 			if (d != JsonDataType.Primitive) {
 				return GetRevertMethod (d);
 			}
-			if (type.IsGenericType && type.GetGenericTypeDefinition ().Equals (typeof (Nullable<>))) {
+			if (type.IsNullable ()) {
 				type = type.GetGenericArguments ()[0];
 			}
 			return typeof (byte).Equals (type) ? RevertByte
@@ -224,7 +224,7 @@ namespace PowerJson
 			if (String.IsNullOrEmpty (data.Type) == false) {
 				type = _manager.GetSerializationInfo (data.Type);
 				if (type == null) {
-					type = _manager.GetSerializationInfo (Reflection.Instance.GetTypeFromCache (data.Type));
+					type = _manager.GetSerializationInfo (Reflection.GetTypeFromCache (data.Type));
 				}
 			}
 			if (type != null && typeof (object).Equals (type.Reflection.Type)) {
@@ -725,7 +725,7 @@ namespace PowerJson
 				var ms = (DatasetSchema)CreateObject ((JsonDict)schema, _manager.GetSerializationInfo (typeof (DatasetSchema)), null);
 				dt.TableName = ms.Info[0];
 				for (int i = 0; i < ms.Info.Count; i += 3) {
-					dt.Columns.Add (ms.Info[i + 1], Reflection.Instance.GetTypeFromCache (ms.Info[i + 2]));
+					dt.Columns.Add (ms.Info[i + 1], Reflection.GetTypeFromCache (ms.Info[i + 2]));
 				}
 			}
 

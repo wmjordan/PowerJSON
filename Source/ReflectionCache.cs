@@ -68,12 +68,8 @@ namespace PowerJson
 			TypeName = type.FullName;
 			AssemblyName = type.AssemblyQualifiedName;
 			CircularReferencable = type.IsValueType == false || type != typeof(string);
-			IsAbstract = type.IsAbstract || type.IsInterface || type.Equals(typeof(object));
-			IsAnonymous = type.IsGenericType
-				&& (type.Name.StartsWith ("<>", StringComparison.Ordinal) || type.Name.StartsWith ("VB$", StringComparison.Ordinal))
-				&& AttributeHelper.HasAttribute<System.Runtime.CompilerServices.CompilerGeneratedAttribute> (type, false)
-				&& type.Name.Contains ("AnonymousType")
-				&& (type.Attributes & TypeAttributes.NotPublic) == TypeAttributes.NotPublic;
+			IsAbstract = type.IsUndetermined ();
+			IsAnonymous = type.IsAnonymous ();
 
 			JsonDataType = Reflection.GetJsonDataType (type);
 			SerializeMethod = JsonSerializer.GetWriteJsonMethod (type);
@@ -130,17 +126,8 @@ namespace PowerJson
 			if (CommonType != ComplexType.Array
 				&& CommonType != ComplexType.MultiDimensionalArray
 				&& CommonType != ComplexType.Nullable) {
-				var t = type;
-				if (type.IsNested == false && type.IsPublic == false) {
+				if (type.IsPubliclyAccessible () == false) {
 					ConstructorInfo |= ConstructorTypes.NonPublic;
-				}
-				else {
-					while (t != null && t.IsNested) {
-						if (t.IsNestedPublic == false) {
-							ConstructorInfo |= ConstructorTypes.NonPublic;
-						}
-						t = t.DeclaringType;
-					}
 				}
 				if (type.IsClass || type.IsValueType) {
 					try {
@@ -288,7 +275,7 @@ namespace PowerJson
 			IsCollection = typeof (ICollection).IsAssignableFrom (memberType) && typeof (byte[]).Equals (memberType) == false;
 			if (memberType.IsGenericType) {
 				ElementType = memberType.GetGenericArguments ()[0];
-				IsNullable = memberType.GetGenericTypeDefinition ().Equals (typeof (Nullable<>));
+				IsNullable = memberType.IsNullable ();
 			}
 			if (IsValueType) {
 				ChangeType = IsNullable ? ElementType : memberType;
