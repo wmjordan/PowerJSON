@@ -134,7 +134,7 @@ namespace PowerJson
 						Constructor = Reflection.CreateConstructorMethod (type, type.IsVisible == false || typeof (DatasetSchema).Equals (type));
 					}
 					catch (Exception ex) {
-						throw new JsonSerializationException ("Error occured when creating constructor method for type " + type.AssemblyQualifiedName, ex);
+						throw new JsonSerializationException ("Error occurred when creating constructor method for type " + type.AssemblyQualifiedName, ex);
 					}
 					if (Constructor != null && Constructor.Method.IsPublic == false) {
 						ConstructorInfo |= ConstructorTypes.NonPublic;

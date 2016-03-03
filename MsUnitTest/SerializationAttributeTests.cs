@@ -612,6 +612,52 @@ namespace UnitTests
 			CollectionAssert.AreEqual (new int[] { 1, 2, 3 }, (ICollection)o.Variable1);
 		}
 
+		[JsonConverter(typeof (CustomerConverter))]
+		public class ConverterOnTypeDeclaration
+		{
+			public int Value { get; set; }
+		}
+
+		class CustomerConverter : IJsonConverter
+		{
+			public object DeserializationConvert (object value) {
+				var v = value as ConverterOnTypeDeclaration;
+				v.Value -= 1;
+				return v;
+			}
+
+			public Type GetReversiveType (JsonItem item) {
+				return typeof (ConverterOnTypeDeclaration);
+			}
+
+			public object SerializationConvert (object value) {
+				var v = value as ConverterOnTypeDeclaration;
+				v.Value += 1;
+				return v;
+			}
+		}
+
+		[TestMethod]
+		public void ConverterOnTypeTest () {
+			var n = new List<ConverterOnTypeDeclaration> () {
+				new ConverterOnTypeDeclaration { Value = 1 },
+				new ConverterOnTypeDeclaration { Value = -10 },
+				new ConverterOnTypeDeclaration { Value = 100 }
+			};
+			var s = Json.ToJson (n);
+			Console.WriteLine (s);
+			StringAssert.Contains (s, @"""Value"":2");
+			StringAssert.Contains (s, @"""Value"":-9");
+			StringAssert.Contains (s, @"""Value"":101");
+			var o = Json.ToObject<List<ConverterOnTypeDeclaration>> (s);
+			Assert.AreEqual (1, o[0].Value);
+			Assert.AreEqual (-10, o[1].Value);
+			Assert.AreEqual (100, o[2].Value);
+			var a = Json.ToObject<ConverterOnTypeDeclaration[]> (s);
+			Assert.AreEqual (1, a[0].Value);
+			Assert.AreEqual (-10, a[1].Value);
+			Assert.AreEqual (100, a[2].Value);
+		}
 		#endregion
 
 		#region JsonItemConverterAttribute

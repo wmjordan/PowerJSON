@@ -415,6 +415,7 @@ namespace PowerJson
 					}
 				}
 				#endregion
+
 				#region Determine Serialized Field Name
 				if (p.SpecificName) {
 					if (ji._Value == null || p.TypedNames == null || p.TypedNames.TryGetValue (ji._Value.GetType (), out ji._Name) == false) {
@@ -425,6 +426,7 @@ namespace PowerJson
 					ji._Name = p.SerializedName;
 				}
 				#endregion
+
 				#region Skip Null, Default Value or Empty Collection
 				if (_manager.SerializeNullValues == false && (ji._Value == null || ji._Value is DBNull)) {
 					continue;
@@ -452,6 +454,7 @@ namespace PowerJson
 					OutputName (ji._Name);
 				}
 				#endregion
+
 				#region Write Value
 				if (p.SerializeMethod != null && cv == null) {
 					var v = ji._Value;
@@ -482,6 +485,7 @@ namespace PowerJson
 				append = true;
 			}
 			#endregion
+
 			#region Write Extra Values
 			if (si != null) {
 				var ev = si.SerializeExtraValues (obj);
@@ -496,6 +500,7 @@ namespace PowerJson
 				si.OnSerialized (obj);
 			}
 			#endregion
+
 			_currentDepth--;
 			OutputChar ('}');
 		}
@@ -538,12 +543,18 @@ namespace PowerJson
 					WriteMultiDimensionalArray (serializer, list);
 					return;
 				}
-				var d = serializer._manager.GetReflectionCache (t);
-				var w = d.ItemSerializer;
+				var d = serializer._manager.GetSerializationInfo (t);
+				var w = d.Reflection.ItemSerializer;
+				var m = d.TypeParameters[0];
+				var ic = m.Converter;
 				if (w != null) {
 					serializer.OutputChar ('[');
 					var v = list[0];
-					if (v == null) {
+					if (ic != null) {
+						v = ic.SerializationConvert (v);
+						WriteUnknown (serializer, v);
+					}
+					else if (v == null) {
 						serializer.OutputText ("null");
 					}
 					else {
@@ -552,6 +563,11 @@ namespace PowerJson
 					for (int i = 1; i < c; i++) {
 						serializer.OutputChar (',');
 						v = list[i];
+						if (ic != null) {
+							v = ic.SerializationConvert (v);
+							WriteUnknown (serializer, v);
+							continue;
+						}
 						if (v == null) {
 							serializer.OutputText ("null");
 						}

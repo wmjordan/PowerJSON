@@ -475,13 +475,35 @@ namespace PowerJson
 			var ec = arrayType.TypeParameters[0];
 			Array col = Array.CreateInstance (ec.Reflection.Type, l);
 			var r = arrayType.ItemDeserializeMethod;
+			var ic = ec.Converter;
 			if (r != null) {
-				for (int i = 0; i < l; i++) {
-					var ob = data[i];
-					if (ob == null) {
-						continue;
+				if (ic == null) {
+					for (int i = 0; i < l; i++) {
+						var ob = data[i];
+						if (ob == null) {
+							continue;
+						}
+						col.SetValue (r (this, ob, ec), i);
 					}
-					col.SetValue (r (this, ob, ec), i);
+				}
+				else {
+					Type rt = null;
+					for (int i = 0; i < l; i++) {
+						var ob = data[i];
+						var ji = new JsonItem (null, ob);
+						if (rt == null) {
+							rt = ic.GetReversiveType (ji);
+						}
+						var xv = ob;
+						if (xv != null && rt != null && ec.Reflection.Type.Equals (xv.GetType ()) == false) {
+							xv = RevertValueType (rt, xv);
+						}
+						ob = ic.DeserializationConvert (xv);
+						if (ob == null) {
+							continue;
+						}
+						col.SetValue (r (this, ob, ec), i);
+					}
 				}
 				return col;
 			}
@@ -504,6 +526,19 @@ namespace PowerJson
 			}
 
 			return col;
+		}
+
+		private object RevertValueType (Type rt, object xv) {
+			var c = _manager.GetSerializationInfo (rt);
+			var jt = Reflection.GetJsonDataType (rt);
+			if (jt != JsonDataType.Undefined) {
+				xv = c.DeserializeMethod (this, xv, c);
+			}
+			else if (xv is JsonDict) {
+				xv = CreateObject ((JsonDict)xv, c, null);
+			}
+
+			return xv;
 		}
 
 		object CreateMultiDimensionalArray (JsonArray data, SerializationInfo arrayType) {
@@ -566,10 +601,31 @@ namespace PowerJson
 			var listType = info;
 			var ec = listType.TypeParameters != null ? listType.TypeParameters[0] : null;
 			var r = listType.ItemDeserializeMethod;
+			var ic = ec.Converter;
 			object l = input ?? info.Instantiate ();
 			IList col = l as IList;
 			if (col != null) {
-				if (r != null) {
+				if (ic != null) {
+					Type rt = null;
+					foreach (var item in data) {
+						if (rt == null) {
+							var ji = new JsonItem (null, item);
+							rt = ic.GetReversiveType (ji);
+						}
+						var xv = item;
+						if (xv != null && rt != null && ec.Reflection.Type.Equals (xv.GetType ()) == false) {
+							xv = RevertValueType (rt, xv);
+						}
+						xv = ic.DeserializationConvert (xv);
+						if (xv == null) {
+							continue;
+						}
+						// TODO: determine whether item type is nullable
+						col.Add (xv != null ? r (this, xv, ec) : null);
+					}
+					return col;
+				}
+				else if (r != null) {
 					foreach (var item in data) {
 						// TODO: determine whether item type is nullable
 						col.Add (item != null ? r (this, item, ec) : null);
@@ -582,27 +638,31 @@ namespace PowerJson
 				if (l == null) {
 					throw new JsonSerializationException ("The collection member typed \"" + listType.Reflection.AssemblyName + "\" was null and could not be instantiated");
 				}
-				foreach (var item in data) {
-					a (l, r (this, item, ec));
+				if (ic != null) {
+					Type rt = null;
+					foreach (var item in data) {
+						if (rt == null) {
+							var ji = new JsonItem (null, item);
+							rt = ic.GetReversiveType (ji);
+						}
+						var xv = item;
+						if (xv != null && rt != null && ec.Reflection.Type.Equals (xv.GetType ()) == false) {
+							xv = RevertValueType (rt, xv);
+						}
+						xv = ic.DeserializationConvert (xv);
+						if (xv == null) {
+							continue;
+						}
+						a (l, r (this, item, ec));
+					}
+				}
+				else {
+					foreach (var item in data) {
+						a (l, r (this, item, ec));
+					}
 				}
 				return l;
 			}
-			// TODO: candidate of code clean-up.
-			//var et = listType.TypeParameters != null ? listType.TypeParameters[0] : null;
-			//// create an array of objects
-			//foreach (var o in data) {
-			//	if (o is IDictionary)
-			//		col.Add (CreateObject ((JsonDict)o, ec, null));
-
-			//	else if (o is JsonArray) {
-			//		if (et.IsGenericType)
-			//			col.Add (o);//).ToArray());
-			//		else
-			//			col.Add (((JsonArray)o).ToArray ());
-			//	}
-			//	else
-			//		col.Add (ChangeType (o, et));
-			//}
 			return col;
 		}
 
