@@ -302,9 +302,9 @@ namespace PowerJson
 				switch (m.JsonDataType) {
 					case JsonDataType.Undefined: goto default;
 					case JsonDataType.Int: oset = (int)(long)v; break;
-					case JsonDataType.String:
-					case JsonDataType.Bool:
-					case JsonDataType.Long: oset = v; break;
+					case JsonDataType.String: oset = v as string; break;
+					case JsonDataType.Bool: oset = v is bool ? (bool)v : false; break;
+					case JsonDataType.Long: oset = v is long ? (long)v : v is double ? (long)(double)v : 0; break;
 					case JsonDataType.Double: oset = v is long ? (double)(long)v : (double)v; break;
 					case JsonDataType.Single: oset = v is long ? (float)(long)v : (float)(double)v; break;
 					case JsonDataType.DateTime: oset = CreateDateTime (this, v); break;
@@ -344,7 +344,17 @@ namespace PowerJson
 					}
 				}
 				if (m.Setter != null) {
-					o = m.Setter (o, ji.Value);
+					//try {
+						o = m.Setter (o, ji.Value);
+					//}
+					//catch (InvalidCastException) {
+					//	if (_manager.SetDefaultForMismatchedProperty) {
+					//		o = m.Setter(o, m.IsValueType ? System.Runtime.Serialization.FormatterServices.GetUninitializedObject(m.MemberType) : null);
+					//		Console.WriteLine("Error when setting " + m.MemberName);
+					//		continue;
+					//	}
+					//	throw;
+					//}
 				}
 			}
 			if (si != null) {

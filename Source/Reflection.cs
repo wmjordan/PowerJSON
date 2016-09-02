@@ -173,7 +173,7 @@ namespace PowerJson
 
 		internal static GenericGetter CreateGetField (FieldInfo fieldInfo) {
 			var type = fieldInfo.DeclaringType;
-			var dynamicGet = new DynamicMethod (fieldInfo.Name, ObjectType, new Type[] { ObjectType }, type, true);
+			var dynamicGet = new DynamicMethod (type.Name + "." + fieldInfo.Name, ObjectType, new Type[] { ObjectType }, type, true);
 
 			var il = dynamicGet.GetILGenerator ();
 
@@ -206,8 +206,12 @@ namespace PowerJson
 				return null;
 
 			var type = propertyInfo.DeclaringType;
+			var field = type.GetField ("<" + propertyInfo.Name + ">k__BackingField", __ReflectionFlags);
+			if (field != null) {
+				return CreateGetField (field);
+			}
 			var pt = propertyInfo.PropertyType;
-			var getter = new DynamicMethod (getMethod.Name, ObjectType, new Type[] { ObjectType }, type, true);
+			var getter = new DynamicMethod (type.Name + "." + getMethod.Name, ObjectType, new Type[] { ObjectType }, type, true);
 
 			var il = getter.GetILGenerator ();
 
@@ -245,7 +249,7 @@ namespace PowerJson
 			var arguments = new Type[2];
 			arguments[0] = arguments[1] = ObjectType;
 
-			var dynamicSet = new DynamicMethod (fieldInfo.Name, ObjectType, arguments, type, true);
+			var dynamicSet = new DynamicMethod (type.Name + "." + fieldInfo.Name, ObjectType, arguments, type, true);
 
 			var il = dynamicSet.GetILGenerator ();
 
@@ -284,11 +288,15 @@ namespace PowerJson
 				return null;
 
 			var type = propertyInfo.DeclaringType;
+			var field = type.GetField ("<" + propertyInfo.Name + ">k__BackingField", __ReflectionFlags);
+			if (field != null) {
+				return CreateSetField (field);
+			}
 			var pt = propertyInfo.PropertyType;
 			var arguments = new Type[2];
 			arguments[0] = arguments[1] = ObjectType;
 
-			var setter = new DynamicMethod (setMethod.Name, ObjectType, arguments, true);
+			var setter = new DynamicMethod (type.Name + "." + setMethod.Name, ObjectType, arguments, true);
 			var il = setter.GetILGenerator ();
 
 			if (!type.IsClass) // structs
@@ -334,7 +342,7 @@ namespace PowerJson
 			return (GenericSetter)setter.CreateDelegate (typeof(GenericSetter));
 		}
 
-		// TODO: Support method that takes more than 1 arguments
+		// TODO: Support methods that take more than 1 argument
 		/// <summary>
 		/// Creates a wrapper delegate for the given method.
 		/// The delegate should have a similar signature as the <paramref name="method"/>, except that an argument in inserted before the method arguments.
@@ -517,11 +525,13 @@ namespace PowerJson
 			return type.IsAbstract || type.IsInterface || type.Equals (ObjectType);
 		}
 		internal static bool IsAnonymous(this Type type) {
-			return type.IsGenericType
-				&& (type.Name.StartsWith ("<>", StringComparison.Ordinal) || type.Name.StartsWith ("VB$", StringComparison.Ordinal))
-				&& AttributeHelper.HasAttribute<System.Runtime.CompilerServices.CompilerGeneratedAttribute> (type, false)
-				&& type.Name.Contains ("AnonymousType")
-				&& (type.Attributes & TypeAttributes.NotPublic) == TypeAttributes.NotPublic;
+			if (type.IsGenericType == false || (type.Attributes & TypeAttributes.NotPublic) != TypeAttributes.NotPublic) {
+				return false;
+			}
+			var n = type.Name;
+			return (n.StartsWith("<>", StringComparison.Ordinal) || n.StartsWith("VB$", StringComparison.Ordinal))
+				&& n.Contains("AnonymousType")
+				&& AttributeHelper.GetAttribute<System.Runtime.CompilerServices.CompilerGeneratedAttribute>(type, false) != null;
 		}
 		internal static bool IsNullable(this Type type) {
 			return type.IsGenericType && typeof (Nullable<>).Equals (type.GetGenericTypeDefinition ());

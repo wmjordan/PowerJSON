@@ -18,6 +18,8 @@ namespace UnitTests
 			int PrivateField = 1;
 			public int Field { get; set; }
 			public PrivateStruct StructData { get; set; }
+			[JsonSerializable]
+			public int ReadOnlyProperty { get; private set; }
 
 			public PrivateClass () {
 				Field = 1;
@@ -98,6 +100,10 @@ namespace UnitTests
 			Console.WriteLine (sd);
 			var pd = Json.ToObject<Dictionary<string, List<PrivateClass>>> (sd);
 			Assert.AreEqual (l[0].Field, d["test"][0].Field);
+
+			s = @"{""readonlyproperty"": 3}";
+			o = Json.ToObject<PrivateClass> (s);
+			Assert.AreEqual (3, o.ReadOnlyProperty);
 		}
 
 		[TestMethod]

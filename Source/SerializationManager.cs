@@ -358,9 +358,9 @@ namespace PowerJson
 				}
 				// add properties ignored by _controller in GetProperties method
 				foreach (var ov in overrideInfo._MemberOverrides) {
-					if (ov.Deserializable != true) {
-						continue;
-					}
+					//if (ov.Deserializable != true) {
+					//	continue;
+					//}
 					var p = s.FindProperties (ov.MemberName);
 					if (p.Count == 0) {
 						var m = s.Reflection.FindMemberCache (ov.MemberName);

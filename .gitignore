@@ -3,6 +3,10 @@
 ################################################################################
 
 /.svn
-/UnitTests/obj
 *.suo
 /.vs
+bin
+obj
+/packages
+/PowerJsonLite
+*.user
