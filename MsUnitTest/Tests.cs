@@ -237,6 +237,13 @@ namespace MsUnitTest
 		}
 #endif
 
+		[TestMethod]
+		public void JsonDictTest() {
+			var json = "{\"name\":\"Test\",\"data\":{\"IsTrue\":true,\"FirstName\":\"Firstname\"}}";
+			var obj = Json.Parse(json);
+			Assert.AreEqual(json, Json.ToJson(obj, new SerializationManager { UseExtensions = false }));
+		}
+
 #if NET_40_OR_GREATER
         [TestMethod]
         public void DynamicTest()

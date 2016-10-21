@@ -77,24 +77,32 @@ namespace PowerJson
 				return type.GetArrayRank () == 1 ? JsonDataType.Array : JsonDataType.MultiDimensionalArray;
 			}
 			if (type.IsGenericType) {
+				var isDict = false;
+				var isList = false;
 				foreach (var item in type.GetInterfaces ()) {
 					if (item.IsGenericType == false) {
 						continue;
 					}
 					var g = item.GetGenericTypeDefinition ();
 					if (typeof(IEnumerable<>).Equals (g)) {
-						return JsonDataType.List;
+						isList = true;
 					}
 					if (typeof(IDictionary<,>).Equals (g)) {
 						var gt = item.GetGenericArguments ();
 						if (gt.Length > 0 && typeof (string).Equals (gt[0])) {
 							return JsonDataType.StringKeyDictionary;
 						}
-						return JsonDataType.Dictionary;
+						isDict = true;
 					}
 				}
+				if (isDict) {
+					return JsonDataType.Dictionary;
+				}
+				if (isList) {
+					return JsonDataType.List;
+				}
 			}
-			if (typeof (IDictionary).IsAssignableFrom (type)) {
+			if (type == typeof(JsonDict) || typeof (IDictionary).IsAssignableFrom (type)) {
 				return JsonDataType.Dictionary;
 			}
 			if (typeof (DataSet).IsAssignableFrom (type)) {
