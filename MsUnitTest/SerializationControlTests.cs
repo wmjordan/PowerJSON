@@ -296,6 +296,7 @@ namespace MsUnitTest
 		{
 			public bool Boolean;
 			public DateTime DateTime;
+			public DateTime? DateTime2;
 		}
 		[TestMethod]
 		public void ConverterTest () {
@@ -304,42 +305,49 @@ namespace MsUnitTest
 				Converter = PowerJson.Converters.ZeroOneBoolean
             });
 			sm.Override<DateTime> (new TypeOverride () { Converter = new JavaTimestampConverter () });
+			sm.Override<DateTime?> (new TypeOverride () { Converter = new JavaTimestampConverter () });
 			var s = Json.ToJson (true, sm);
-			Console.WriteLine (s);
-			Assert.AreEqual ("1", s);
-			Assert.IsTrue (Json.ToObject<bool> (s, sm));
-			s = Json.ToJson (false, sm);
-			Console.WriteLine (s);
-			Assert.AreEqual ("0", s);
-			Assert.IsFalse (Json.ToObject<bool> (s, sm));
+			Console.WriteLine(s);
+			Assert.AreEqual("1", s);
+			Assert.IsTrue(Json.ToObject<bool>(s, sm));
+			s = Json.ToJson(false, sm);
+			Console.WriteLine(s);
+			Assert.AreEqual("0", s);
+			Assert.IsFalse(Json.ToObject<bool>(s, sm));
 
-			s = Json.ToJson (new DateTime (1970, 1, 1), sm);
-			Console.WriteLine (s);
-			Assert.AreEqual ("\"/Date(0)/\"", s);
-			var d = new DateTime (1997, 7, 1, 23, 59, 59);
-			s = Json.ToJson (d, sm);
-			Assert.AreEqual ("\"/Date(867801599000)/\"", s);
-			Console.WriteLine (s);
-			Assert.AreEqual (d, Json.ToObject<DateTime> (s, sm));
+			s = Json.ToJson(new DateTime(1970, 1, 1), sm);
+			Console.WriteLine(s);
+			Assert.AreEqual("\"/Date(0)/\"", s);
+			var d = new DateTime(1997, 7, 1, 23, 59, 59);
+			s = Json.ToJson(d, sm);
+			Assert.AreEqual("\"/Date(867801599000)/\"", s);
+			Console.WriteLine(s);
+			Assert.AreEqual(d, Json.ToObject<DateTime>(s, sm));
+			DateTime? nd = new DateTime(1997, 7, 1, 23, 59, 59);
+			s = Json.ToJson(nd, sm);
+			Assert.AreEqual("\"/Date(867801599000)/\"", s);
+			Console.WriteLine(s);
+			Assert.AreEqual(nd, Json.ToObject<DateTime?>(s, sm));
 
-			var c = new ConverterSampleClass () { Boolean = true, DateTime = DateTime.Now };
+			var c = new ConverterSampleClass () { Boolean = true, DateTime = DateTime.Now, DateTime2 = new DateTime?(DateTime.Now) };
 			s = Json.ToJson (c, sm);
 			Console.WriteLine (s);
 			var o = Json.ToObject<ConverterSampleClass> (s, sm);
 			Assert.AreEqual (c.Boolean, o.Boolean);
 			Assert.AreEqual (c.DateTime.ToString (), o.DateTime.ToString ());
+			Assert.AreEqual (c.DateTime2.ToString (), o.DateTime2.ToString ());
 
-			sm.Override<DateTime> (new TypeOverride () { Converter = new AddHourConverter () });
-			s = Json.ToJson (d, sm);
-			Console.WriteLine (s);
-			Console.WriteLine (Json.ToJson (c, sm));
-			Assert.AreEqual (d, Json.ToObject<DateTime> (s, sm));
+			sm.Override<DateTime>(new TypeOverride() { Converter = new AddHourConverter() });
+			s = Json.ToJson(d, sm);
+			Console.WriteLine(s);
+			Console.WriteLine(Json.ToJson(c, sm));
+			Assert.AreEqual(d, Json.ToObject<DateTime>(s, sm));
 
-			sm.Override<baseclass> (new TypeOverride () { Converter = new BaseClassConverter () });
-			s = Json.ToJson (new baseclass () { Name = "a", Code = "b" }, sm);
-			Console.WriteLine (s);
-			var bc = Json.ToObject<baseclass> (s, sm);
-			Assert.AreEqual ("b", bc.Code);
+			sm.Override<baseclass>(new TypeOverride() { Converter = new BaseClassConverter() });
+			s = Json.ToJson(new baseclass() { Name = "a", Code = "b" }, sm);
+			Console.WriteLine(s);
+			var bc = Json.ToObject<baseclass>(s, sm);
+			Assert.AreEqual("b", bc.Code);
 		}
 	}
 }

@@ -400,7 +400,7 @@ namespace PowerJson
 				}
 				#region Convert Items
 				var ic = p.ItemConverter;
-				if (ic == null && p.TypeInfo.TypeParameters != null) {
+				if (ic == null && p.TypeInfo.TypeParameters != null && p.Member.IsNullable == false) {
 					var it = p.TypeInfo.TypeParameters[0]; // item type
 					ic = it.Converter;
 				}
