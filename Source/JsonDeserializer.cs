@@ -62,7 +62,10 @@ namespace PowerJson
 			if (o == null)
 				return null;
 
-			SerializationInfo c = null;
+            if (type == typeof(Dictionary<string, object>))
+                return new Dictionary<string, object>((JsonDict)o);
+
+            SerializationInfo c = null;
 			if (type != null) {
 				c = _manager.GetSerializationInfo (type);
 				var cv = c.Converter;

@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Linq;
 using PowerJson;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -490,10 +491,53 @@ namespace MsUnitTest
 			Console.WriteLine (s);
 			Assert.AreEqual ("{\"b\":0}", s);
 		}
-		#endregion
 
-		#region Special Collections
-		[TestMethod]
+        [TestMethod]
+        public void ArrayToDictionaryTest()
+        {
+            arrayclass a = new arrayclass();
+            a.ints = new int[] { 3, 1, 4 };
+            a.strs = new string[] { "a", "b", "c" };
+            var s = Json.ToJson(a);
+            Console.WriteLine(Json.Beautify(s));
+            var o = Json.ToObject<Dictionary<string, object>>(s);
+
+            CollectionAssert.AreEqual(a.ints, ((List<object>)o["ints"]).Select(ob => int.Parse(ob.ToString())).ToArray());
+            CollectionAssert.AreEqual(a.strs, ((List<object>)o["strs"]).Select(ob => ob.ToString()).ToArray());
+        }
+
+        [TestMethod]
+        public void DictionaryToDictionaryTest()
+        {
+            var manager = new SerializationManager { DateTimeMilliseconds = true };
+
+            var dict = new Dictionary<string, object>();
+
+            var guid = Guid.NewGuid();
+            var dt = DateTime.Now;
+            // Remove fractional milliseconds
+            dt = dt.AddTicks(-(dt.Ticks % TimeSpan.TicksPerSecond));
+
+            dict.Add("Key1", "Text");
+            dict.Add("Key2", 1000);
+            dict.Add("Key3", true);
+            dict.Add("Key4", guid);
+            dict.Add("Key5", dt);
+
+            var s = Json.ToJson(dict, manager);
+            Console.WriteLine(Json.Beautify(s));
+            var o = Json.ToObject<Dictionary<string, object>>(s, manager);
+
+            Assert.AreEqual("Text", (string)o["Key1"]);
+            Assert.AreEqual(1000, Convert.ToInt32(o["Key2"]));
+            Assert.AreEqual(true, (bool)o["Key3"]);
+            Assert.AreEqual(guid, Guid.Parse(o["Key4"].ToString()));
+            Assert.AreEqual(dt, DateTime.Parse(o["Key5"].ToString()));
+        }
+        #endregion
+
+        #region Special Collections
+        [TestMethod]
 		public void NameValueCollectionTest () {
 			var nv = new NameValueCollection ();
 			nv.Add ("item1", "value1");
