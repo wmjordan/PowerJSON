@@ -226,7 +226,13 @@ namespace PowerJson
 		}
 		#region Enum Cache
 		internal Dictionary<string, Enum> GetEnumValues (Type type, IReflectionController controller) {
-			var ns = Enum.GetNames (type);
+
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
+            {
+                type = type.GetGenericArguments()[0];
+            }
+
+            var ns = Enum.GetNames (type);
 			var vs = Enum.GetValues (type);
 			var vm = new Dictionary<string, Enum> (ns.Length);
 			var vc = _EnumValueCache;
