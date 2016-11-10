@@ -270,8 +270,8 @@ namespace PowerJson
 					return "0"; // should not be here
 				}
 				var sl = new List<string> ();
-				for (int i = vs.Length - 1; i > 0; i--) {
-					var ev = (ulong)Convert.ToInt64 (vs.GetValue (i));
+				for (int i = vs.Length - 1; i >= 0; i--) {
+                    var ev = (ulong)Convert.ToInt64 (vs.GetValue (i));
 					if (ev == 0) {
 						continue;
 					}
