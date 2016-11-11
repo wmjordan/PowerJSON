@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using System.Text.RegularExpressions;
 
 namespace PowerJson
 {
@@ -84,5 +85,10 @@ namespace PowerJson
 
 			return output.ToString();
 		}
+
+	    public static string UglyPrint(string input)
+	    {
+	        return Regex.Replace(input, "(\"(?:[^\"\\\\]|\\\\.)*\")|\\s+", "$1");
+	    }
 	}
 }
