@@ -227,6 +227,16 @@ namespace PowerJson
 			return Formatter.PrettyPrint(input, decodeUnicode);
 		}
 
-	}
+        /// <summary>
+		/// Creates a minified string from the JSON. 
+		/// </summary>
+		/// <param name="input">The JSON string to be minified.</param>
+		/// <returns>A minified JSON string.</returns>
+        public static string Minify(string input)
+        {
+            return Formatter.UglyPrint(input);
+        }
+
+    }
 
 }
