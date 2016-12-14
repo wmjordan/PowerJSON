@@ -884,6 +884,13 @@
             <param name="decodeUnicode">Indicates whether \uXXXX encoded Unicode notations should be converted into actual Unicode characters.</param>
             <returns>A pretty-printed JSON string.</returns>
         </member>
+        <member name="M:PowerJson.Json.Minify(System.String)">
+            <summary>
+            Creates a minified string from the JSON. 
+            </summary>
+            <param name="input">The JSON string to be minified.</param>
+            <returns>A minified JSON string.</returns>
+        </member>
         <member name="T:PowerJson.JsonParser">
             <summary>
             This class encodes and decodes JSON strings.

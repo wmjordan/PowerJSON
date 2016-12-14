@@ -304,12 +304,12 @@ namespace PowerJson
 				// set member value
 				switch (m.JsonDataType) {
 					case JsonDataType.Undefined: goto default;
-					case JsonDataType.Int: oset = (int)(long)v; break;
-					case JsonDataType.String: oset = v as string; break;
-					case JsonDataType.Bool: oset = v is bool ? (bool)v : false; break;
-					case JsonDataType.Long: oset = v is long ? (long)v : v is double ? (long)(double)v : 0; break;
-					case JsonDataType.Double: oset = v is long ? (double)(long)v : (double)v; break;
-					case JsonDataType.Single: oset = v is long ? (float)(long)v : (float)(double)v; break;
+					case JsonDataType.Int: oset = v is long ? (int)(long)v : v is double ? (int)(double)v : v is string ? ValueConverter.ToInt32((string)v) : v is bool && (bool)v ? 1 : 0; break;
+					case JsonDataType.String: oset = v is string ? (string)v : v is double ? ((double)v).ToString() : v is long ? ValueConverter.Int64ToString((long)v) : v is bool ? ((bool)v).ToString() : null; break;
+					case JsonDataType.Bool: oset = v is bool ? (bool)v : v is double ? (double)v != 0 : v is long ? (long)v != 0 : v is string ? ValueConverter.ToBoolean((string)v) : false; break;
+					case JsonDataType.Long: oset = v is long ? (long)v : v is double ? (long)(double)v : v is string ? ValueConverter.ToInt64((string)v) : v is bool && (bool)v ? 1L : 0L; break;
+					case JsonDataType.Double: oset = v is double ? (double)v : v is long ? (double)(long)v : v is string ? ValueConverter.ToDouble((string)v) : v is bool && (bool)v ? 1D : 0D; break;
+					case JsonDataType.Single: oset = v is double ? (float)(double)v : v is long ? (float)(long)v : v is string ? ValueConverter.ToSingle((string)v) : v is bool && (bool)v ? 1F : 0F; break;
 					case JsonDataType.DateTime: oset = CreateDateTime (this, v); break;
 					case JsonDataType.Guid: oset = CreateGuid (v); break;
 					case JsonDataType.ByteArray: oset = Convert.FromBase64String ((string)v); break;
@@ -829,31 +829,31 @@ namespace PowerJson
 			return value;
 		}
 		internal static object RevertInt32 (JsonDeserializer deserializer, object value, SerializationInfo type) {
-			return value is double ? (int)(double)value : (int)(long)value;
+			return value is long ? (int)(long)value : value is double ? (int)(double)value : value is string ? ValueConverter.ToInt32((string)value) : value is bool && (bool)value ? 1 : 0;
 		}
 		internal static object RevertByte (JsonDeserializer deserializer, object value, SerializationInfo type) {
-			return value is double ? (byte)(double)value : (byte)(long)value;
+			return value is long ? (byte)(long)value : value is double ? (byte)(double)value : value is string ? (byte)ValueConverter.ToInt32((string)value) : value is bool && (bool)value ? (byte)1 : (byte)0;
 		}
 		internal static object RevertSByte (JsonDeserializer deserializer, object value, SerializationInfo type) {
-			return value is double ? (sbyte)(double)value : (sbyte)(long)value;
+			return value is long ? (sbyte)(long)value : value is double ? (sbyte)(double)value : value is string ? (sbyte)ValueConverter.ToInt32((string)value) : value is bool && (bool)value ? (sbyte)1 : (sbyte)0;
 		}
 		internal static object RevertShort (JsonDeserializer deserializer, object value, SerializationInfo type) {
-			return value is double ? (short)(double)value : (short)(long)value;
+			return value is long ? (short)(long)value : value is double ? (short)(double)value : value is string ? (short)ValueConverter.ToInt32((string)value) : value is bool && (bool)value ? (short)1 : (short)0;
 		}
 		internal static object RevertUShort (JsonDeserializer deserializer, object value, SerializationInfo type) {
-			return value is double ? (ushort)(double)value : (ushort)(long)value;
+			return value is long ? (ushort)(long)value : value is double ? (ushort)(double)value : value is string ? (ushort)ValueConverter.ToInt32((string)value) : value is bool && (bool)value ? (ushort)1 : (ushort)0;
 		}
 		internal static object RevertUInt32 (JsonDeserializer deserializer, object value, SerializationInfo type) {
-			return value is double ? (uint)(double)value : (uint)(long)value;
+			return value is long ? (uint)(long)value : value is double ? (uint)(double)value : value is string ? (uint)ValueConverter.ToInt64((string)value) : value is bool && (bool)value ? (uint)1 : (uint)0;
 		}
 		internal static object RevertUInt64 (JsonDeserializer deserializer, object value, SerializationInfo type) {
-			return value is double ? (ulong)(double)value : (ulong)(long)value;
+			return value is long ? (ulong)(long)value : value is double ? (ulong)(double)value : value is string ? (ulong)ValueConverter.ToInt64((string)value) : value is bool && (bool)value ? (ulong)1 : (ulong)0;
 		}
 		internal static object RevertSingle (JsonDeserializer deserializer, object value, SerializationInfo type) {
-			return value is double ? (float)(double)value : (float)(long)value;
+			return value is double ? (float)(double)value : value is long ? (float)(long)value : value is string  ? ValueConverter.ToSingle((string)value) : value is bool && (bool)value ? (float)1 : (float)0;
 		}
 		internal static object RevertDecimal (JsonDeserializer deserializer, object value, SerializationInfo type) {
-			return value is double ? (decimal)(double)value : (decimal)(long)value;
+			return value is double ? (decimal)(double)value : value is long ? (decimal)(long)value : value is string ? (decimal)ValueConverter.ToDouble((string)value) : value is bool && (bool)value ? (decimal)1 : (decimal)0;
 		}
 		internal static object RevertChar (JsonDeserializer deserializer, object value, SerializationInfo type) {
 			var s = value as string;

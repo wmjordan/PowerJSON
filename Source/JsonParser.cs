@@ -272,7 +272,7 @@ namespace PowerJson
 				string s = _json.Substring (startIndex, _index - startIndex);
 				return double.Parse (s, NumberFormatInfo.InvariantInfo);
 			}
-			return ValueConverter.CreateLong (_json, startIndex, _index - startIndex);
+			return ValueConverter.ToInt64 (_json, startIndex, _index - startIndex);
 		}
 
 		Token LookAhead () {

@@ -20,7 +20,37 @@ namespace PowerJson
 			return 0;
 		}
 
-		internal static long CreateLong (string s, int index, int count) {
+		internal static bool ToBoolean(string s) {
+			bool b;
+			if (Boolean.TryParse(s, out b)) {
+				return b;
+			}
+			if (s == null || s.Length == 0 || (s = s.Trim()).Length == 0 || s == "0") {
+				return false;
+			}
+			return true;
+		}
+		internal static long ToInt64(string s) {
+			long l;
+			Int64.TryParse(s, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out l);
+			return l;
+		}
+		internal static int ToInt32(string s) {
+			int l;
+			Int32.TryParse(s, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out l);
+			return l;
+		}
+		internal static double ToDouble(string s) {
+			double l;
+			Double.TryParse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out l);
+			return l;
+		}
+		internal static float ToSingle(string s) {
+			float l;
+			Single.TryParse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out l);
+			return l;
+		}
+		internal static long ToInt64 (string s, int index, int count) {
 			long num = 0;
 			bool neg = false;
 			for (int x = 0; x < count; x++, index++) {
