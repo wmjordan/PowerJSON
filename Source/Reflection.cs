@@ -510,12 +510,20 @@ namespace PowerJson
 				if (t == null) // RaptorDB : loading runtime assemblies
 				{
 					foreach (var asm in AppDomain.CurrentDomain.GetAssemblies ()) {
-						foreach (var type in asm.GetTypes ()) {
-							if (type.FullName == typename) {
-								t = type;
-								break;
-							}
-						}
+                        try
+                        {
+                            foreach (var type in asm.GetTypes())
+                            {
+                                if (type.FullName == typename)
+                                {
+                                    t = type;
+                                    break;
+                                }
+                            }
+                        }
+                        catch (Exception) // ignore assemblies that can't be loaded
+                        {
+                        }
 					}
 				}
 				if (t == null) {
