@@ -5,6 +5,7 @@ using System.Collections.Specialized;
 using System.Data;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Text.RegularExpressions;
 
 namespace PowerJson
 {
@@ -14,6 +15,8 @@ namespace PowerJson
 		internal static readonly Type ObjectType = typeof (object);
 		static readonly SafeDictionary<Type, JsonDataType> _jsonTypeCache = InitBuiltInTypes ();
 		static readonly SafeDictionary<string, Type> _typecache = new SafeDictionary<string, Type>();
+        static readonly Regex genericRegex = new Regex(@"(?<generic>.+[`]\d+)\[(?<types>.+)\]");
+        static readonly Regex genericTypesRegex = new Regex(@"\[(?<name>[^,]+),[^\]]+\],?");
 
 		#region Built-in Deserializable Types
 		static SafeDictionary<Type, JsonDataType> InitBuiltInTypes () {
@@ -507,7 +510,9 @@ namespace PowerJson
 			else
 			{
 				var t = Type.GetType(typename);
-				if (t == null) // RaptorDB : loading runtime assemblies
+                if (t == null)
+                    t = GetGenericType(typename);
+                if (t == null) // RaptorDB : loading runtime assemblies
 				{
 					foreach (var asm in AppDomain.CurrentDomain.GetAssemblies ()) {
                         try
@@ -534,7 +539,26 @@ namespace PowerJson
 			}
 		}
 
-		internal static bool IsUnsafe (this Type type) {
+        internal static Type GetGenericType(string typeName)
+        {
+            var match = genericRegex.Match(typeName);
+
+            if (!match.Success)
+                return null;
+
+            var genericTypeName = match.Groups["generic"].Value;
+            var argTypes = match.Groups["types"].Value;
+            var typesMatch = genericTypesRegex.Matches(argTypes);
+            var types = new Type[typesMatch.Count];
+
+            for (int i = 0, l = typesMatch.Count; i < l; i++)
+            {
+                types[i] = GetTypeFromCache(typesMatch[i].Groups["name"].Value);
+            }
+
+            return GetTypeFromCache(genericTypeName).MakeGenericType(types);
+        }
+        internal static bool IsUnsafe (this Type type) {
 			return type.IsPointer || type.Equals (typeof (IntPtr));
 		}
 		internal static bool IsUndetermined(this Type type) {

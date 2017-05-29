@@ -62,6 +62,7 @@
   </Choose>
   <ItemGroup>
     <Compile Include="DataContractAttributesTests.cs" />
+    <Compile Include="GenericTypeTest.cs" />
     <Compile Include="SampleClasses.cs" />
     <Compile Include="SerializationControlTests.cs" />
     <Compile Include="SerializationAttributeTests.cs" />
