@@ -15,8 +15,8 @@ namespace PowerJson
 		internal static readonly Type ObjectType = typeof (object);
 		static readonly SafeDictionary<Type, JsonDataType> _jsonTypeCache = InitBuiltInTypes ();
 		static readonly SafeDictionary<string, Type> _typecache = new SafeDictionary<string, Type>();
-        static readonly Regex genericRegex = new Regex(@"(?<generic>.+[`]\d+)\[(?<types>.+)\]");
-        static readonly Regex genericTypesRegex = new Regex(@"\[(?<name>[^,]+),[^\]]+\],?");
+        static readonly Regex genericRegex = new Regex(@"(?<generic>[^`]+[`]\d+)\[(?<types>.+)\]");
+        static readonly Regex genericTypesRegex = new Regex(@"\[(?<name>(?>\[(?<l>)|\](?<-l>)|(?!\[|\]).)+(?(l)(?!)))\][,]?");
 
 		#region Built-in Deserializable Types
 		static SafeDictionary<Type, JsonDataType> InitBuiltInTypes () {

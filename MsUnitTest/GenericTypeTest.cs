@@ -14,7 +14,7 @@ namespace MsUnitTest
 
     public class TestObject
     {
-        public GenericTestObject<string, int> Prop { get; set; }
+        public GenericTestObject<GenericTestObject<string, int>, int> Prop { get; set; }
     }
 
     [TestClass]
@@ -23,7 +23,17 @@ namespace MsUnitTest
         [TestMethod]
         public void ReadGenericType()
         {
-            var json = "{\"$type\":\"MsUnitTest.TestObject\",\"Prop\":{\"$type\":\"MsUnitTest.GenericTestObject`2[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]\",\"Prop1\":\"test\",\"Prop2\":1}}";
+            var json = 
+            //    PowerJson.Json.ToJson(new TestObject {
+            //    Prop = new GenericTestObject<GenericTestObject<string, int>, int> {
+            //        Prop1 = new GenericTestObject<string, int> {
+            //            Prop1 = "1",
+            //            Prop2 = 10
+            //        },
+            //        Prop2 = 11
+            //    }
+            //});
+            "{ \"$type\":\"MsUnitTest.TestObject\",\"Prop\":{ \"$type\":\"MsUnitTest.GenericTestObject`2[[MsUnitTest.GenericTestObject`2[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], MsUnitTest, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null],[System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]\",\"Prop1\":{ \"$type\":\"MsUnitTest.GenericTestObject`2[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]\",\"Prop1\":\"1\",\"Prop2\":10},\"Prop2\":11} }";
             var obj = PowerJson.Json.ToObject<TestObject>(json);
             Assert.IsNotNull(obj);
         }
